@@ -25,13 +25,18 @@ type Object struct {
 	Export any
 }
 
-// Dispatch is the only capability exposed to a plan. Arguments/results must
+// Dispatch exposes named tool capabilities to a plan. Arguments/results must
 // be JSON-compatible Go values (float64 numbers), or Undefined. Implementations
 // must honor context cancellation; with Parallelism > 1 they must be thread safe.
 type Dispatch func(context.Context, string, any) (any, error)
 
 // ExecuteOptions bounds each execution independently. Zero values use defaults.
 type ExecuteOptions struct {
+	// HostDispatch handles only explicitly admitted global calls. It has the same
+	// cancellation, immutable-data and concurrency contract as Dispatch.
+	HostDispatch func(context.Context, string, []any) (any, error)
+	MaxHostCalls int // default 64, independent of the tool-call budget
+
 	Dispatch    Dispatch
 	Fatal       func(error) bool
 	MaxCalls    int // default 64
@@ -42,17 +47,19 @@ type ExecuteOptions struct {
 
 // Result retains the call count and fatal status even after execution fails.
 type Result struct {
-	Value   any
-	Calls   int
-	Aborted bool
+	Value     any
+	Calls     int
+	HostCalls int
+	Aborted   bool
 }
 type execution struct {
-	opts    ExecuteOptions
-	calls   atomic.Int64
-	steps   atomic.Int64
-	aborted atomic.Bool
-	fatalMu sync.Mutex
-	fatal   error
+	opts      ExecuteOptions
+	calls     atomic.Int64
+	hostCalls atomic.Int64
+	steps     atomic.Int64
+	aborted   atomic.Bool
+	fatalMu   sync.Mutex
+	fatal     error
 }
 type environment map[string]any
 
@@ -60,6 +67,9 @@ type environment map[string]any
 // retries a call. Parallel batches join all workers before returning, including
 // on errors; callers needing a hard deadline must retain admission until exit.
 func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (Result, error) {
+	if opts.MaxHostCalls <= 0 {
+		opts.MaxHostCalls = 64
+	}
 	if opts.MaxCalls <= 0 {
 		opts.MaxCalls = 64
 	}
@@ -84,7 +94,7 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (Result, err
 		err = x.fatal
 		v = Undefined
 	}
-	return Result{Value: v, Calls: int(x.calls.Load()), Aborted: x.aborted.Load()}, err
+	return Result{Value: v, Calls: int(x.calls.Load()), HostCalls: int(x.hostCalls.Load()), Aborted: x.aborted.Load()}, err
 }
 func (x *execution) tick(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
@@ -182,6 +192,21 @@ func (e *expr) eval(ctx context.Context, x *execution, env environment) (any, er
 			out[f.name] = a
 		}
 		return out, nil
+	case "host":
+		args := make([]any, len(e.children))
+		for i, child := range e.children {
+			value, err := child.eval(ctx, x, env)
+			if err != nil {
+				return nil, err
+			}
+			args[i] = value
+		}
+		return x.invoke(ctx, &x.hostCalls, x.opts.MaxHostCalls, "host-call", func() (any, error) {
+			if x.opts.HostDispatch == nil {
+				return nil, errors.New("no host dispatcher configured")
+			}
+			return x.opts.HostDispatch(ctx, e.name, args)
+		})
 	case "call":
 		arg, err := e.children[0].eval(ctx, x, env)
 		if err != nil {
@@ -207,7 +232,15 @@ func (e *expr) eval(ctx context.Context, x *execution, env environment) (any, er
 	}
 	return nil, errors.New("invalid execution plan")
 }
-func (x *execution) call(ctx context.Context, name string, arg any) (value any, err error) {
+func (x *execution) call(ctx context.Context, name string, arg any) (any, error) {
+	return x.invoke(ctx, &x.calls, x.opts.MaxCalls, "tool-call", func() (any, error) {
+		if x.opts.Dispatch == nil {
+			return nil, errors.New("no dispatcher configured")
+		}
+		return x.opts.Dispatch(ctx, name, arg)
+	})
+}
+func (x *execution) invoke(ctx context.Context, counter *atomic.Int64, limit int, label string, dispatch func() (any, error)) (value any, err error) {
 	// Also contains host panics inside batch goroutines.
 	defer func() {
 		if r := recover(); r != nil {
@@ -219,18 +252,15 @@ func (x *execution) call(ctx context.Context, name string, arg any) (value any, 
 		return nil, err
 	}
 	for {
-		n := x.calls.Load()
-		if n >= int64(x.opts.MaxCalls) {
-			return nil, fmt.Errorf("tool-call limit (%d) exceeded", x.opts.MaxCalls)
+		n := counter.Load()
+		if n >= int64(limit) {
+			return nil, fmt.Errorf("%s limit (%d) exceeded", label, limit)
 		}
-		if x.calls.CompareAndSwap(n, n+1) {
+		if counter.CompareAndSwap(n, n+1) {
 			break
 		}
 	}
-	if x.opts.Dispatch == nil {
-		return nil, errors.New("no dispatcher configured")
-	}
-	value, err = x.opts.Dispatch(ctx, name, arg)
+	value, err = dispatch()
 	if err != nil && x.opts.Fatal != nil && x.opts.Fatal(err) {
 		x.fatalMu.Lock()
 		if x.fatal == nil {

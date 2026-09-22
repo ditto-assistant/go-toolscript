@@ -19,8 +19,19 @@ import (
 // Only Compile returns it; execution errors must NEVER trigger fallback.
 var ErrUnsupported = errors.New("unsupported tool script")
 
+// HostFunction explicitly admits a bare global function with positional arguments.
+// LiteralStringArgs requires those argument positions to be string literals;
+// hosts can use this to avoid approximating JavaScript coercion. No implementation
+// or ambient capability is installed by declaring a function.
+type HostFunction struct {
+	MinArgs           int
+	MaxArgs           int
+	LiteralStringArgs []int
+}
+
 // CompileOptions selects the host's exposed namespace and language extensions.
 type CompileOptions struct {
+	HostFunctions map[string]HostFunction
 	// Resolve maps a static property path (e.g. ["mcp","search"]) to a
 	// dispatcher name. Return false for unknown bindings. Never executes a tool.
 	Resolve func([]string) (string, bool)
@@ -155,6 +166,10 @@ func reserved(s string) bool {
 	}
 	return false
 }
+func (c *compiler) reserved(name string) bool {
+	_, host := c.opts.HostFunctions[name]
+	return host || reserved(name)
+}
 func (c *compiler) pattern(n ast.Expression, keys []selection, depth int) ([]binding, error) {
 	if depth > 32 {
 		return nil, fmt.Errorf("binding nesting limit")
@@ -162,7 +177,7 @@ func (c *compiler) pattern(n ast.Expression, keys []selection, depth int) ([]bin
 	switch n := n.(type) {
 	case *ast.Identifier:
 		name := n.Name.String()
-		if reserved(name) || c.names[name] {
+		if c.reserved(name) || c.names[name] {
 			return nil, fmt.Errorf("shadowed/redeclared binding %s", name)
 		}
 		c.names[name] = true
@@ -407,6 +422,31 @@ func (c *compiler) expression(node ast.Expression) (*expr, error) {
 }
 func (c *compiler) call(n *ast.CallExpression) (*expr, error) {
 	path, static := staticPath(n.Callee)
+	if static && len(path) == 1 && !c.names[path[0]] && !reserved(path[0]) {
+		if spec, ok := c.opts.HostFunctions[path[0]]; ok {
+			if spec.MinArgs < 0 || spec.MaxArgs < spec.MinArgs || len(n.ArgumentList) < spec.MinArgs || len(n.ArgumentList) > spec.MaxArgs {
+				return nil, unsupported(n)
+			}
+			for _, index := range spec.LiteralStringArgs {
+				if index < 0 || index >= len(n.ArgumentList) {
+					return nil, unsupported(n)
+				}
+				if _, ok := n.ArgumentList[index].(*ast.StringLiteral); !ok {
+					return nil, unsupported(n)
+				}
+			}
+			args := make([]*expr, len(n.ArgumentList))
+			for i, arg := range n.ArgumentList {
+				e, err := c.expression(arg)
+				if err != nil {
+					return nil, err
+				}
+				args[i] = e
+			}
+			return &expr{kind: "host", name: path[0], children: args}, nil
+		}
+	}
+
 	if static && len(path) == 2 && path[0] == "Promise" && (path[1] == "all" || path[1] == "allSettled") {
 		if !c.opts.Batches || len(n.ArgumentList) != 1 || c.batchDepth > 0 {
 			return nil, unsupported(n)
@@ -441,7 +481,7 @@ func (c *compiler) call(n *ast.CallExpression) (*expr, error) {
 		var params []string
 		for _, p := range arrow.ParameterList.List {
 			id, ok := p.Target.(*ast.Identifier)
-			if !ok || p.Initializer != nil || reserved(id.Name.String()) || child.names[id.Name.String()] {
+			if !ok || p.Initializer != nil || child.reserved(id.Name.String()) || child.names[id.Name.String()] {
 				return nil, unsupported(p)
 			}
 			params = append(params, id.Name.String())

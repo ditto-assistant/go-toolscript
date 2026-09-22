@@ -90,6 +90,37 @@ may finish; queued work checks the fatal flag before dispatch. No execution
 error causes a retry. Programs and input data are immutable; each execution
 gets its own bindings, counters and budget.
 
+## Explicit host functions
+
+Hosts can opt in to bare global calls without exposing JavaScript or ambient
+capabilities. Positional arguments use the same bounded expression evaluator:
+
+```go
+plan, err := toolscript.Compile(`return bash("printf hello");`, toolscript.CompileOptions{
+    HostFunctions: map[string]toolscript.HostFunction{
+        "bash": {MinArgs: 1, MaxArgs: 1, LiteralStringArgs: []int{0}},
+    },
+})
+// Handle err before Execute, including safe whole-program fallback.
+result, err := plan.Execute(ctx, toolscript.ExecuteOptions{
+    HostDispatch: func(ctx context.Context, name string, args []any) (any, error) {
+        return yourVirtualShell(ctx, args[0].(string))
+    },
+})
+```
+
+The library does not implement a shell. The host owns that capability and its
+permissions, serialization, timeouts and output limits. `LiteralStringArgs` lets
+an adapter decline dynamic/coercing arguments before any effects occur.
+Functions cannot be aliased, shadowed, spread-called, or reached via properties.
+They compose with bindings, projections, maps and opted-in batches.
+
+`MaxHostCalls` defaults to 64 and is independent of `MaxCalls`; `Result.HostCalls`
+records it separately. Host calls share cancellation, panic containment, fatal
+error handling and bounded batch workers with tool calls. Host implementations
+must be thread-safe before opting into parallelism. No execution failure permits
+fallback or replay. Omitted functions remain unsupported.
+
 ## Deliberate fallback boundary
 
 The **entire program**, including unreachable code, must compile before any

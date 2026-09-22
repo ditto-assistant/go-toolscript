@@ -202,15 +202,17 @@ func TestBudgets(t *testing.T) {
 	}
 }
 func FuzzCompile(f *testing.F) {
-	for _, s := range []string{`return mcp.echo({x:1});`, `const [a,b]=await Promise.all([mcp.a(),mcp.b()]);return {a,b};`, "return\n1", "/*comment*/"} {
+	for _, s := range []string{`return mcp.echo({x:1});`, `const [a,b]=await Promise.all([mcp.a(),mcp.b()]);return {a,b};`, "return\n1", "/*comment*/", `return bash("printf hi",{items:[1]},undefined);`, `return Promise.all([bash("one"),bash("two")]);`} {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, s string) {
-		p, err := Compile(s, options())
+		opts := options()
+		opts.HostFunctions = hostOptions().HostFunctions
+		p, err := Compile(s, opts)
 		if err != nil {
 			return
 		}
-		r, _ := p.Execute(context.Background(), ExecuteOptions{Dispatch: echo, MaxSteps: 100, MaxCalls: 10, MaxItems: 10})
+		r, _ := p.Execute(context.Background(), ExecuteOptions{Dispatch: echo, HostDispatch: func(_ context.Context, _ string, args []any) (any, error) { return args, nil }, MaxHostCalls: 10, MaxSteps: 100, MaxCalls: 10, MaxItems: 10})
 		_, _ = Marshal(r.Value)
 	})
 }

@@ -234,13 +234,21 @@ func propertyKey(n ast.Expression) (string, bool) {
 	case *ast.StringLiteral:
 		return n.Value.String(), true
 	case *ast.NumberLiteral:
+		var number float64
 		switch v := n.Value.(type) {
 		case int64:
-			return strconv.FormatFloat(float64(v), 'f', -1, 64), true
+			number = float64(v)
 		case float64:
-			return strconv.FormatFloat(v, 'f', -1, 64), true
+			number = v
+		default:
+			return "", false
 		}
-		return "", false
+		// JS ToPropertyKey switches to exponent notation at 1e21 and below
+		// 1e-6. Decline uncommon numeric keys rather than approximate coercion.
+		if number < 0 || number > 9007199254740991 || math.Trunc(number) != number {
+			return "", false
+		}
+		return strconv.FormatFloat(number, 'f', -1, 64), true
 	}
 	return "", false
 }

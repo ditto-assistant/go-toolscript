@@ -101,6 +101,8 @@ run the original source in its existing runtime.
 
 This subset operates on JSON data, not JS prototypes/coercion. Invalid data
 shapes (such as mapping a non-array) fail at execution time, not via fallback.
+Numeric property keys are limited to nonnegative safe integers; other numeric
+keys decline compilation rather than approximate JS string coercion.
 Property reads use own JSON properties, array indexes/length and string UTF-16
 indexes/length. Destructuring arrays requires an array or string.
 

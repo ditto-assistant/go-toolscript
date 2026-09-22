@@ -15,7 +15,7 @@ import (
 )
 
 func options() CompileOptions {
-	return CompileOptions{Resolve: func(p []string) (string, bool) {
+	return CompileOptions{ResolveCall: func(name string) (string, bool) { return name, true }, Resolve: func(p []string) (string, bool) {
 		if len(p) < 2 || (p[0] != "mcp" && p[0] != "tools") {
 			return "", false
 		}
@@ -236,6 +236,20 @@ func BenchmarkGoja(b *testing.B) {
 		_ = vm.Set("mcp", map[string]any{"echo": func(c goja.FunctionCall) goja.Value { return c.Argument(0) }})
 		if _, err := vm.RunString(s); err != nil {
 			b.Fatal(fmt.Sprint(err))
+		}
+	}
+}
+
+func TestRawCallDoesNotCollideWithPropertyPath(t *testing.T) {
+	opts := CompileOptions{Resolve: func(parts []string) (string, bool) { return strings.Join(parts, "/"), true }, ResolveCall: func(name string) (string, bool) { return "raw/" + name, true }}
+	for _, tc := range []struct{ source, want string }{{`return mcp.call("foo",{});`, "raw/foo"}, {`return mcp.call.foo({});`, "mcp/call/foo"}, {`return mcp["x.y"]({});`, "mcp/x.y"}, {`return mcp.x.y({});`, "mcp/x/y"}} {
+		p, err := Compile(tc.source, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := p.Execute(context.Background(), ExecuteOptions{Dispatch: func(_ context.Context, name string, _ any) (any, error) { return name, nil }})
+		if err != nil || r.Value != tc.want {
+			t.Fatalf("%s: %+v %v", tc.source, r, err)
 		}
 	}
 }

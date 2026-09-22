@@ -33,8 +33,9 @@ output, err := toolscript.Marshal(result.Value)
 ```
 
 `Resolve` sees static paths: `mcp.foo`, `tools.foo`, `mcp.server.foo`, and
-string-bracket equivalents. `mcp.call("raw-name", args)` resolves as
-`["mcp", "call", "raw-name"]`; the host decides the mapping and permissions.
+string-bracket equivalents. `mcp.call("raw-name", args)` uses the separate `ResolveCall(rawName)` callback,
+so it cannot collide with a server literally named `call`. The host decides
+the mapping and permissions.
 Calls accept zero or one data argument. Null/undefined normalization, access
 control, approvals, accounting, credentials, result storage and audit remain
 host responsibilities. `Compile` never dispatches.

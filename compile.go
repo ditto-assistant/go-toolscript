@@ -24,6 +24,9 @@ type CompileOptions struct {
 	// Resolve maps a static property path (e.g. ["mcp","search"]) to a
 	// dispatcher name. Return false for unknown bindings. Never executes a tool.
 	Resolve func([]string) (string, bool)
+	// ResolveCall maps mcp.call("raw-name", args) separately from property
+	// bindings, so it cannot collide with mcp.call.some_tool(args).
+	ResolveCall func(string) (string, bool)
 	// Batches admits await and Promise.all/allSettled over arrays and .map.
 	// This is an explicit asynchronous-tool dialect, not arbitrary JS promises.
 	Batches bool
@@ -452,21 +455,27 @@ func (c *compiler) call(n *ast.CallExpression) (*expr, error) {
 		}
 		return &expr{kind: "map", children: []*expr{source}, params: params, body: body}, nil
 	}
-	if !static || len(path) < 2 || c.names[path[0]] || c.opts.Resolve == nil {
+	if !static || len(path) < 2 || c.names[path[0]] {
 		return nil, unsupported(n)
 	}
+	var name string
+	var ok bool
 	if len(path) == 2 && (path[0] == "mcp" || path[0] == "tools") && path[1] == "call" {
-		if len(n.ArgumentList) < 1 || len(n.ArgumentList) > 2 {
+		if c.opts.ResolveCall == nil || len(n.ArgumentList) < 1 || len(n.ArgumentList) > 2 {
 			return nil, unsupported(n)
 		}
 		raw, ok := n.ArgumentList[0].(*ast.StringLiteral)
 		if !ok {
 			return nil, unsupported(n)
 		}
-		path = append(path, raw.Value.String())
+		name, ok = c.opts.ResolveCall(raw.Value.String())
 		n = &ast.CallExpression{ArgumentList: n.ArgumentList[1:]}
+	} else {
+		if c.opts.Resolve == nil {
+			return nil, unsupported(n)
+		}
+		name, ok = c.opts.Resolve(path)
 	}
-	name, ok := c.opts.Resolve(path)
 	if !ok {
 		return nil, fmt.Errorf("unknown binding %s", strings.Join(path, "."))
 	}

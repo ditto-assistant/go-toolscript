@@ -1,0 +1,23 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: go test -run '^$' -fuzz FuzzCompile -fuzztime=15s -parallel=2
+      - name: Verify the production dependency graph has no JS VM
+        run: |
+          go list -deps . > deps.txt
+          if grep -Fx 'github.com/dop251/goja' deps.txt; then
+            echo 'Production package imports the JS VM'
+            exit 1
+          fi

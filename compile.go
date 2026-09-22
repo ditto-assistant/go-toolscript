@@ -464,8 +464,8 @@ func (c *compiler) call(n *ast.CallExpression) (*expr, error) {
 		if c.opts.ResolveCall == nil || len(n.ArgumentList) < 1 || len(n.ArgumentList) > 2 {
 			return nil, unsupported(n)
 		}
-		raw, ok := n.ArgumentList[0].(*ast.StringLiteral)
-		if !ok {
+		raw, literal := n.ArgumentList[0].(*ast.StringLiteral)
+		if !literal {
 			return nil, unsupported(n)
 		}
 		name, ok = c.opts.ResolveCall(raw.Value.String())

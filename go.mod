@@ -1,4 +1,4 @@
-module github.com/ditto-assistant/go-toolscript
+module github.com/omniaura/go-toolscript
 
 go 1.25
 

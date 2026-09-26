@@ -1,0 +1,6 @@
+join with null/undefined elements, nested arrays and custom separators.
+-- script.js --
+const a = [1, null, undefined, [2, [3, null]], "", 0, false];
+return [a.join(), a.join(" - "), a.join(null), a.join(undefined), [].join(), [null].join(), [[]].join("x"), String(a), a.toString()];
+-- tools.json --
+{}

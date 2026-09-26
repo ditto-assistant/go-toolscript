@@ -119,7 +119,7 @@ func (ctx *stringifier) str(key string, holder any) (bool, error) {
 				return false, r.typeError("Converting circular structure to JSON")
 			}
 		}
-		if len(ctx.stack) > 1000 {
+		if len(ctx.stack) > 10000 {
 			return false, r.rangeError("Maximum call stack size exceeded")
 		}
 		ctx.stack = append(ctx.stack, value)

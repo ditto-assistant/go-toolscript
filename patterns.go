@@ -54,6 +54,9 @@ func (c *compiler) identifierStore(name string, init bool) (binder, error) {
 		return nil, fmt.Errorf("namespace alias %s reassigned", name)
 	}
 	slot := v.slot
+	if !init && v.kind == kindFuncName {
+		return func(*rt, *scope, any) error { return nil }, nil
+	}
 	if !init && v.kind == kindConst {
 		return func(r *rt, s *scope, _ any) error {
 			if s.up(hops).vars[slot] == tdz {
@@ -168,7 +171,7 @@ func nonNil(a []any) []any {
 func (r *rt) iterableItems(v any) ([]any, error) {
 	switch t := v.(type) {
 	case *array:
-		return t.items, nil
+		return denseItems(t.items), nil
 	case string:
 		out := make([]any, 0, len(t))
 		for _, ch := range t {
@@ -244,7 +247,7 @@ func (c *compiler) objectPattern(n *ast.ObjectPattern, init bool) (binder, error
 	}
 	return func(r *rt, s *scope, v any) error {
 		if isNullish(v) {
-			return r.typeError("Cannot destructure '" + nullishName(v) + "' as it is " + nullishName(v) + ".")
+			return r.typeError("Value is not object coercible")
 		}
 		used := static
 		if dynamicKeys && rest != nil {

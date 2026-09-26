@@ -1,0 +1,5 @@
+Array.from with {length}, a mapper and strings.
+-- script.js --
+return [Array.from({length: 3}), Array.from({length: 3}, (_, i) => i * i), Array.from({length: "2"}), Array.from({length: -1}), Array.from({length: 2, 0: "a", 1: "b"}), Array.from("héllo"), Array.from([1, 2], x => x * 2), Array.from({length: 2.7}, (v, i) => i)];
+-- tools.json --
+{}

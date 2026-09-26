@@ -1,0 +1,6 @@
+Indentation after an empty array followed by siblings at several depths.
+-- script.js --
+const o = {list: [[], [1]], x: {y: [], z: {w: []}, v: 2}, tail: 3};
+return JSON.stringify(o, null, 1);
+-- tools.json --
+{}

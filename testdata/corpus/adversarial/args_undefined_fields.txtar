@@ -1,0 +1,8 @@
+Tool arguments with undefined fields, nested undefined in arrays.
+-- script.js --
+const q = undefined;
+return mcp.search.run({query: q, limit: 5, tags: [undefined, "a"], nested: {x: undefined, y: null}});
+-- tools.json --
+{
+  "search.run": null
+}

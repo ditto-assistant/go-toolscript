@@ -1,0 +1,6 @@
+indexOf/includes/startsWith with odd positions.
+-- script.js --
+const s = "abcabc";
+return [s.indexOf("c", -5), s.indexOf("", 10), s.lastIndexOf("a", -3), s.lastIndexOf("c", 2.9), s.includes("", 99), s.startsWith("b", 1), s.endsWith("b", 2), s.indexOf("a", NaN), s.lastIndexOf("a", NaN), s.lastIndexOf(""), s.startsWith("", 99)];
+-- tools.json --
+{}

@@ -1,0 +1,7 @@
+Return value with a primitive sibling exactly at the 64-level export clamp.
+-- script.js --
+let o = {leaf: "deep", next: {end: true}};
+for (let i = 0; i < 63; i++) o = {n: o};
+return o;
+-- tools.json --
+{}

@@ -1,0 +1,6 @@
+toFixed on binary-exact ties, negatives and tiny negatives.
+-- script.js --
+const xs = [0.5, 1.5, 2.5, -0.5, -2.5, 1.005, 1.45, 8.345, -0.0001, 0.000001, 123.456];
+return xs.map(x => [x.toFixed(0), x.toFixed(1), x.toFixed(2)].join("|"));
+-- tools.json --
+{}

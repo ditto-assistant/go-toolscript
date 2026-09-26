@@ -1,0 +1,10 @@
+Calling a variable holding a non-function.
+-- script.js --
+const out = [];
+const n = 5, s = "x", u = undefined, o = {}, nul = null;
+for (const f of [() => n(), () => s(), () => u(), () => o(), () => nul()]) {
+  try { f(); } catch (e) { out.push(e.name + ": " + e.message); }
+}
+return out;
+-- tools.json --
+{}

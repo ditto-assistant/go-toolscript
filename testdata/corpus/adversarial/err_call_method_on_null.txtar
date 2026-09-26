@@ -1,0 +1,10 @@
+Calling a method on null/undefined.
+-- script.js --
+const out = [];
+const r = {list: null};
+try { r.list.map(x => x); } catch (e) { out.push(e.message); }
+try { r.missing.join(","); } catch (e) { out.push(e.message); }
+try { r.list.length; } catch (e) { out.push(e.message); }
+return out;
+-- tools.json --
+{}

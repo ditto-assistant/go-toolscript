@@ -124,8 +124,10 @@ type funcCode struct {
 	length     int
 	async      bool
 	usesScopes bool
-	direct     bool // only simple identifier parameters: args bind straight into slots
-	leaf       bool // creates no closures, so its frame cannot outlive the call
+	direct     bool     // only simple identifier parameters: args bind straight into slots
+	leaf       bool     // creates no closures, so its frame cannot outlive the call
+	bodyInit   []any    // separate body scope template when parameters have expressions
+	bodyCopies [][2]int // parameter slot -> same-named body var slot
 }
 
 type hoistedFunc struct {
@@ -142,6 +144,7 @@ const (
 	kindConst
 	kindFunc
 	kindParam
+	kindFuncName // a named function expression's own name: writes are ignored
 )
 
 type cvar struct {
@@ -321,34 +324,51 @@ func (c *compiler) function(params *ast.ParameterList, body *ast.BlockStatement,
 	sc := c.pushScope(true)
 	code := &funcCode{async: async, source: source}
 
-	// Parameters first, then hoisted var and function declarations.
+	// With parameter expressions (defaults, patterns) the parameters live in
+	// their own scope, initialized left to right (TDZ), and the body gets a
+	// separate scope that the defaults cannot see.
+	hasExprs := false
+	paramKind := kindParam
 	if params != nil {
 		for _, p := range params.List {
-			if err := c.declarePattern(sc, p.Target, kindParam); err != nil {
+			if _, id := p.Target.(*ast.Identifier); p.Initializer != nil || !id {
+				hasExprs = true
+			}
+		}
+		if hasExprs {
+			paramKind = kindLet
+		}
+		for _, p := range params.List {
+			if err := c.declarePattern(sc, p.Target, paramKind); err != nil {
 				return nil, err
 			}
 		}
 		if params.Rest != nil {
-			if err := c.declarePattern(sc, params.Rest, kindParam); err != nil {
+			if err := c.declarePattern(sc, params.Rest, paramKind); err != nil {
 				return nil, err
 			}
 		}
 	}
-	var stmts []ast.Statement
-	if body != nil {
-		stmts = body.List
-		if err := c.hoistVars(sc, stmts); err != nil {
-			return nil, err
+	declareBody := func(bs *cscope, stmts []ast.Statement) error {
+		if err := c.hoistVars(bs, stmts); err != nil {
+			return err
 		}
 		for _, st := range stmts {
 			if fd, ok := st.(*ast.FunctionDeclaration); ok {
-				if _, err := c.declare(sc, fd.Function.Name.Name.String(), kindFunc); err != nil {
-					return nil, err
+				if _, err := c.declare(bs, fd.Function.Name.Name.String(), kindFunc); err != nil {
+					return err
 				}
 			}
 		}
-		if err := c.declareLexical(sc, stmts); err != nil {
-			return nil, err
+		return c.declareLexical(bs, stmts)
+	}
+	var stmts []ast.Statement
+	if body != nil {
+		stmts = body.List
+		if !hasExprs {
+			if err := declareBody(sc, stmts); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if params != nil {
@@ -390,6 +410,21 @@ func (c *compiler) function(params *ast.ParameterList, body *ast.BlockStatement,
 	} else {
 		code.leaf = !containsFunction(exprBody)
 	}
+	bodyScope := sc
+	if hasExprs {
+		bodyScope = c.pushScope(false)
+		if body != nil {
+			if err := declareBody(bodyScope, stmts); err != nil {
+				return nil, err
+			}
+		}
+		// A body var named like a parameter starts with the parameter's value.
+		for name, v := range bodyScope.vars {
+			if p, ok := sc.vars[name]; ok && v.kind == kindVar {
+				code.bodyCopies = append(code.bodyCopies, [2]int{p.slot, v.slot})
+			}
+		}
+	}
 	if body != nil {
 		for _, st := range stmts {
 			if fd, ok := st.(*ast.FunctionDeclaration); ok {
@@ -402,7 +437,7 @@ func (c *compiler) function(params *ast.ParameterList, body *ast.BlockStatement,
 					return nil, err
 				}
 				name := f.Name.Name.String()
-				code.hoisted = append(code.hoisted, hoistedFunc{code: inner, name: name, slot: sc.vars[name].slot})
+				code.hoisted = append(code.hoisted, hoistedFunc{code: inner, name: name, slot: bodyScope.vars[name].slot})
 			}
 		}
 		list, err := c.statements(stmts)
@@ -418,7 +453,13 @@ func (c *compiler) function(params *ast.ParameterList, body *ast.BlockStatement,
 		code.exprBody = e
 	}
 	code.init = sc.init
-	code.direct = code.rest == nil
+	if hasExprs {
+		code.bodyInit = bodyScope.init
+		if code.bodyInit == nil {
+			code.bodyInit = []any{}
+		}
+	}
+	code.direct = code.rest == nil && !hasExprs
 	for i, slot := range code.simple {
 		if slot < 0 || code.defaults[i] != nil {
 			code.direct = false
@@ -1138,7 +1179,7 @@ func (r *rt) iterate(v any, step func(any) (ctl, any, error)) (ctl, any, error) 
 	switch t := v.(type) {
 	case *array:
 		for i := 0; i < len(t.items); i++ {
-			k, rv, err := step(t.items[i])
+			k, rv, err := step(unhole(t.items[i]))
 			if err != nil {
 				return 0, nil, err
 			}
@@ -1169,15 +1210,10 @@ func (r *rt) iterate(v any, step func(any) (ctl, any, error)) (ctl, any, error) 
 }
 
 func (r *rt) notIterable(v any) error {
-	s := typeOf(v)
-	if isObjectValue(v) {
-		s = "object"
-	} else if !isNullish(v) {
-		s, _ = r.toString(v)
-	} else if v == nil {
-		s = "null"
+	if isNullish(v) {
+		return r.typeError("Cannot convert undefined or null to object")
 	}
-	return r.typeError(s + " is not iterable")
+	return r.typeError("object is not iterable")
 }
 
 func (c *compiler) switchStatement(n *ast.SwitchStatement) (stmtFn, error) {

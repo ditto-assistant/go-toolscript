@@ -1,0 +1,16 @@
+Console order inside Promise.all(map(async)) interleaves across awaits.
+-- script.js --
+const ids = [1, 2, 3];
+const rs = await Promise.all(ids.map(async id => {
+  console.log("start", id);
+  const r = await mcp.crm.get({id});
+  console.log("end", id);
+  return r.args.id;
+}));
+return rs;
+-- tools.json --
+{
+  "crm.get": null
+}
+-- divergence --
+Async dialect: batch items run to completion one at a time (tools return values, not promises), so there is no microtask interleaving.

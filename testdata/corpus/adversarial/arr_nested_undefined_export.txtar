@@ -1,0 +1,8 @@
+Arrays containing undefined, functions and nested undefined in the return value.
+-- script.js --
+const fn = () => 1;
+return [undefined, null, fn, [undefined, fn], {a: undefined, f: fn, n: null}];
+-- tools.json --
+{}
+-- divergence --
+Functions inside a returned value: Goja's Export cannot be JSON-encoded (Ditto then returns a %v dump with pointer addresses); the native engine encodes them as null like JSON.stringify would in arrays.

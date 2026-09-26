@@ -1,0 +1,6 @@
+Recursion 1200 frames deep (e.g. walking a long linked list).
+-- script.js --
+function depth(n) { return n === 0 ? 0 : 1 + depth(n - 1); }
+return depth(1200);
+-- tools.json --
+{}

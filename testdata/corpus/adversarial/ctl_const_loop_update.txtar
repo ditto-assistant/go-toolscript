@@ -1,0 +1,6 @@
+Updating a const loop variable throws on the second iteration.
+-- script.js --
+const seen = [];
+try { for (const i = 0; i < 3; i++) seen.push(i); } catch (e) { return [seen, e.name, e.message]; }
+-- tools.json --
+{}

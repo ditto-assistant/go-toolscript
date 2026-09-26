@@ -1,0 +1,5 @@
+Math.round of halves, large odd integers and negatives.
+-- script.js --
+return [Math.round(0.5), Math.round(1.5), Math.round(2.5), Math.round(-0.5), Math.round(-1.5), Math.round(-2.5), Math.round(4503599627370497), Math.round(0.49999999999999994), Math.round(-4503599627370497), Math.round(9007199254740991), Math.round(1.4999999999999998)];
+-- tools.json --
+{}

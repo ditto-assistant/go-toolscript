@@ -1,0 +1,11 @@
+Tool argument with a cycle.
+-- script.js --
+const o = {id: 1};
+o.self = o;
+try { return mcp.store.put(o); } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{
+  "store.put": {
+    "ok": true
+  }
+}

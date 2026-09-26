@@ -1,0 +1,6 @@
+Objects with their own valueOf in arithmetic and comparison.
+-- script.js --
+const v = {valueOf: () => 42};
+return [v * 2, v + 1, v > 40, v == 42, +v, `${v}`, Math.max(v, 1)].map(String);
+-- tools.json --
+{}

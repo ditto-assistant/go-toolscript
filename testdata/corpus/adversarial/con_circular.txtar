@@ -1,0 +1,11 @@
+console.log of a circular object.
+-- script.js --
+const a = {name: "a"};
+a.self = a;
+console.log(a);
+const arr = [1];
+arr.push(arr);
+console.log(arr);
+return "ok";
+-- tools.json --
+{}

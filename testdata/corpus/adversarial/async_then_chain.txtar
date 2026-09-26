@@ -1,0 +1,19 @@
+Using .then on a tool call.
+-- script.js --
+const names = await mcp.crm.list({}).then(r => r.items.map(i => i.name));
+return names;
+-- tools.json --
+{
+  "crm.list": {
+    "items": [
+      {
+        "name": "a"
+      },
+      {
+        "name": "b"
+      }
+    ]
+  }
+}
+-- divergence --
+Async dialect: results are plain values; .then is not available.

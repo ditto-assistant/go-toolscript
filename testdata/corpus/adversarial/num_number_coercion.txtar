@@ -1,0 +1,6 @@
+Number() of string forms: hex, octal, binary, whitespace, exponent, empty.
+-- script.js --
+const inputs = ["0x1f", "0X1F", "0o17", "0b101", " 12 ", "1e3", "", "  ", "12px", "-0x10", "+5", ".5", "5.", "1_000", "Infinity", "-Infinity", "infinity", "\t\n42\n", "0x", "00012", "1e1000", null, true, false, undefined, [], [7], [1,2], {}];
+return inputs.map(x => String(Number(x)));
+-- tools.json --
+{}

@@ -8,8 +8,11 @@ import (
 	"math"
 	"reflect"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
+
+	"golang.org/x/text/collate"
 )
 
 // Undefined represents an absent JS value. Marshal omits it in objects and
@@ -51,7 +54,7 @@ type ExecuteOptions struct {
 	MaxItems     int // default 1024 items per Promise.all/allSettled batch
 	Parallelism  int // default 1; maximum 64
 	// MaxArrayLength and MaxStringBytes bound values built by the script
-	// (defaults 1<<22 elements and 16 MiB). Exceeding them throws RangeError.
+	// (defaults 1<<24 elements and 16 MiB). Exceeding them throws RangeError.
 	MaxArrayLength int
 	MaxStringBytes int
 	MaxCallDepth   int // default 1000 nested function calls
@@ -90,6 +93,7 @@ type rt struct {
 	depth   int
 	pending int // steps not yet published to x.steps
 	frames  []*scope8
+	coll    *collate.Collator
 }
 
 // Throw is an uncaught JavaScript exception. Tool and host failures surface
@@ -149,8 +153,9 @@ func goError(err error) *Throw {
 }
 
 var (
-	errStepLimit = errors.New("step limit exceeded")
-	errAborted   = errors.New("tool execution aborted")
+	errStackOverflow = errors.New("RangeError: Maximum call stack size exceeded")
+	errStepLimit     = errors.New("step limit exceeded")
+	errAborted       = errors.New("tool execution aborted")
 )
 
 // Execute runs a validated program. It never retries a call. Parallel batches
@@ -177,7 +182,7 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (res Result,
 		opts.Parallelism = 64
 	}
 	if opts.MaxArrayLength <= 0 {
-		opts.MaxArrayLength = 1 << 22
+		opts.MaxArrayLength = 1 << 24
 	}
 	if opts.MaxStringBytes <= 0 {
 		opts.MaxStringBytes = 16 << 20
@@ -261,7 +266,7 @@ func (r *rt) invoke(f *function, args []any) (any, error) {
 		return nil, err
 	}
 	if r.depth >= r.x.maxDepth {
-		return nil, r.rangeError("Maximum call stack size exceeded")
+		return nil, errStackOverflow
 	}
 	r.depth++
 	v, err := r.invokeBody(f, args)
@@ -276,7 +281,7 @@ func (r *rt) invokeDirect(f *function, argFns []evalFn, caller *scope) (any, err
 		return nil, err
 	}
 	if r.depth >= r.x.maxDepth {
-		return nil, r.rangeError("Maximum call stack size exceeded")
+		return nil, errStackOverflow
 	}
 	code := f.code
 	var frame *scope
@@ -349,6 +354,13 @@ func (r *rt) invokeBody(f *function, args []any) (any, error) {
 			return nil, err
 		}
 	}
+	if code.bodyInit != nil {
+		body := newScope(s, code.bodyInit)
+		for _, c := range code.bodyCopies {
+			body.vars[c[1]] = s.vars[c[0]]
+		}
+		s = body
+	}
 	return r.runBody(f, s)
 }
 
@@ -386,15 +398,15 @@ func (r *rt) call(f any, args []any) (any, error) {
 }
 
 func (r *rt) notCallable(f any) error {
-	if isObjectValue(f) {
-		return r.typeError("Value is not callable")
-	}
 	s, _ := r.toString(f)
+	if isObjectValue(f) {
+		return r.typeError("Not a function: " + s)
+	}
 	return r.typeError("Value is not an object: " + s)
 }
 
 func (r *rt) callTool(name string, arg any) (any, error) {
-	exported, err := exportValue(arg)
+	exported, err := exportArgument(arg)
 	if err != nil {
 		return nil, r.typeError("invalid arguments for " + name + ": " + err.Error())
 	}
@@ -569,23 +581,55 @@ const (
 // objects become map[string]any (undefined properties keep the Undefined
 // sentinel), arrays []any, functions Undefined.
 func exportValue(v any) (any, error) {
-	nodes := 0
-	return export(v, 0, &nodes)
+	x := exporter{clamp: true}
+	return x.export(v, 0)
 }
 
-func export(v any, depth int, nodes *int) (any, error) {
-	*nodes++
-	if *nodes > maxExportNodes {
+// exportArgument exports a tool argument like Goja's Value.Export followed by
+// json.Marshal: no depth clamp, and functions, non-finite numbers and cycles
+// fail with encoding/json's messages (the host binding reports them).
+func exportArgument(v any) (any, error) {
+	x := exporter{strict: true, onStack: map[any]bool{}}
+	return x.export(v, 0)
+}
+
+// exportConsole exports a console argument; a function inside fails so the
+// caller falls back to String(value), as Goja's console does.
+func exportConsole(v any) (any, error) {
+	x := exporter{clamp: true, funcsFail: true}
+	return x.export(v, 0)
+}
+
+type exporter struct {
+	onStack   map[any]bool
+	nodes     int
+	clamp     bool // replace values at maxExportDepth with a marker
+	strict    bool // mirror json.Marshal failures
+	funcsFail bool
+}
+
+var errFuncExport = errors.New("json: unsupported type: func(goja.FunctionCall) goja.Value")
+
+func (x *exporter) export(v any, depth int) (any, error) {
+	x.nodes++
+	if x.nodes > maxExportNodes {
 		return nil, errors.New("JSON value limit exceeded")
+	}
+	if x.clamp && depth >= maxExportDepth {
+		return maxDepthExceeded, nil
 	}
 	switch t := v.(type) {
 	case *object:
-		if depth >= maxExportDepth {
-			return maxDepthExceeded, nil
+		if x.strict {
+			if x.onStack[t] {
+				return nil, errors.New("json: unsupported value: encountered a cycle via map[string]interface {}")
+			}
+			x.onStack[t] = true
+			defer delete(x.onStack, t)
 		}
 		out := make(map[string]any, len(t.props))
 		for k, p := range t.props {
-			e, err := export(p, depth+1, nodes)
+			e, err := x.export(p, depth+1)
 			if err != nil {
 				return nil, err
 			}
@@ -593,12 +637,16 @@ func export(v any, depth int, nodes *int) (any, error) {
 		}
 		return out, nil
 	case *array:
-		if depth >= maxExportDepth {
-			return maxDepthExceeded, nil
+		if x.strict {
+			if x.onStack[t] {
+				return nil, errors.New("json: unsupported value: encountered a cycle via []interface {}")
+			}
+			x.onStack[t] = true
+			defer delete(x.onStack, t)
 		}
 		out := make([]any, len(t.items))
 		for i, p := range t.items {
-			e, err := export(p, depth+1, nodes)
+			e, err := x.export(p, depth+1)
 			if err != nil {
 				return nil, err
 			}
@@ -609,11 +657,22 @@ func export(v any, depth int, nodes *int) (any, error) {
 		if !t.dirty {
 			return t.export, nil
 		}
-		return export(t.view, depth, nodes)
-	case *function, tdzMarker:
+		return x.export(t.view, depth)
+	case *function:
+		if x.strict || x.funcsFail {
+			return nil, errFuncExport
+		}
 		return Undefined, nil
+	case tdzMarker:
+		return Undefined, nil
+	case holeMarker:
+		return nil, nil // Goja exports a missing element as nil
 	case *regexpValue:
 		return map[string]any{}, nil
+	case float64:
+		if x.strict && (math.IsNaN(t) || math.IsInf(t, 0)) {
+			return nil, fmt.Errorf("json: unsupported value: %s", strconv.FormatFloat(t, 'g', -1, 64))
+		}
 	}
 	return v, nil
 }
@@ -631,7 +690,7 @@ func Marshal(v any) ([]byte, error) {
 
 func jsonValue(v any, depth int, nodes *int, omitUndefined bool) (any, error) {
 	*nodes++
-	if *nodes > maxExportNodes || depth > 64 {
+	if *nodes > maxExportNodes || depth > 10000 {
 		return nil, errors.New("JSON value limit exceeded")
 	}
 	switch v := v.(type) {

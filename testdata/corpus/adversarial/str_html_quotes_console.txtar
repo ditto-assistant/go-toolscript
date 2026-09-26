@@ -1,0 +1,9 @@
+console.log of strings and objects containing quotes, HTML and unicode.
+-- script.js --
+const s = `He said "hi" <b>&</b> 'ok'   é 😀`;
+console.log(s);
+console.log({s});
+console.log([s, "\t\n"]);
+return {s};
+-- tools.json --
+{}

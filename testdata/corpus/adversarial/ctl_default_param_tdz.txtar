@@ -1,0 +1,6 @@
+Later parameters are in TDZ for earlier defaults.
+-- script.js --
+function f(a = b, b = 1) { return [a, b]; }
+try { return f(); } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}

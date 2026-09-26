@@ -1,0 +1,6 @@
+Default sort on mixed types: booleans, objects, arrays, numbers.
+-- script.js --
+const xs = [true, {a: 1}, [2, 1], 10, "10", false, [1], "[object Object]", -5, "-4"];
+return xs.sort().map(x => JSON.stringify(x));
+-- tools.json --
+{}

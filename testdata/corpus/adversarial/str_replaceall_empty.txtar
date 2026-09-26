@@ -1,0 +1,5 @@
+replaceAll and replace with an empty pattern.
+-- script.js --
+return ["abc".replaceAll("", "-"), "abc".replace("", "-"), "".replaceAll("", "x"), "aaa".replaceAll("aa", "b"), "aaaa".replaceAll("aa", "$&!")];
+-- tools.json --
+{}

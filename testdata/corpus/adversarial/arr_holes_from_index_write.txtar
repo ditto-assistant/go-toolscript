@@ -1,0 +1,10 @@
+Writing past the end creates holes that iteration methods skip.
+-- script.js --
+const a = [1];
+a[3] = 4;
+let visits = 0;
+a.forEach(() => visits++);
+const mapped = a.map(x => typeof x);
+return {visits, filtered: a.filter(() => true).length, keys: Object.keys(a), in2: 2 in a, idx: a.indexOf(undefined), incl: a.includes(undefined), mapped, some: a.some(x => x === undefined)};
+-- tools.json --
+{}

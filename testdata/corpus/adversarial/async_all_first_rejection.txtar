@@ -1,0 +1,22 @@
+Promise.all rejects with the first failure; console lines after are observable.
+-- script.js --
+try {
+  await Promise.all([1, 2, 3].map(async x => {
+    const r = await mcp.a.maybe({x});
+    console.log("got", x);
+    return r;
+  }));
+} catch (e) { return ["caught", e.message]; }
+-- tools.json --
+{
+  "a.maybe": {
+    "$sequence": [
+      {
+        "v": 1
+      },
+      {
+        "$error": "second failed"
+      }
+    ]
+  }
+}

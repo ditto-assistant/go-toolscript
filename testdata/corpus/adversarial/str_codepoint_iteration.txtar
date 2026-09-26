@@ -1,0 +1,9 @@
+for-of and spread iterate by code point, not code unit.
+-- script.js --
+const s = "a😀b👍🏽";
+const cps = [...s];
+const seen = [];
+for (const ch of s) seen.push(ch.length);
+return [cps.length, seen, Array.from(s).length, s.codePointAt(1), s.codePointAt(2)];
+-- tools.json --
+{}

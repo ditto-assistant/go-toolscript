@@ -1,0 +1,11 @@
+Closures in for-let loops capture per-iteration bindings, including updates in body.
+-- script.js --
+const fs = [];
+for (let i = 0; i < 3; i++) { fs.push(() => i); i += 0; }
+const gs = [];
+for (let i = 0, f = () => i; i < 2; i++) gs.push(f);
+const hs = [];
+for (let i = 0; i < 4; i++) { if (i === 1) { i++; } hs.push(() => i); }
+return [fs.map(f => f()), gs.map(g => g()), hs.map(h => h())];
+-- tools.json --
+{}

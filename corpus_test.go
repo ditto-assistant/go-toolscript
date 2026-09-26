@@ -236,7 +236,8 @@ func runNative(c *corpusCase, p *Program) outcome {
 	var out outcome
 	fx := &fixture{c: c, calls: map[string]int{}}
 	res, err := p.Execute(context.Background(), ExecuteOptions{
-		Console: func(_, line string) { out.console = append(out.console, line) },
+		MaxCallDepth: 2000, // Ditto's runner and the oracle both allow 2000
+		Console:      func(_, line string) { out.console = append(out.console, line) },
 		Dispatch: func(_ context.Context, name string, arg any) (any, error) {
 			b, err := MarshalExport(arg)
 			if err != nil {
@@ -425,6 +426,11 @@ func runGoja(c *corpusCase) outcome {
 	}
 	if err != nil {
 		var ex *goja.Exception
+		var overflow *goja.StackOverflowError
+		if errors.As(err, &overflow) {
+			out.err = "RangeError: Maximum call stack size exceeded"
+			return out
+		}
 		if errors.As(err, &ex) && ex.Value() != nil {
 			out.err = gojaErrorText(ex.Value())
 		} else {

@@ -1,0 +1,10 @@
+finally with return overrides the try's return and throw.
+-- script.js --
+function a() { try { return "try"; } finally { return "finally"; } }
+function b() { try { throw new Error("x"); } finally { return "swallowed"; } }
+function c() { let v = 1; try { return v; } finally { v = 2; } }
+function d() { for (const i of [1, 2]) { try { return i; } finally { if (i === 1) continue; } } return "loop-end"; }
+function e() { try { return "t"; } finally { } }
+return [a(), b(), c(), d(), e()];
+-- tools.json --
+{}

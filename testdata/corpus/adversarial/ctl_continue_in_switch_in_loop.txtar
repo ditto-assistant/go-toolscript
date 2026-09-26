@@ -1,0 +1,13 @@
+continue inside switch inside a loop continues the loop.
+-- script.js --
+const out = [];
+for (const x of [1, 2, 3, 4]) {
+  switch (x % 2) {
+    case 0: continue;
+    default: out.push(x);
+  }
+  out.push("after" + x);
+}
+return out;
+-- tools.json --
+{}

@@ -1,0 +1,6 @@
+JSON.stringify gap strings with multibyte characters are cut at 10 UTF-16 units.
+-- script.js --
+const o = {a: 1};
+return [JSON.stringify(o, null, "ééééééééééé"), JSON.stringify(o, null, "→→→→→→→→→→→→")];
+-- tools.json --
+{}

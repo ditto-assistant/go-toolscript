@@ -1,0 +1,9 @@
+map over an array that shrinks leaves holes, not nulls.
+-- script.js --
+const a = [1, 2, 3, 4];
+const m = a.map((x, i) => { if (i === 0) { a.pop(); a.pop(); } return x; });
+const types = [];
+for (let i = 0; i < m.length; i++) types.push(typeof m[i]);
+return {len: m.length, types, isNull: m[3] === null, isUndef: m[3] === undefined};
+-- tools.json --
+{}

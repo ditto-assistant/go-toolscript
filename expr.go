@@ -26,16 +26,6 @@ func unsafeKey(k string) bool {
 	return false
 }
 
-// objectProtoKey names inherited Object.prototype members; reading them as
-// values (rather than calling the supported ones) declines compilation.
-func objectProtoKey(k string) bool {
-	switch k {
-	case "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable":
-		return true
-	}
-	return false
-}
-
 func propertyKey(n ast.Expression) (string, bool) {
 	switch n := n.(type) {
 	case *ast.Identifier:
@@ -216,7 +206,7 @@ func (c *compiler) functionExpression(n *ast.FunctionLiteral) (evalFn, error) {
 	// A named function expression sees its own name in an enclosing scope.
 	name := n.Name.Name.String()
 	sc := c.pushScope(false)
-	v, err := c.declare(sc, name, kindVar)
+	v, err := c.declare(sc, name, kindFuncName)
 	if err != nil {
 		c.popScope()
 		return nil, err
@@ -529,7 +519,9 @@ func (r *rt) copyProps(dst *object, src any) error {
 		}
 	case *array:
 		for i, v := range t.items {
-			dst.set(strconv.Itoa(i), v)
+			if !isHole(v) {
+				dst.set(strconv.Itoa(i), v)
+			}
 		}
 		if t.props != nil {
 			for _, k := range t.props.ownKeys() {
@@ -627,14 +619,6 @@ func (c *compiler) member(node ast.Expression) (evalFn, error) {
 			}
 		}
 	}
-	if d, ok := node.(*ast.DotExpression); ok && objectProtoKey(d.Identifier.Name.String()) {
-		return nil, unsupported(node)
-	}
-	if b, ok := node.(*ast.BracketExpression); ok {
-		if k, ok := staticKey(b.Member); ok && objectProtoKey(k) {
-			return nil, unsupported(node)
-		}
-	}
 	obj, key, err := c.memberParts(node)
 	if err != nil {
 		return nil, err
@@ -678,21 +662,23 @@ func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
 }
 
 func (r *rt) makeError(name string, args []any) (any, error) {
-	msg := ""
-	if len(args) > 0 {
-		if _, ok := args[0].(undefined); !ok {
+	e := newError(name, "")
+	// Goja keeps a non-string message as given (the spec would ToString it).
+	e.errMsg = Undefined
+	if len(args) > 0 && !isUndefined(args[0]) {
+		e.errMsg = args[0]
+		if isObjectValue(args[0]) {
 			s, err := r.toString(args[0])
 			if err != nil {
 				return nil, err
 			}
-			msg = s
+			e.errMsg = s
 		}
 	}
-	e := newError(name, msg)
 	if len(args) > 1 {
 		if o, ok := args[1].(*object); ok {
 			if cause, ok := o.props["cause"]; ok {
-				e.set("cause", cause)
+				e.errCause = cause
 			}
 		}
 	}
@@ -711,10 +697,9 @@ func (c *compiler) unary(n *ast.UnaryExpression) (evalFn, error) {
 				case name == "Promise":
 					// Hosts differ on whether a Promise global exists.
 					return nil, fmt.Errorf("typeof Promise")
+				case name == "String" || name == "Number" || name == "Object" || name == "Array" || name == "Boolean" || name == "RegExp":
+					return constant("function"), nil
 				case name == "mcp" || name == "tools" || isGlobalNamespace(name):
-					if name == "String" || name == "Number" {
-						return constant("function"), nil
-					}
 					return constant("object"), nil
 				case isErrorConstructor(name) || c.opts.HostFunctions != nil && hasHost(c.opts.HostFunctions, name):
 					return constant("function"), nil

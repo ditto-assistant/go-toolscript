@@ -17,8 +17,9 @@ type object struct {
 	props    map[string]any
 	keys     []string
 	errName  string // non-empty for Error objects
-	errMsg   string
-	indexKey bool // at least one key is a canonical array index
+	errMsg   any    // own non-enumerable message (Undefined when absent)
+	errCause any    // own non-enumerable cause (nil Go value when absent)
+	indexKey bool   // at least one key is a canonical array index
 }
 
 type array struct {
@@ -45,6 +46,39 @@ type hostObject struct {
 
 type tdzMarker struct{}
 
+// holeMarker is an array element that does not exist (a sparse slot). Every
+// read converts it to undefined; iteration methods that skip holes skip it.
+type holeMarker struct{}
+
+var hole any = holeMarker{}
+
+func unhole(v any) any {
+	if _, ok := v.(holeMarker); ok {
+		return Undefined
+	}
+	return v
+}
+
+func isHole(v any) bool {
+	_, ok := v.(holeMarker)
+	return ok
+}
+
+// denseItems returns the items with holes read as undefined.
+func denseItems(items []any) []any {
+	for i, v := range items {
+		if isHole(v) {
+			out := make([]any, len(items))
+			for j, w := range items {
+				out[j] = unhole(w)
+			}
+			_ = i
+			return out
+		}
+	}
+	return items
+}
+
 // tdz marks a lexical binding that has not been initialized yet.
 var tdz any = tdzMarker{}
 
@@ -63,23 +97,48 @@ func (o *object) get(key string) (any, bool) {
 	if !ok && o.errName != "" {
 		switch key {
 		case "message":
+			if isUndefined(o.errMsg) {
+				return "", true // Error.prototype.message
+			}
 			return o.errMsg, true
 		case "name":
 			return o.errName, true
 		case "stack":
-			return o.errName + ": " + o.errMsg, true
+			return errorToString(o), true
+		case "cause":
+			if o.errCause != nil {
+				return o.errCause, true
+			}
 		}
 	}
 	return v, ok
 }
 
+// hasOwnHidden reports an Error's own non-enumerable properties.
+func (o *object) hasOwnHidden(key string) bool {
+	if o.errName == "" {
+		return false
+	}
+	switch key {
+	case "stack":
+		return true
+	case "message":
+		return !isUndefined(o.errMsg)
+	case "cause":
+		return o.errCause != nil
+	}
+	return false
+}
+
 func (o *object) set(key string, v any) {
-	if o.errName != "" && key == "message" {
+	if o.errName != "" && (key == "message" || key == "cause") {
 		if _, own := o.props[key]; !own {
-			if s, ok := v.(string); ok {
-				o.errMsg = s
-				return
+			if key == "message" {
+				o.errMsg = v
+			} else {
+				o.errCause = v
 			}
+			return
 		}
 	}
 	if _, ok := o.props[key]; !ok {
@@ -149,16 +208,16 @@ func arrayIndex(k string) int {
 }
 
 func isNullish(v any) bool {
-	if v == nil {
+	switch v.(type) {
+	case nil, undefined, holeMarker:
 		return true
 	}
-	_, ok := v.(undefined)
-	return ok
+	return false
 }
 
 func typeOf(v any) string {
 	switch v.(type) {
-	case undefined, tdzMarker:
+	case undefined, tdzMarker, holeMarker:
 		return "undefined"
 	case nil:
 		return "object"
@@ -190,13 +249,55 @@ func toBoolean(v any) bool {
 
 // toPrimitive applies OrdinaryToPrimitive for the value shapes we model.
 // Objects have no user-defined valueOf/toString, so both hints yield strings.
-func (r *rt) toPrimitive(v any) (any, error) {
-	switch v := v.(type) {
-	case *object, *array, *function, *hostObject, *regexpValue:
+func (r *rt) toPrimitive(v any) (any, error) { return r.toPrimitiveHint(v, "default") }
+
+// toPrimitiveHint implements OrdinaryToPrimitive, honoring script-defined
+// own toString/valueOf methods on plain objects.
+func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
+	switch t := v.(type) {
+	case *object:
+		if userConversion(t) {
+			order := [2]string{"valueOf", "toString"}
+			if hint == "string" {
+				order = [2]string{"toString", "valueOf"}
+			}
+			for _, m := range order {
+				f, own := t.props[m].(*function)
+				if !own {
+					if m == "toString" {
+						return r.defaultObjectString(t), nil
+					}
+					continue // Object.prototype.valueOf returns the object
+				}
+				res, err := r.call(f, nil)
+				if err != nil {
+					return nil, err
+				}
+				if !isObjectValue(res) {
+					return res, nil
+				}
+			}
+			return nil, r.typeError("Cannot convert object to primitive value")
+		}
+		return r.defaultObjectString(t), nil
+	case *array, *function, *hostObject, *regexpValue:
 		s, err := r.toString(v)
 		return s, err
 	}
 	return v, nil
+}
+
+func userConversion(o *object) bool {
+	_, s := o.props["toString"].(*function)
+	_, v := o.props["valueOf"].(*function)
+	return s || v
+}
+
+func (r *rt) defaultObjectString(o *object) string {
+	if o.errName != "" {
+		return errorToString(o)
+	}
+	return "[object Object]"
 }
 
 func (r *rt) toString(v any) (string, error) {
@@ -217,10 +318,14 @@ func (r *rt) toString(v any) (string, error) {
 	case *array:
 		return r.join(v, ",")
 	case *object:
-		if v.errName != "" {
-			return errorToString(v), nil
+		if userConversion(v) {
+			p, err := r.toPrimitiveHint(v, "string")
+			if err != nil {
+				return "", err
+			}
+			return r.toString(p)
 		}
-		return "[object Object]", nil
+		return r.defaultObjectString(v), nil
 	case *hostObject:
 		return "[object Object]", nil
 	case *regexpValue:
@@ -234,11 +339,18 @@ func (r *rt) toString(v any) (string, error) {
 	return "", errInternal
 }
 
+// errorToString implements Error.prototype.toString for our error objects.
 func errorToString(o *object) string {
+	r := &rt{x: &execution{maxString: 1 << 20}}
 	name, _ := o.get("name")
 	msg, _ := o.get("message")
-	ns, _ := name.(string)
-	ms, _ := msg.(string)
+	ns, ms := "Error", ""
+	if !isUndefined(name) {
+		ns, _ = r.toString(name)
+	}
+	if !isUndefined(msg) {
+		ms, _ = r.toString(msg)
+	}
 	if ns == "" {
 		return ms
 	}
@@ -295,7 +407,7 @@ func (r *rt) toNumber(v any) (float64, error) {
 	case string:
 		return stringToNumber(v), nil
 	}
-	p, err := r.toPrimitive(v)
+	p, err := r.toPrimitiveHint(v, "number")
 	if err != nil {
 		return 0, err
 	}
@@ -458,6 +570,13 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		if p, ok := v.get(key); ok {
 			return p, nil
 		}
+		ctor := "Object"
+		if v.errName != "" {
+			ctor = v.errName
+		}
+		if p, ok, err := inherited(key, ctor); ok {
+			return p, err
+		}
 		return Undefined, nil
 	case *array:
 		if key == "length" {
@@ -465,7 +584,7 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		}
 		if i := arrayIndex(key); i >= 0 {
 			if i < len(v.items) {
-				return v.items[i], nil
+				return unhole(v.items[i]), nil
 			}
 			return Undefined, nil
 		}
@@ -476,6 +595,12 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		}
 		if arrayMethods[key] != nil {
 			return boundMethod(v, key), nil
+		}
+		if declinedArrayMembers[key] {
+			return declinedMethod(key), nil
+		}
+		if p, ok, err := inherited(key, "Array"); ok {
+			return p, err
 		}
 		return Undefined, nil
 	case *regexpValue:
@@ -500,6 +625,12 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		if stringMethods[key] != nil {
 			return boundMethod(v, key), nil
 		}
+		if declinedStringMembers[key] {
+			return declinedMethod(key), nil
+		}
+		if p, ok, err := inherited(key, "String"); ok {
+			return p, err
+		}
 		return Undefined, nil
 	case *hostObject:
 		return r.getProp(v.view, key)
@@ -507,10 +638,19 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		if numberMethods[key] != nil {
 			return boundMethod(v, key), nil
 		}
+		if declinedNumberMembers[key] {
+			return declinedMethod(key), nil
+		}
+		if p, ok, err := inherited(key, "Number"); ok {
+			return p, err
+		}
 		return Undefined, nil
 	case bool:
 		if key == "toString" || key == "valueOf" {
 			return boundMethod(v, key), nil
+		}
+		if p, ok, err := inherited(key, "Boolean"); ok {
+			return p, err
 		}
 		return Undefined, nil
 	case *function:
@@ -548,6 +688,9 @@ func boundMethod(recv any, key string) *function {
 func (r *rt) setProp(target any, key string, v any) error {
 	switch t := target.(type) {
 	case *object:
+		if key == "__proto__" {
+			return errRuntimeUnsupported("__proto__ assignment")
+		}
 		t.set(key, v)
 		return nil
 	case *array:
@@ -585,7 +728,7 @@ func (r *rt) setProp(target any, key string, v any) error {
 		t.view.set(key, v)
 		return nil
 	case nil, undefined:
-		return r.typeError("Cannot set property '" + key + "' of undefined")
+		return r.typeError("Cannot convert undefined or null to object")
 	case *function:
 		if t.native != nil || key == "name" || key == "length" {
 			return nil // built-ins and read-only function properties ignore writes
@@ -604,7 +747,7 @@ func (r *rt) resize(a *array, n int) error {
 		return r.rangeError("Invalid array length")
 	}
 	for len(a.items) < n {
-		a.items = append(a.items, Undefined)
+		a.items = append(a.items, hole)
 	}
 	a.items = a.items[:n]
 	return nil
@@ -622,7 +765,7 @@ func (r *rt) deleteProp(target any, key string) (bool, error) {
 	case *array:
 		if i := arrayIndex(key); i >= 0 {
 			if i < len(t.items) {
-				t.items[i] = Undefined
+				t.items[i] = hole
 			}
 			return true, nil
 		}
@@ -641,12 +784,12 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 	switch t := target.(type) {
 	case *object:
 		_, ok := t.get(key)
-		return ok || (t.errName != "" && key == "toString"), nil
+		return ok || objectProtoMember(key), nil
 	case *hostObject:
 		_, ok := t.view.get(key)
-		return ok, nil
+		return ok || objectProtoMember(key), nil
 	case *array:
-		if key == "length" || arrayMethods[key] != nil {
+		if key == "length" || arrayMethods[key] != nil || declinedArrayMembers[key] || objectProtoMember(key) {
 			return true, nil
 		}
 		if t.props != nil {
@@ -655,14 +798,24 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 			}
 		}
 		i := arrayIndex(key)
-		return i >= 0 && i < len(t.items), nil
+		return i >= 0 && i < len(t.items) && !isHole(t.items[i]), nil
 	case *regexpValue:
 		_, ok := t.get(key)
 		return ok, nil
 	case *function:
-		return key == "name" || key == "length", nil
+		if t.props != nil {
+			if _, ok := t.props.props[key]; ok {
+				return true, nil
+			}
+		}
+		switch key {
+		case "name", "length", "call", "apply", "bind":
+			return true, nil
+		}
+		return objectProtoMember(key), nil
 	}
-	return false, r.typeError("Cannot use 'in' operator to search for '" + key + "' in non-object")
+	s, _ := r.toString(target)
+	return false, r.typeError("Value is not an object: " + s)
 }
 
 func ownEnumerableKeys(v any) []string {
@@ -671,10 +824,17 @@ func ownEnumerableKeys(v any) []string {
 		return v.ownKeys()
 	case *hostObject:
 		return v.view.ownKeys()
+	case *function:
+		if v.props != nil {
+			return v.props.ownKeys()
+		}
+		return nil
 	case *array:
-		keys := make([]string, len(v.items))
-		for i := range v.items {
-			keys[i] = strconv.Itoa(i)
+		keys := make([]string, 0, len(v.items))
+		for i, item := range v.items {
+			if !isHole(item) {
+				keys = append(keys, strconv.Itoa(i))
+			}
 		}
 		if v.props != nil {
 			keys = append(keys, v.props.ownKeys()...)
@@ -689,4 +849,72 @@ func ownEnumerableKeys(v any) []string {
 		return keys
 	}
 	return nil
+}
+
+// objectProtoMember names Object.prototype members every object inherits.
+func objectProtoMember(k string) bool {
+	switch k {
+	case "constructor", "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "__proto__":
+		return true
+	}
+	return false
+}
+
+// protoFunctions are the shared, immutable function values read through
+// inherited prototype members (o[k] where k is "toString", "constructor"...).
+var protoFunctions = map[string]*function{}
+
+func protoFunction(key, ctor string) *function {
+	name := key
+	if key == "constructor" {
+		name = ctor
+	}
+	id := key + "/" + name
+	if f, ok := protoFunctions[id]; ok {
+		return f
+	}
+	return &function{name: name, native: func(r *rt, _ any, _ []any) (any, error) {
+		return nil, errRuntimeUnsupported("calling an inherited " + key + " as a value")
+	}}
+}
+
+func init() {
+	for _, ctor := range []string{"Object", "Array", "String", "Number", "Boolean", "Function", "Error", "RegExp"} {
+		for _, key := range []string{"constructor", "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+			name := key
+			if key == "constructor" {
+				name = ctor
+			}
+			protoFunctions[key+"/"+name] = &function{name: name, native: func(r *rt, this any, args []any) (any, error) {
+				return nil, errRuntimeUnsupported("calling an inherited " + key + " as a value")
+			}}
+		}
+	}
+}
+
+// inherited returns a prototype member for a missing own key, if any.
+func inherited(key, ctor string) (any, bool, error) {
+	if key == "__proto__" {
+		// The prototype object itself is not modelled; a fresh empty object
+		// answers typeof/keys/property reads the way Object.prototype would.
+		return newObject(0), true, nil
+	}
+	if objectProtoMember(key) {
+		return protoFunction(key, ctor), true, nil
+	}
+	return nil, false, nil
+}
+
+// Prototype members Goja has but the engine does not implement: readable as
+// function values (typeof, feature checks); calling them is unsupported.
+var (
+	declinedArrayMembers  = map[string]bool{"copyWithin": true, "entries": true, "keys": true, "values": true}
+	declinedStringMembers = map[string]bool{"matchAll": true, "normalize": true}
+	declinedNumberMembers = map[string]bool{"toExponential": true}
+)
+
+func declinedMethod(key string) *function {
+	return &function{name: key, native: func(*rt, any, []any) (any, error) {
+		return nil, errRuntimeUnsupported("method " + key)
+	}}
 }

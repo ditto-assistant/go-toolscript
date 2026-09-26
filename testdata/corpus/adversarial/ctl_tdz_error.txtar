@@ -1,0 +1,5 @@
+Reading a let before initialization throws ReferenceError.
+-- script.js --
+try { const v = z + 1; let z = 2; return v; } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}

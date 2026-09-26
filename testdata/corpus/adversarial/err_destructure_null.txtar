@@ -1,0 +1,12 @@
+Destructuring null/undefined error messages.
+-- script.js --
+const out = [];
+try { const {a} = null; } catch (e) { out.push(e.name + ": " + e.message); }
+try { const {b} = undefined; } catch (e) { out.push(e.message); }
+try { const [c] = null; } catch (e) { out.push(e.message); }
+try { const [d] = {}; } catch (e) { out.push(e.message); }
+try { const [f] = 5; } catch (e) { out.push(e.message); }
+try { (({x}) => x)(); } catch (e) { out.push(e.message); }
+return out;
+-- tools.json --
+{}

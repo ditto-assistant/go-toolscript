@@ -73,9 +73,9 @@ func (c *compiler) arguments(list []ast.Expression) (argsFn, error) {
 // Methods that exist on Goja's prototypes but are outside the subset. Calls
 // to these names decline compilation instead of diverging at run time.
 var declinedMethods = map[string]bool{
-	"copyWithin": true, "entries": true, "keys": true, "values": true, "toLocaleString": true,
-	"localeCompare": true, "matchAll": true, "normalize": true,
-	"toExponential": true, "toPrecision": true, "isPrototypeOf": true, "propertyIsEnumerable": true,
+	"copyWithin": true, "entries": true, "keys": true, "values": true,
+	"matchAll": true, "normalize": true,
+	"toExponential": true, "isPrototypeOf": true, "propertyIsEnumerable": true,
 	"apply": true, "bind": true, "call": true,
 }
 
@@ -463,7 +463,7 @@ func (c *compiler) batch(kind string, n *ast.CallExpression) (evalFn, error) {
 						return nil, err
 					}
 					f := fv.(*function)
-					items := append([]any(nil), a.items...)
+					items := append([]any(nil), denseItems(a.items)...)
 					return r.runBatch(len(items), settled, isolated, func(w *rt, i int) (any, error) {
 						return w.call(f, []any{items[i], float64(i), a})
 					})

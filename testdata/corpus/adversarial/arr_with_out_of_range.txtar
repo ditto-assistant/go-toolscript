@@ -1,0 +1,5 @@
+Array.prototype.with with an out-of-range index throws RangeError.
+-- script.js --
+try { [1, 2].with(5, 0); } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}

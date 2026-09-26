@@ -1,0 +1,15 @@
+switch with default in the middle and fallthrough.
+-- script.js --
+function s(v) {
+  const log = [];
+  switch (v) {
+    case 1: log.push("one");
+    default: log.push("def");
+    case 2: log.push("two"); break;
+    case 3: log.push("three");
+  }
+  return log.join(",");
+}
+return [s(1), s(2), s(3), s(4), s("1")];
+-- tools.json --
+{}

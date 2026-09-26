@@ -1,0 +1,11 @@
+Array methods given a non-callable callback.
+-- script.js --
+const out = [];
+for (const cb of [5, "s", null, undefined, {}]) {
+  try { [1].map(cb); } catch (e) { out.push(e.name + ": " + e.message); }
+}
+try { [1].forEach(); } catch (e) { out.push(e.message); }
+try { [1].sort(5); } catch (e) { out.push(e.message); }
+return out;
+-- tools.json --
+{}

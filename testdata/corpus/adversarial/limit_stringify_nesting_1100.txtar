@@ -1,0 +1,7 @@
+JSON.stringify of arrays nested 1100 levels.
+-- script.js --
+let a = [];
+for (let i = 0; i < 1100; i++) a = [a];
+try { return JSON.stringify(a).length; } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}

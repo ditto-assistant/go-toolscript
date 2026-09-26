@@ -1,0 +1,7 @@
+Tool called with a string, number, null, and no argument.
+-- script.js --
+return [mcp.search.run("plain"), mcp.search.run(5), mcp.search.run(null), mcp.search.run(), mcp.search.run(undefined), mcp.search.run(true)];
+-- tools.json --
+{
+  "search.run": null
+}

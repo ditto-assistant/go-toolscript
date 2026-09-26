@@ -1,0 +1,8 @@
+User toString used for default sort and computed keys.
+-- script.js --
+const a = {toString: () => "b"}, b = {toString: () => "a"};
+const sorted = [a, b].sort().map(x => x.toString());
+const o = {[a]: 1, [b]: 2};
+return [sorted, Object.keys(o)];
+-- tools.json --
+{}

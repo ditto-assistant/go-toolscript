@@ -1,0 +1,7 @@
+Object key order with integer-like keys.
+-- script.js --
+const o = {};
+for (const k of ["b", "10", "2", "a", "-1", "01", "1.5", "4294967295", "4294967294", "0"]) o[k] = k;
+return [Object.keys(o), JSON.stringify(o)];
+-- tools.json --
+{}

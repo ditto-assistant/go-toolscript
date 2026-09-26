@@ -1,0 +1,9 @@
+var hoisting inside blocks, loops and try/catch.
+-- script.js --
+const before = typeof x;
+if (false) { var x = 1; }
+for (var j = 0; j < 2; j++) { var inner = j; }
+try { var t = 1; throw 0; } catch (e) { var c = 2; }
+return [before, x, j, inner, t, c, typeof y];
+-- tools.json --
+{}

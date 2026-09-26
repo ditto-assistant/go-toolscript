@@ -1,0 +1,6 @@
+Reading prototype methods outside the subset as values.
+-- script.js --
+const a = [1, 2], s = "x", n = 5;
+return [typeof a.entries, typeof a.keys, typeof a.values, typeof s.localeCompare, typeof s.normalize, typeof s.match, typeof n.toPrecision, typeof a.copyWithin];
+-- tools.json --
+{}

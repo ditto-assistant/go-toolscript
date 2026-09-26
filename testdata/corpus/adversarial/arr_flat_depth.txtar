@@ -1,0 +1,6 @@
+flat with depth 0, Infinity, negative and nested empties.
+-- script.js --
+const a = [1, [2, [3, [4, [5]]]], [], [[]]];
+return [a.flat(), a.flat(0), a.flat(Infinity), a.flat(-1), a.flat(2), a.flat("1"), [[1, 2], 3].flatMap(x => x), [1, 2].flatMap(x => [[x]])];
+-- tools.json --
+{}

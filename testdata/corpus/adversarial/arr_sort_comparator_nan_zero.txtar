@@ -1,0 +1,6 @@
+Comparator returning NaN, -0, strings and undefined.
+-- script.js --
+const xs = [3, 1, 2, 5, 4];
+return [[...xs].sort(() => NaN), [...xs].sort(() => -0), [...xs].sort((a, b) => String(a - b)), [...xs].sort(() => undefined), [...xs].sort((a, b) => b - a)];
+-- tools.json --
+{}

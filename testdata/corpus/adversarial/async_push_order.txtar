@@ -1,0 +1,15 @@
+Pushing to a shared array after await in parallel callbacks.
+-- script.js --
+const order = [];
+await Promise.all(["a", "b"].map(async k => {
+  order.push("before-" + k);
+  await mcp.kv.get({k});
+  order.push("after-" + k);
+}));
+return order;
+-- tools.json --
+{
+  "kv.get": null
+}
+-- divergence --
+Async dialect: batch items run sequentially without microtask interleaving.

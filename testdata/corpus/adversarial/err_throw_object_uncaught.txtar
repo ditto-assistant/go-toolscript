@@ -1,0 +1,11 @@
+Uncaught throw of a plain object and a string.
+-- script.js --
+const r = mcp.crm.get({});
+if (!r.ok) throw {code: 400, message: "bad request"};
+return r;
+-- tools.json --
+{
+  "crm.get": {
+    "ok": false
+  }
+}

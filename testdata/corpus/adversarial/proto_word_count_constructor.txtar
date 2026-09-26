@@ -1,0 +1,12 @@
+Word counting with an object map hits inherited Object.prototype names.
+-- script.js --
+const text = mcp.docs.get({}).text;
+const counts = {};
+for (const w of text.split(" ")) counts[w] = (counts[w] || 0) + 1;
+return counts;
+-- tools.json --
+{
+  "docs.get": {
+    "text": "the constructor of the toString is the valueOf"
+  }
+}

@@ -1,0 +1,12 @@
+Tool argument nested 70 levels deep.
+-- script.js --
+let o = {leaf: 1};
+for (let i = 0; i < 70; i++) o = {n: o};
+const r = mcp.store.put({o});
+return JSON.stringify(r).length;
+-- tools.json --
+{
+  "store.put": {
+    "ok": true
+  }
+}

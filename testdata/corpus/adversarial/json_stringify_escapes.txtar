@@ -1,0 +1,5 @@
+JSON.stringify escapes control characters, quotes and U+2028.
+-- script.js --
+return JSON.stringify({s: "a\"b\\c\n\t\b\f\r\u0001\u001f\u2028\u2029<>&é😀\u007f"});
+-- tools.json --
+{}

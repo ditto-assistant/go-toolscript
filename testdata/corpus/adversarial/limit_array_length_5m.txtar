@@ -1,0 +1,6 @@
+Setting an array length to five million.
+-- script.js --
+const a = [];
+try { a.length = 5000000; return a.length; } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}

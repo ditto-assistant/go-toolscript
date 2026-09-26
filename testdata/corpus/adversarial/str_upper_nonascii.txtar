@@ -1,0 +1,5 @@
+toUpperCase/toLowerCase of non-ASCII special cases.
+-- script.js --
+return ["straße".toUpperCase(), "İstanbul".toLowerCase(), "ΣΑΣ".toLowerCase(), "ﬁ".toUpperCase(), "ǅ".toLowerCase(), "ǆ".toUpperCase(), "Ωmega".toLowerCase(), "i̇".toUpperCase()].map(s => [s, s.length]);
+-- tools.json --
+{}

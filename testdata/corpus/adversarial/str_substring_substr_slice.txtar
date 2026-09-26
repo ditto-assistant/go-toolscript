@@ -1,0 +1,6 @@
+substring/substr/slice with swapped, negative and NaN args.
+-- script.js --
+const s = "abcdef";
+return [s.substring(4, 1), s.substring(-2, 2), s.substring(NaN, 3), s.substr(-3, 2), s.substr(2), s.substr(1, -1), s.slice(4, 1), s.slice(-3, -1), s.slice(NaN), s.slice(2, undefined), s.slice(Infinity), s.substring(1, Infinity)];
+-- tools.json --
+{}

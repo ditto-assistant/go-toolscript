@@ -1,0 +1,6 @@
+trim of unusual whitespace (NBSP, BOM, line separators, em space, NEL).
+-- script.js --
+const s = " ﻿  x  　 \u0085";
+return [s.trim().length, s.trimStart().length, s.trimEnd().length, "᠎ x".trim().length, "​ x".trim().length];
+-- tools.json --
+{}

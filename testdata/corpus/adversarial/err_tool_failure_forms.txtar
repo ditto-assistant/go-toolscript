@@ -1,0 +1,15 @@
+Tool failure ($error) seen through message, name, String, JSON and console.
+-- script.js --
+try {
+  mcp.crm.update({id: 1});
+} catch (e) {
+  console.log(e);
+  console.log(String(e));
+  return {name: e.name, message: e.message, s: String(e), j: JSON.stringify(e), keys: Object.keys(e), isErr: e instanceof Error, t: typeof e, v: typeof e.value};
+}
+-- tools.json --
+{
+  "crm.update": {
+    "$error": "permission denied: crm.write"
+  }
+}

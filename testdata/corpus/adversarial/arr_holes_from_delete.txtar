@@ -1,0 +1,7 @@
+delete arr[i] leaves a hole.
+-- script.js --
+const a = [1, 2, 3];
+const d = delete a[1];
+return {d, len: a.length, in1: 1 in a, keys: Object.keys(a), joined: a.join("-"), json: JSON.stringify(a), count: a.reduce(n => n + 1, 0)};
+-- tools.json --
+{}

@@ -1,0 +1,6 @@
+Membership test with in on a plain-object map for prototype names.
+-- script.js --
+const allowed = {read: true, write: true};
+return ["read", "toString", "constructor", "admin"].map(p => p in allowed);
+-- tools.json --
+{}

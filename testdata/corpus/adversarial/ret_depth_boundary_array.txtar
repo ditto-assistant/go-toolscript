@@ -1,0 +1,7 @@
+Return value arrays nested to the clamp boundary with primitive siblings.
+-- script.js --
+let a = ["x", ["y"]];
+for (let i = 0; i < 62; i++) a = [i, a];
+return JSON.stringify(a).length > 0 ? a : null;
+-- tools.json --
+{}

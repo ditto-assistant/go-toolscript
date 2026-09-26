@@ -1,0 +1,6 @@
+JSON.parse error messages for several bad inputs.
+-- script.js --
+const bad = ["", "{", "{'a':1}", "[1,]", "{\"a\":1,}", "nul", "01", "1 2", "\"\\x\"", "undefined", "{\"a\" 1}", "[1 2]", "NaN", "\"a\nb\""];
+return bad.map(s => { try { JSON.parse(s); return "ok:" + s; } catch (e) { return e.name + ": " + e.message; } });
+-- tools.json --
+{}

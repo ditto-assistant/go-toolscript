@@ -1,0 +1,12 @@
+Loose equality coercion table.
+-- script.js --
+const vals = [0, "", "0", false, null, undefined, NaN, [], [0], "1", 1, true, " 1 ", "true"];
+const rows = [];
+for (const a of vals) {
+  let row = "";
+  for (const b of vals) row += (a == b) ? "1" : "0";
+  rows.push(row);
+}
+return rows;
+-- tools.json --
+{}

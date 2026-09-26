@@ -1,0 +1,13 @@
+Extending length creates holes; for-of still visits them as undefined.
+-- script.js --
+const a = [1];
+a.length = 3;
+const forOf = [];
+for (const x of a) forOf.push(String(x));
+const forIn = [];
+for (const k in a) forIn.push(k);
+let n = 0;
+a.forEach(() => n++);
+return {forOf, forIn, n, entries: Object.entries(a).length};
+-- tools.json --
+{}

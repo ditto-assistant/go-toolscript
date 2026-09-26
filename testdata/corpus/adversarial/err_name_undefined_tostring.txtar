@@ -1,0 +1,11 @@
+Error toString with name set to undefined falls back to Error.
+-- script.js --
+const e = new Error("msg");
+e.name = undefined;
+const f = new TypeError("t");
+f.name = "";
+const g = new Error("g");
+g.message = undefined;
+return [String(e), String(f), String(g)];
+-- tools.json --
+{}

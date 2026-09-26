@@ -1,0 +1,7 @@
+Template literals with arrays, objects, null, nested templates.
+-- script.js --
+const arr = [1, [2, 3], null, undefined];
+const obj = {a: 1};
+return `${arr}|${obj}|${null}|${undefined}|${true}|${`in${1+1}`}|${[]}|${[[]]}|${[null]}`;
+-- tools.json --
+{}

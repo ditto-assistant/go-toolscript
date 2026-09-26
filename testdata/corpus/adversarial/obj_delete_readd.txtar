@@ -1,0 +1,10 @@
+delete then re-add moves the key to the end.
+-- script.js --
+const o = {a: 1, b: 2, c: 3};
+delete o.a;
+o.a = 4;
+delete o.zzz;
+const r = delete o.b;
+return {keys: Object.keys(o), r, json: JSON.stringify(o), has: "b" in o};
+-- tools.json --
+{}

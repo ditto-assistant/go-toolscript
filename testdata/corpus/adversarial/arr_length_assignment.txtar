@@ -1,0 +1,11 @@
+Assigning length truncates or extends with undefined.
+-- script.js --
+const a = [1, 2, 3, 4];
+a.length = 2;
+const b = [1];
+b.length = 3;
+const c = [1, 2];
+c[4] = 5;
+return {a, b, bl: b.length, c, cl: c.length, has: 3 in c, keys: Object.keys(c)};
+-- tools.json --
+{}

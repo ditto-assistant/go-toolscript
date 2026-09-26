@@ -1,0 +1,9 @@
+Integer-like keys in literals, spread and for-in.
+-- script.js --
+const o = {z: 1, 3: "c", 1: "a", y: 2, "2": "b"};
+const copy = {...o, 0: "zero"};
+const seen = [];
+for (const k in copy) seen.push(k);
+return {keys: Object.keys(o), seen, entries: Object.entries(copy).map(e => e.join("="))};
+-- tools.json --
+{}

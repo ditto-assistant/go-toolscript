@@ -1,0 +1,6 @@
+Default parameter referencing a body function declaration.
+-- script.js --
+function f(a = helper()) { function helper() { return "h"; } return a; }
+try { return f(); } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}

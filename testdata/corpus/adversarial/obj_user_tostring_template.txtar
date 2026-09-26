@@ -1,0 +1,8 @@
+Objects with their own toString method in templates, concatenation and String().
+-- script.js --
+const money = {amount: 5, toString() { return "$" + this_amount(); }};
+function this_amount() { return 5; }
+const tag = {toString: () => "TAG"};
+return [`${tag}`, "x" + tag, String(tag), [tag, tag].join("|"), tag + ""];
+-- tools.json --
+{}

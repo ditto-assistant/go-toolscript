@@ -1,0 +1,6 @@
+String replace with $&, $`, $', $$ and unknown $ sequences.
+-- script.js --
+const s = "price: 10 USD";
+return [s.replace("10", "[$&]"), s.replace("10", "<$`>"), s.replace("10", "<$'>"), s.replace("10", "$$"), s.replace("10", "$1"), s.replace("10", "$"), s.replace("10", "$<n>"), s.replace("USD", "$$$&$")];
+-- tools.json --
+{}

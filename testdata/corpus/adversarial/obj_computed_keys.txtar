@@ -1,0 +1,7 @@
+Computed keys coerced from numbers, objects, arrays and null.
+-- script.js --
+const k = {};
+const o = {[1 + 1]: "a", [null]: "b", [[1, 2]]: "c", [k]: "d", [undefined]: "e", [-0]: "f", [1e21]: "g", [0.1 + 0.2]: "h"};
+return Object.keys(o);
+-- tools.json --
+{}

@@ -1,0 +1,5 @@
+Relational comparison with mixed strings and numbers.
+-- script.js --
+return ["10" < "9", "10" < 9, 10 < "9", "a" < "b", "B" < "a", null < 1, undefined < 1, null >= 0, undefined >= 0, "" < 1, [2] > 1, "abc" < "abd", NaN <= NaN, "é" > "z", [1,2] < "1,3"];
+-- tools.json --
+{}

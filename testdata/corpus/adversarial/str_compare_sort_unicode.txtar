@@ -1,0 +1,6 @@
+Default sort and < on strings compare UTF-16 code units.
+-- script.js --
+const xs = ["é", "z", "😀", "￿", "Z", "a", "ä", "퟿"];
+return {sorted: [...xs].sort(), lt: "😀" < "￿"};
+-- tools.json --
+{}

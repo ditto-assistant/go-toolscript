@@ -1,0 +1,9 @@
+Dedupe via a seen-object skips names inherited from Object.prototype.
+-- script.js --
+const names = ["valueOf", "alice", "hasOwnProperty", "alice", "bob"];
+const seen = {};
+const out = [];
+for (const n of names) { if (!seen[n]) { seen[n] = true; out.push(n); } }
+return out;
+-- tools.json --
+{}

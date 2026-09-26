@@ -1,0 +1,12 @@
+console.log of arrow functions, named functions and builtins.
+-- script.js --
+const f = (a, b) => a + b;
+function named(x) { return x * 2; }
+console.log(f);
+console.log(named);
+console.log(String);
+console.log([f]);
+console.log({f});
+return typeof f;
+-- tools.json --
+{}

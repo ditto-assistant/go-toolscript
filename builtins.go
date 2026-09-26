@@ -9,9 +9,21 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/dop251/goja/ftoa"
 	"golang.org/x/text/cases"
+	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
+	"golang.org/x/text/unicode/norm"
 )
+
+// collator matches Goja's String.prototype.localeCompare (root collation).
+// Collators keep scratch buffers, so each interpreter goroutine owns one.
+func (r *rt) collator() *collate.Collator {
+	if r.coll == nil {
+		r.coll = collate.New(language.Und)
+	}
+	return r.coll
+}
 
 type (
 	arrayMethod  func(r *rt, a *array, args []any) (any, error)
@@ -68,7 +80,7 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 // objectMethod handles the supported Object.prototype methods.
 func (r *rt) objectMethod(o any, key string, args []any) (any, error) {
 	switch key {
-	case "toString":
+	case "toString", "toLocaleString":
 		return r.toString(o)
 	case "valueOf":
 		return o, nil
@@ -80,7 +92,7 @@ func (r *rt) objectMethod(o any, key string, args []any) (any, error) {
 		switch t := o.(type) {
 		case *object:
 			_, ok := t.props[k]
-			return ok || (t.errName != "" && k == "message" && t.errMsg != ""), nil
+			return ok || t.hasOwnHidden(k), nil
 		case *hostObject:
 			_, ok := t.view.props[k]
 			return ok, nil
@@ -141,9 +153,9 @@ func (r *rt) requireCallable(f any) error {
 	if _, ok := f.(*function); !ok {
 		s, _ := r.toString(f)
 		if isObjectValue(f) {
-			s = "object"
+			return r.typeError("Value is not callable: " + s)
 		}
-		return r.typeError(s + " is not a function")
+		return r.typeError("Value is not an object: " + s)
 	}
 	return nil
 }
@@ -187,7 +199,7 @@ func init() {
 			if n < 0 || n >= len(a.items) {
 				return Undefined, nil
 			}
-			return a.items[n], nil
+			return unhole(a.items[n]), nil
 		},
 		"concat": func(r *rt, a *array, args []any) (any, error) {
 			out := append([]any(nil), a.items...)
@@ -206,7 +218,7 @@ func init() {
 					return false, true
 				}
 				return nil, false
-			}, true)
+			}, true, true)
 		},
 		"some": func(r *rt, a *array, args []any) (any, error) {
 			return iterateArray(r, a, args, func(v, res any, i int) (any, bool) {
@@ -214,7 +226,7 @@ func init() {
 					return true, true
 				}
 				return nil, false
-			}, false)
+			}, false, true)
 		},
 		"find": func(r *rt, a *array, args []any) (any, error) {
 			return iterateArray(r, a, args, func(v, res any, i int) (any, bool) {
@@ -249,7 +261,7 @@ func init() {
 			}, float64(-1))
 		},
 		"forEach": func(r *rt, a *array, args []any) (any, error) {
-			return iterateArray(r, a, args, func(v, res any, i int) (any, bool) { return nil, false }, Undefined)
+			return iterateArray(r, a, args, func(v, res any, i int) (any, bool) { return nil, false }, Undefined, true)
 		},
 		"map": func(r *rt, a *array, args []any) (any, error) {
 			f := arg(args, 0)
@@ -258,7 +270,13 @@ func init() {
 			}
 			n := len(a.items)
 			out := make([]any, n)
+			for i := range out {
+				out[i] = hole
+			}
 			for i := 0; i < n && i < len(a.items); i++ {
+				if isHole(a.items[i]) {
+					continue
+				}
 				v, err := r.callback(f, a.items[i], float64(i), a)
 				if err != nil {
 					return nil, err
@@ -276,6 +294,9 @@ func init() {
 			n := len(a.items)
 			for i := 0; i < n && i < len(a.items); i++ {
 				v := a.items[i]
+				if isHole(v) {
+					continue
+				}
 				keep, err := r.callback(f, v, float64(i), a)
 				if err != nil {
 					return nil, err
@@ -309,6 +330,9 @@ func init() {
 			out := []any{}
 			n := len(a.items)
 			for i := 0; i < n && i < len(a.items); i++ {
+				if isHole(a.items[i]) {
+					continue
+				}
 				v, err := r.callback(f, a.items[i], float64(i), a)
 				if err != nil {
 					return nil, err
@@ -330,7 +354,7 @@ func init() {
 				return nil, err
 			}
 			for i := from; i < len(a.items); i++ {
-				if sameValueZero(a.items[i], arg(args, 0)) {
+				if sameValueZero(unhole(a.items[i]), arg(args, 0)) {
 					return true, nil
 				}
 			}
@@ -342,7 +366,7 @@ func init() {
 				return nil, err
 			}
 			for i := from; i < len(a.items); i++ {
-				if strictEquals(a.items[i], arg(args, 0)) {
+				if !isHole(a.items[i]) && strictEquals(a.items[i], arg(args, 0)) {
 					return float64(i), nil
 				}
 			}
@@ -362,7 +386,7 @@ func init() {
 				from = int(math.Min(f, float64(len(a.items)-1)))
 			}
 			for i := from; i >= 0; i-- {
-				if strictEquals(a.items[i], arg(args, 0)) {
+				if !isHole(a.items[i]) && strictEquals(a.items[i], arg(args, 0)) {
 					return float64(i), nil
 				}
 			}
@@ -380,13 +404,28 @@ func init() {
 			return r.join(a, sep)
 		},
 		"toString": func(r *rt, a *array, args []any) (any, error) { return r.join(a, ",") },
+		"toLocaleString": func(r *rt, a *array, args []any) (any, error) {
+			parts := make([]any, len(a.items))
+			for i, v := range a.items {
+				if isNullish(v) {
+					parts[i] = ""
+					continue
+				}
+				s, err := r.callMethod(v, "toLocaleString", nil)
+				if err != nil {
+					return nil, err
+				}
+				parts[i] = s
+			}
+			return r.join(&array{items: parts}, ",")
+		},
 		"pop": func(r *rt, a *array, args []any) (any, error) {
 			if len(a.items) == 0 {
 				return Undefined, nil
 			}
 			v := a.items[len(a.items)-1]
 			a.items = a.items[:len(a.items)-1]
-			return v, nil
+			return unhole(v), nil
 		},
 		"push": func(r *rt, a *array, args []any) (any, error) {
 			if len(a.items)+len(args) > r.x.maxItems {
@@ -401,7 +440,7 @@ func init() {
 			}
 			v := a.items[0]
 			a.items = append(a.items[:0:0], a.items[1:]...)
-			return v, nil
+			return unhole(v), nil
 		},
 		"unshift": func(r *rt, a *array, args []any) (any, error) {
 			if len(a.items)+len(args) > r.x.maxItems {
@@ -425,7 +464,7 @@ func init() {
 		"toReversed": func(r *rt, a *array, args []any) (any, error) {
 			out := make([]any, len(a.items))
 			for i, v := range a.items {
-				out[len(out)-1-i] = v
+				out[len(out)-1-i] = unhole(v)
 			}
 			return &array{items: out}, nil
 		},
@@ -451,7 +490,7 @@ func init() {
 			return a, nil
 		},
 		"toSorted": func(r *rt, a *array, args []any) (any, error) {
-			out := append([]any(nil), a.items...)
+			out := append([]any(nil), denseItems(a.items)...)
 			if err := r.sortItems(out, arg(args, 0)); err != nil {
 				return nil, err
 			}
@@ -465,7 +504,7 @@ func init() {
 			return removed, nil
 		},
 		"toSpliced": func(r *rt, a *array, args []any) (any, error) {
-			c := &array{items: append([]any(nil), a.items...)}
+			c := &array{items: append([]any(nil), denseItems(a.items)...)}
 			if _, err := r.splice(c, args, false); err != nil {
 				return nil, err
 			}
@@ -497,9 +536,9 @@ func init() {
 				i += len(a.items)
 			}
 			if i < 0 || i >= len(a.items) {
-				return nil, r.rangeError("Invalid index")
+				return nil, r.rangeError("Invalid index " + numberToString(toIntegerOrInfinity(f)))
 			}
-			out := append([]any(nil), a.items...)
+			out := append([]any(nil), denseItems(a.items)...)
 			out[i] = arg(args, 1)
 			return &array{items: out}, nil
 		},
@@ -790,6 +829,14 @@ func init() {
 			}
 			return &array{items: out}, nil
 		},
+		"localeCompare": func(r *rt, s string, args []any) (any, error) {
+			that, err := r.toString(arg(args, 0))
+			if err != nil {
+				return nil, err
+			}
+			return float64(r.collator().CompareString(norm.NFD.String(s), norm.NFD.String(that))), nil
+		},
+		"toLocaleString":    func(r *rt, s string, _ []any) (any, error) { return s, nil },
 		"toLowerCase":       func(r *rt, s string, _ []any) (any, error) { return toLowerJS(s), nil },
 		"toLocaleLowerCase": func(r *rt, s string, _ []any) (any, error) { return toLowerJS(s), nil },
 		"toUpperCase":       func(r *rt, s string, _ []any) (any, error) { return toUpperJS(s), nil },
@@ -834,6 +881,26 @@ func init() {
 			return s, nil
 		},
 		"valueOf": func(r *rt, f float64, _ []any) (any, error) { return f, nil },
+		// Goja formats numbers for every locale like toString.
+		"toLocaleString": func(r *rt, f float64, _ []any) (any, error) { return numberToString(f), nil },
+		"toPrecision": func(r *rt, f float64, args []any) (any, error) {
+			if isUndefined(arg(args, 0)) {
+				return numberToString(f), nil
+			}
+			p, err := r.toNumber(args[0])
+			if err != nil {
+				return nil, err
+			}
+			p = toIntegerOrInfinity(p)
+			if math.IsNaN(f) || math.IsInf(f, 0) {
+				return numberToString(f), nil
+			}
+			if p < 1 || p > 100 {
+				return nil, r.rangeError("toPrecision() precision must be between 1 and 100")
+			}
+			var buf [128]byte
+			return string(ftoa.FToStr(f, ftoa.ModePrecision, int(p), buf[:0])), nil
+		},
 	}
 
 	staticFunctions = map[string]func(r *rt, args []any) (any, error){
@@ -916,7 +983,7 @@ func init() {
 			for _, e := range items {
 				if !isObjectValue(e) {
 					s, _ := r.toString(e)
-					return nil, r.typeError("Iterator value " + s + " is not an entry object")
+					return nil, r.typeError("Value is not an object: " + s)
 				}
 				k, err := r.getProp(e, "0")
 				if err != nil {
@@ -1156,10 +1223,17 @@ func (r *rt) callBuiltinMethodOwn(o any, key any) (any, error) {
 	switch t := o.(type) {
 	case *object:
 		_, ok := t.props[k]
-		return ok, nil
+		return ok || t.hasOwnHidden(k), nil
 	case *hostObject:
 		_, ok := t.view.props[k]
 		return ok, nil
+	case *function:
+		if t.props != nil {
+			if _, ok := t.props.props[k]; ok {
+				return true, nil
+			}
+		}
+		return k == "name" || k == "length", nil
 	case *array:
 		i := arrayIndex(k)
 		return k == "length" || (i >= 0 && i < len(t.items)), nil
@@ -1196,7 +1270,7 @@ func (r *rt) minMax(args []any, max bool) (any, error) {
 	return best, nil
 }
 
-func iterateArray(r *rt, a *array, args []any, visit func(v, res any, i int) (any, bool), def any) (any, error) {
+func iterateArray(r *rt, a *array, args []any, visit func(v, res any, i int) (any, bool), def any, skipHoles ...bool) (any, error) {
 	f := arg(args, 0)
 	if err := r.requireCallable(f); err != nil {
 		return nil, err
@@ -1205,7 +1279,12 @@ func iterateArray(r *rt, a *array, args []any, visit func(v, res any, i int) (an
 	for i := 0; i < n; i++ {
 		var v any = Undefined
 		if i < len(a.items) {
-			v = a.items[i]
+			if isHole(a.items[i]) && len(skipHoles) > 0 {
+				continue
+			}
+			v = unhole(a.items[i])
+		} else if len(skipHoles) > 0 {
+			continue
 		}
 		res, err := r.callback(f, v, float64(i), a)
 		if err != nil {
@@ -1226,7 +1305,7 @@ func iterateArrayReverse(r *rt, a *array, args []any, visit func(v, res any, i i
 	for i := len(a.items) - 1; i >= 0; i-- {
 		var v any = Undefined
 		if i < len(a.items) {
-			v = a.items[i]
+			v = unhole(a.items[i])
 		}
 		res, err := r.callback(f, v, float64(i), a)
 		if err != nil {
@@ -1241,6 +1320,9 @@ func iterateArrayReverse(r *rt, a *array, args []any, visit func(v, res any, i i
 
 func (r *rt) flatten(out *[]any, items []any, depth float64) error {
 	for _, v := range items {
+		if isHole(v) {
+			continue
+		}
 		if b, ok := v.(*array); ok && depth > 0 {
 			if err := r.flatten(out, b.items, depth-1); err != nil {
 				return err
@@ -1269,14 +1351,17 @@ func (r *rt) reduce(a *array, args []any, right bool) (any, error) {
 	if len(args) >= 2 {
 		acc = args[1]
 	} else {
-		if n == 0 {
+		for i != end && isHole(a.items[i]) {
+			i += step
+		}
+		if i == end {
 			return nil, r.typeError("No initial value")
 		}
 		acc = a.items[i]
 		i += step
 	}
 	for ; i != end; i += step {
-		if i >= len(a.items) {
+		if i >= len(a.items) || isHole(a.items[i]) {
 			continue
 		}
 		v, err := r.callback(f, acc, a.items[i], float64(i), a)
@@ -1295,6 +1380,25 @@ func (r *rt) sortItems(items []any, cmp any) error {
 		if _, ok := cmp.(*function); !ok {
 			return r.typeError("The comparison function must be either a function or undefined")
 		}
+	}
+	// Holes sort after everything, undefined included.
+	dense := items[:0:0]
+	holes := 0
+	for _, v := range items {
+		if isHole(v) {
+			holes++
+		} else {
+			dense = append(dense, v)
+		}
+	}
+	if holes > 0 {
+		defer func() {
+			copy(items, dense)
+			for i := len(dense); i < len(items); i++ {
+				items[i] = hole
+			}
+		}()
+		items = dense
 	}
 	var firstErr error
 	strs := map[int]string{}
@@ -1589,7 +1693,7 @@ func (r *rt) console(level string, args []any) error {
 func (r *rt) consoleArg(v any) (string, error) {
 	switch v.(type) {
 	case *object, *array, *regexpValue:
-		exported, err := exportValue(v)
+		exported, err := exportConsole(v)
 		if err == nil {
 			if clean, err := MarshalExport(exported); err == nil {
 				return string(clean), nil

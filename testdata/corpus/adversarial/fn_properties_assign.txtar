@@ -1,0 +1,9 @@
+Assigning properties on functions and reading name/length.
+-- script.js --
+function f() { return f.count = (f.count || 0) + 1; }
+f(); f();
+f.label = "x";
+f.name = "renamed";
+return [f.count, f.label, f.name, typeof f, Object.keys(f)];
+-- tools.json --
+{}

@@ -1,0 +1,6 @@
+in operator sees inherited Object.prototype members.
+-- script.js --
+const o = {a: 1};
+return ["toString" in o, "hasOwnProperty" in o, "valueOf" in {}, "constructor" in o, "map" in [], "call" in (() => 1)];
+-- tools.json --
+{}

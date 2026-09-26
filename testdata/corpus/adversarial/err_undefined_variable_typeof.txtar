@@ -1,0 +1,5 @@
+typeof undeclared names and globals.
+-- script.js --
+return [typeof notDeclared, typeof mcp, typeof console, typeof JSON, typeof Math, typeof String, typeof Number, typeof Error, typeof parseInt, typeof Array, typeof Object];
+-- tools.json --
+{}

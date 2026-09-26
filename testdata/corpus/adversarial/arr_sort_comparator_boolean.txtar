@@ -1,0 +1,6 @@
+Comparator returning booleans (inconsistent) matches engine order.
+-- script.js --
+const xs = [5, 1, 4, 2, 3, 9, 7, 8, 6, 0, 11, 10, 13, 12];
+return [...xs].sort((a, b) => a > b);
+-- tools.json --
+{}

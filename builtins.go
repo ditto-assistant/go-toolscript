@@ -66,6 +66,11 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 		return r.regexpMethod(t, key, args)
 	case *collection:
 		return r.collectionMethod(t, key, args)
+	case *dateValue:
+		if m := dateMethods[key]; m != nil {
+			return m(r, t, args)
+		}
+		return r.objectMethod(t, key, args)
 	case *iterator:
 		return r.iteratorMethod(t, key)
 	case *function:
@@ -146,7 +151,7 @@ func (r *rt) callBuiltinMethod(recv any, key string, args []any) (any, error) {
 		case "valueOf":
 			return t, nil
 		}
-	case *object, *hostObject:
+	case *object, *hostObject, *dateValue:
 		return r.objectMethod(t, key, args)
 	}
 	return nil, r.typeError("Object has no member '" + key + "'")
@@ -1156,6 +1161,7 @@ func init() {
 			return math.Sqrt(sum), nil
 		},
 	}
+	registerDateStatics()
 	for name, f := range map[string]func(float64) float64{
 		"abs": math.Abs, "ceil": math.Ceil, "floor": math.Floor, "trunc": math.Trunc,
 		"sqrt": math.Sqrt, "cbrt": math.Cbrt, "exp": math.Exp, "expm1": math.Expm1,
@@ -1730,7 +1736,7 @@ func (r *rt) consoleArg(v any) (string, error) {
 	}
 	switch v.(type) {
 	case *object, *array, *regexpValue, *collection, *iterator:
-		exported, err := exportConsole(v)
+		exported, err := exportConsole(v, r.location())
 		if err == nil {
 			if clean, err := MarshalExport(exported); err == nil {
 				return string(clean), nil

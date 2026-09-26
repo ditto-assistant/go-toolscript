@@ -1,0 +1,11 @@
+Adding days across DST in local time vs adding milliseconds.
+-- script.js --
+const start = new Date(2026, 2, 7, 12, 0, 0);
+const byDate = new Date(start); byDate.setDate(byDate.getDate() + 1);
+const byMs = new Date(start.getTime() + 864e5);
+const fall = new Date(2026, 9, 31, 12, 0, 0);
+const fallNext = new Date(fall); fallNext.setDate(fall.getDate() + 1);
+const odd = new Date(2026, 2, 8, 2, 30);
+return [byDate.getHours(), byMs.getHours(), (byDate - start) / 36e5, fallNext.getHours(), (fallNext - fall) / 36e5, odd.getHours(), odd.getMinutes(), odd.toString()];
+-- tools.json --
+{}

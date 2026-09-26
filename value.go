@@ -324,6 +324,15 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 			return nil, r.typeError("Cannot convert object to primitive value")
 		}
 		return r.defaultObjectString(t), nil
+	case *dateValue:
+		// Date's @@toPrimitive: "number" gives the time value, else a string.
+		if hint == "number" {
+			if !t.isSet() {
+				return math.NaN(), nil
+			}
+			return float64(t.msec), nil
+		}
+		return r.dateString(t, dateTimeLayout, false), nil
 	case *array, *function, *hostObject, *regexpValue, *collection, *iterator:
 		s, err := r.toString(v)
 		return s, err
@@ -383,6 +392,8 @@ func (r *rt) toString(v any) (string, error) {
 		return "[object Set]", nil
 	case *iterator:
 		return "[object " + v.name + " Iterator]", nil
+	case *dateValue:
+		return r.dateString(v, dateTimeLayout, false), nil
 	case *function:
 		if v.native != nil {
 			return "function " + v.name + "() { [native code] }", nil
@@ -526,7 +537,7 @@ func sameValueZero(a, b any) bool {
 
 func isObjectValue(v any) bool {
 	switch v.(type) {
-	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator:
+	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator, *dateValue:
 		return true
 	}
 	return false
@@ -589,11 +600,11 @@ func boolNumber(b bool) float64 {
 
 // compareValues implements IsLessThan. It returns (less, undefinedResult).
 func (r *rt) compareValues(a, b any) (bool, bool, error) {
-	pa, err := r.toPrimitive(a)
+	pa, err := r.toPrimitiveHint(a, "number")
 	if err != nil {
 		return false, false, err
 	}
-	pb, err := r.toPrimitive(b)
+	pb, err := r.toPrimitiveHint(b, "number")
 	if err != nil {
 		return false, false, err
 	}
@@ -661,6 +672,14 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			return p, nil
 		}
 		if p, ok, err := inherited(key, "Object"); ok {
+			return p, err
+		}
+		return Undefined, nil
+	case *dateValue:
+		if dateMethods[key] != nil {
+			return boundMethod(v, key), nil
+		}
+		if p, ok, err := inherited(key, "Date"); ok {
 			return p, err
 		}
 		return Undefined, nil
@@ -883,6 +902,8 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 		return ok || objectProtoMember(key), nil
 	case *iterator:
 		return key == "next" || objectProtoMember(key), nil
+	case *dateValue:
+		return dateMethods[key] != nil || objectProtoMember(key), nil
 	case *function:
 		if t.props != nil {
 			if _, ok := t.props.own(key); ok {
@@ -960,7 +981,7 @@ func protoFunction(key, ctor string) *function {
 }
 
 func init() {
-	for _, ctor := range []string{"Object", "Array", "String", "Number", "Boolean", "Function", "Error", "RegExp"} {
+	for _, ctor := range []string{"Object", "Array", "String", "Number", "Boolean", "Function", "Error", "RegExp", "Date"} {
 		for _, key := range []string{"constructor", "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
 			name := key
 			if key == "constructor" {

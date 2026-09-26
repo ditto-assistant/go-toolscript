@@ -1,0 +1,10 @@
+All string forms, extended years and invalid dates.
+-- script.js --
+const ds = [new Date(0), new Date(Date.UTC(2026, 8, 26, 3, 4, 5, 6)), new Date(Date.UTC(-500, 0, 1)), new Date(Date.UTC(12345, 5, 1)), new Date(NaN)];
+return ds.map(d => {
+  let iso;
+  try { iso = d.toISOString(); } catch (e) { iso = String(e); }
+  return [String(d), d.toString(), d.toUTCString(), iso, d.toJSON(), d.toDateString(), d.toTimeString(), d.toLocaleString(), d.toLocaleDateString(), d.toLocaleTimeString(), `${d}`, d + "", JSON.stringify(d)];
+});
+-- tools.json --
+{}

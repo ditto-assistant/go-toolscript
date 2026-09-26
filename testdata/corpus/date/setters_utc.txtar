@@ -1,0 +1,15 @@
+UTC setters and Date.UTC arithmetic.
+-- script.js --
+const d = new Date(Date.UTC(2026, 2, 8, 6, 59, 59, 999));
+const out = [d.toISOString()];
+d.setUTCHours(7); out.push(d.toISOString(), d.getHours());
+d.setUTCDate(1); out.push(d.toISOString());
+d.setUTCMonth(10, 1); out.push(d.toISOString(), d.getTimezoneOffset());
+d.setUTCFullYear(2026, 10, 1); out.push(d.toISOString());
+d.setUTCMinutes(0, 0, 0); out.push(d.toUTCString());
+d.setUTCSeconds(3600); out.push(d.toISOString());
+d.setUTCMilliseconds(-1); out.push(d.toISOString());
+out.push(Date.UTC(2026), Date.UTC(2026, 0), Date.UTC(26, 0), Date.UTC(2026, 1, 29), Date.UTC(), Date.UTC(NaN), Date.UTC(275760, 8, 13), Date.UTC(275760, 8, 13, 0, 0, 0, 1));
+return out;
+-- tools.json --
+{}

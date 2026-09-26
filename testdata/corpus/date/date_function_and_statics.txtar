@@ -1,0 +1,7 @@
+Date() as a function, statics, typeof and invalid comparisons.
+-- script.js --
+const s = Date();
+const t = Date("ignored");
+return [typeof s, s === t, s, typeof Date, typeof Date.now(), Date.now() === new Date().getTime(), new Date(NaN) < new Date(0), new Date(NaN) > new Date(0), isNaN(new Date("x").getTime()), new Date(new Date(5)).getTime()];
+-- tools.json --
+{}

@@ -268,6 +268,19 @@ func (c *compiler) globalCall(callee ast.Expression, n *ast.CallExpression) (eva
 			f, err := c.hostCall(name, spec, n)
 			return f, true, err
 		}
+		if name == "Date" {
+			// Date(...) called as a function ignores its arguments.
+			args, err := c.arguments(n.ArgumentList)
+			if err != nil {
+				return nil, true, err
+			}
+			return func(r *rt, s *scope) (any, error) {
+				if _, err := args(r, s); err != nil {
+					return nil, err
+				}
+				return r.dateCall()
+			}, true, nil
+		}
 		if name == "Array" {
 			args, err := c.arguments(n.ArgumentList)
 			if err != nil {
@@ -670,8 +683,8 @@ func (c *compiler) isolated(node ast.Node) bool {
 				}
 			case *ast.DotExpression:
 				name := cal.Identifier.Name.String()
-				if mutatingMethods[name] {
-					ok = false
+				if mutatingMethods[name] || strings.HasPrefix(name, "set") {
+					ok = false // includes Date setters
 				}
 				if p, isPath := staticPath(cal.Left); isPath && len(p) == 1 && p[0] == "console" {
 					ok = false
@@ -783,6 +796,8 @@ func classString(v any) string {
 		return "[object Function]"
 	case *regexpValue:
 		return "[object RegExp]"
+	case *dateValue:
+		return "[object Date]"
 	case *collection:
 		if t.isMap {
 			return "[object Map]"

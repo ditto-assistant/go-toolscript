@@ -1,0 +1,21 @@
+Local setters with overflow, partial arguments and invalid values.
+-- script.js --
+const out = [];
+const d = new Date(2026, 0, 31, 12, 0, 0);
+out.push(d.setMonth(1), d.getDate(), d.getMonth());
+out.push(d.setDate(0), String(d));
+out.push(d.setDate(45), d.toDateString());
+out.push(d.setHours(-1), d.getHours(), d.getDate());
+out.push(d.setMinutes(90, 90, 1500), d.toTimeString());
+out.push(d.setSeconds(-1), d.getSeconds());
+out.push(d.setMilliseconds(2500), d.getMilliseconds());
+out.push(d.setFullYear(2027, 1, 29), d.toISOString());
+out.push(d.setHours(2, 30), d.toString());
+out.push(d.setTime(1e12), d.valueOf());
+out.push(d.setMonth(NaN), d.getTime(), String(d));
+out.push(d.setFullYear(2020), String(d));
+const inv = new Date(NaN);
+out.push(inv.setHours(1), inv.setFullYear(2021, 5), String(inv));
+return out;
+-- tools.json --
+{}

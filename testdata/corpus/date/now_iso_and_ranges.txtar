@@ -1,0 +1,16 @@
+Common real-world idioms: now as ISO, N days ago, date-only strings.
+-- script.js --
+const now = new Date();
+const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+const r = mcp.calendar.events({since: weekAgo.toISOString(), until: now.toISOString()});
+return {now: now.toISOString(), day: now.toISOString().slice(0, 10), weekAgo: weekAgo.toISOString().split("T")[0], ms: Date.now(), n: r.events.length, stamp: new Date().getTime() - weekAgo.getTime()};
+-- tools.json --
+{
+  "calendar.events": {
+    "events": [
+      {
+        "id": "e1"
+      }
+    ]
+  }
+}

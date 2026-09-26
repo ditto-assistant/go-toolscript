@@ -37,9 +37,9 @@ output, err := toolscript.MarshalExport(result.Value)
 
 ## What runs natively
 
-Measured on real Ditto traffic, 973 of 981 production `run_code` scripts
-(99.2%) run natively. The remaining 8 use `Date` or fail in Goja too
-(syntax errors, typos).
+Measured on real Ditto traffic, 974 of 981 production `run_code` scripts
+(99.3%) run natively. The rest use `Intl` or fail in Goja too (syntax
+errors, typos).
 
 - **Statements:** `var`/`let`/`const` (block scoping, TDZ, per-iteration loop
   bindings), destructuring with defaults and rest, `if`, `for`, `for…of`,
@@ -53,7 +53,10 @@ Measured on real Ditto traffic, 973 of 981 production `run_code` scripts
 - **Built-ins:** Array, String, Number, Object, Math, JSON, `Set`/`Map`,
   iterators, `Array.from/of/isArray`, `parseInt`/`parseFloat`,
   `encodeURIComponent` and related functions, `localeCompare`, `toFixed`,
-  `toPrecision`, and `Error` types. Regular expressions (`test`, `exec`,
+  `toPrecision`, `Error` types and `Date` (ported from Goja: parsing,
+  local/UTC getters and setters, every string form, `Date.now/parse/UTC`;
+  the clock and zone come from `ExecuteOptions.Now`/`Location`, defaulting
+  to `time.Now` and `time.Local` like Goja). Regular expressions (`test`, `exec`,
   `lastIndex`, `match`, `replace` and `replaceAll`, `split`, `search`) run on
   Go's RE2 through Goja's own JS-to-RE2 transform.
 - **Tools and host functions:** `mcp.x(...)`, `tools.x(...)`,
@@ -69,7 +72,7 @@ Measured on real Ditto traffic, 973 of 981 production `run_code` scripts
   `{status:"rejected", reason:"error text"}`. With `Parallelism > 1`, items
   that cannot observe each other run concurrently.
 
-Declined at compile time: `Date`, `class`, generators, getters and setters,
+Declined at compile time: `Intl`, `class`, generators, getters and setters,
 `this`, `with`, `eval`, `Symbol`, tagged templates, `arguments`, JSON.parse
 revivers, `u`-flag regexes, backreference and lookaround regexes, `WeakMap`, and
 unknown globals.

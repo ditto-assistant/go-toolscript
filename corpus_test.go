@@ -22,6 +22,7 @@ import (
 
 // corpusCase is one script from testdata/corpus (txtar) or an external JSONL.
 type corpusCase struct {
+	zone       string // time.Local for this run ("" = UTC)
 	divergence string // documented, intentional difference from Goja
 	name       string
 	script     string
@@ -232,10 +233,14 @@ func canonicalJSON(v any) string {
 	return string(b)
 }
 
+// corpusNow pins Date.now()/new Date() in both engines.
+var corpusNow = time.Date(2026, time.September, 26, 14, 30, 15, 123e6, time.UTC)
+
 func runNative(c *corpusCase, p *Program) outcome {
 	var out outcome
 	fx := &fixture{c: c, calls: map[string]int{}}
 	res, err := p.Execute(context.Background(), ExecuteOptions{
+		Now:          func() time.Time { return corpusNow },
 		MaxCallDepth: 2000, // Ditto's runner and the oracle both allow 2000
 		Console:      func(_, line string) { out.console = append(out.console, line) },
 		Dispatch: func(_ context.Context, name string, arg any) (any, error) {
@@ -300,6 +305,7 @@ func runGoja(c *corpusCase) outcome {
 	fx := &fixture{c: c, calls: map[string]int{}}
 	vm := goja.New()
 	vm.SetMaxCallStackSize(2000)
+	vm.SetTimeSource(func() time.Time { return corpusNow })
 	parse, _ := goja.AssertFunction(vm.Get("JSON").ToObject(vm).Get("parse"))
 	toJS := func(v any) goja.Value {
 		b, _ := json.Marshal(v) // sorted keys, like native fromGo
@@ -534,8 +540,34 @@ func TestCorpusDifferential(t *testing.T) {
 	}
 	native, mismatched := 0, map[string]int{}
 	var report []string
+	// Date cases also run in zones with DST and a half-hour offset. Both
+	// engines read time.Local, so the test swaps it (tests here are serial).
+	saved := time.Local
+	defer func() { time.Local = saved }()
+	time.Local = time.UTC
+	var expanded []corpusCase
+	for _, c := range cases {
+		expanded = append(expanded, c)
+		if strings.HasPrefix(c.name, "date/") {
+			for _, zone := range []string{"America/New_York", "Asia/Kolkata", "Australia/Lord_Howe"} {
+				z := c
+				z.name = c.name + "@" + zone
+				z.zone = zone
+				expanded = append(expanded, z)
+			}
+		}
+	}
+	cases = expanded
 	for i := range cases {
 		c := &cases[i]
+		time.Local = time.UTC
+		if c.zone != "" {
+			loc, err := time.LoadLocation(c.zone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			time.Local = loc
+		}
 		p, err := Compile(c.script, c.compileOptions())
 		if err != nil {
 			if !errors.Is(err, ErrUnsupported) {

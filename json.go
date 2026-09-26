@@ -81,6 +81,11 @@ func (ctx *stringifier) str(key string, holder any) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if d, ok := value.(*dateValue); ok {
+		if value, err = r.dateToJSON(d); err != nil {
+			return false, err
+		}
+	}
 	if o, ok := value.(*object); ok {
 		tj, _ := o.own("toJSON")
 		if f, ok := tj.(*function); ok {
@@ -114,7 +119,7 @@ func (ctx *stringifier) str(key string, holder any) (bool, error) {
 		}
 	case nil:
 		ctx.buf.WriteString("null")
-	case *object, *array, *hostObject, *regexpValue, *collection, *iterator:
+	case *object, *array, *hostObject, *regexpValue, *collection, *iterator, *dateValue:
 		for _, o := range ctx.stack {
 			if o == value {
 				return false, r.typeError("Converting circular structure to JSON")

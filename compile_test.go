@@ -65,7 +65,7 @@ func TestExamples(t *testing.T) {
 	}
 }
 func TestUnsupportedBeforeDispatch(t *testing.T) {
-	for _, s := range []string{`mcp.echo({}); return Date.now()`, `mcp.echo({}); return eval('1')`, `return mcp.echo({...x})`, `return mcp.echo({get x(){return 1}})`, `return mcp.echo({__proto__:{x:1}})`, `return mcp.echo({}).constructor`, `return mcp.echo({}).toString`, `return Promise.all([Promise.all([])])`, `const a=1;const a=2`, `return mcp.echo(/x/)`, `return mcp.call(name,{})`, `return mcp.echo({}).match("x")`, `mcp.echo({}); label: for(;;) break label`, `return this`, `class A {}`, `return new Map()`, `return Object.keys(mcp)`, `return mcp.echo({}).x.bind(null)`, `return [1].map(function*(){})`, `"use strict"; return 1`, `return tools.echo`} {
+	for _, s := range []string{`mcp.echo({}); return Date.now()`, `mcp.echo({}); return eval('1')`, `return mcp.echo({...x})`, `return mcp.echo({get x(){return 1}})`, `return mcp.echo({__proto__:{x:1}})`, `return mcp.echo({}).constructor`, `return mcp.echo({}).toString`, `return Promise.all([Promise.all([])])`, `const a=1;const a=2`, `return mcp.echo(/(a)\1/)`, `return /(?=x)/.test("x")`, `return /x/u.test("x")`, `return mcp.call(name,{})`, `return "x".matchAll(/x/g)`, `mcp.echo({}); label: for(;;) break label`, `return this`, `class A {}`, `return new Map()`, `return Object.keys(mcp)`, `return mcp.echo({}).x.bind(null)`, `return [1].map(function*(){})`, `"use strict"; return 1`, `return tools.echo`} {
 		if _, err := Compile(s, options()); !errors.Is(err, ErrUnsupported) {
 			t.Errorf("accepted %q (%v)", s, err)
 		}

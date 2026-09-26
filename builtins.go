@@ -8,6 +8,9 @@ import (
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type (
@@ -46,6 +49,8 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 			return r.call(f, args)
 		}
 		return r.objectMethod(t, key, args)
+	case *regexpValue:
+		return r.regexpMethod(t, key, args)
 	case *function:
 		if t.props != nil {
 			if f, ok := t.props.get(key); ok {
@@ -87,6 +92,11 @@ func (r *rt) objectMethod(o any, key string, args []any) (any, error) {
 func (r *rt) callBuiltinMethod(recv any, key string, args []any) (any, error) {
 	switch t := recv.(type) {
 	case *array:
+		if t.props != nil {
+			if f, ok := t.props.get(key); ok {
+				return r.call(f, args)
+			}
+		}
 		if m := arrayMethods[key]; m != nil {
 			return m(r, t, args)
 		}
@@ -566,6 +576,9 @@ func init() {
 			return r.checkString(b.String())
 		},
 		"endsWith": func(r *rt, s string, args []any) (any, error) {
+			if _, ok := arg(args, 0).(*regexpValue); ok {
+				return nil, r.typeError("First argument to String.prototype.endsWith must not be a regular expression")
+			}
 			sub, err := r.toString(arg(args, 0))
 			if err != nil {
 				return nil, err
@@ -583,6 +596,9 @@ func init() {
 			return utf16Slice(s, start, end) == sub, nil
 		},
 		"startsWith": func(r *rt, s string, args []any) (any, error) {
+			if _, ok := arg(args, 0).(*regexpValue); ok {
+				return nil, r.typeError("First argument to String.prototype.startsWith must not be a regular expression")
+			}
 			sub, err := r.toString(arg(args, 0))
 			if err != nil {
 				return nil, err
@@ -598,6 +614,9 @@ func init() {
 			return utf16Slice(s, start, end) == sub, nil
 		},
 		"includes": func(r *rt, s string, args []any) (any, error) {
+			if _, ok := arg(args, 0).(*regexpValue); ok {
+				return nil, r.typeError("First argument to String.prototype.includes must not be a regular expression")
+			}
 			sub, err := r.toString(arg(args, 0))
 			if err != nil {
 				return nil, err
@@ -659,10 +678,30 @@ func init() {
 			return strings.Repeat(s, int(n)), nil
 		},
 		"replace": func(r *rt, s string, args []any) (any, error) {
+			if rx, ok := arg(args, 0).(*regexpValue); ok {
+				return r.stringReplaceRegexp(s, rx, arg(args, 1), false)
+			}
 			return r.replace(s, args, false)
 		},
 		"replaceAll": func(r *rt, s string, args []any) (any, error) {
+			if rx, ok := arg(args, 0).(*regexpValue); ok {
+				return r.stringReplaceRegexp(s, rx, arg(args, 1), true)
+			}
 			return r.replace(s, args, true)
+		},
+		"match": func(r *rt, s string, args []any) (any, error) {
+			rx, err := r.toRegexp(arg(args, 0))
+			if err != nil {
+				return nil, err
+			}
+			return r.stringMatch(s, rx)
+		},
+		"search": func(r *rt, s string, args []any) (any, error) {
+			rx, err := r.toRegexp(arg(args, 0))
+			if err != nil {
+				return nil, err
+			}
+			return r.stringSearch(s, rx)
 		},
 		"slice": func(r *rt, s string, args []any) (any, error) {
 			l := utf16Len(s)
@@ -713,6 +752,9 @@ func init() {
 			return utf16Slice(s, start, start+int(length)), nil
 		},
 		"split": func(r *rt, s string, args []any) (any, error) {
+			if rx, ok := arg(args, 0).(*regexpValue); ok {
+				return r.stringSplitRegexp(s, rx, arg(args, 1))
+			}
 			limit := -1
 			if v := arg(args, 1); !isUndefined(v) {
 				f, err := r.toNumber(v)
@@ -721,14 +763,15 @@ func init() {
 				}
 				limit = int(toUint32(f))
 			}
-			// Goja stringifies the separator first, so undefined splits on
-			// the text "undefined".
+			if limit == 0 {
+				return &array{items: []any{}}, nil
+			}
+			if isUndefined(arg(args, 0)) {
+				return &array{items: []any{s}}, nil
+			}
 			sep, err := r.toString(arg(args, 0))
 			if err != nil {
 				return nil, err
-			}
-			if limit == 0 {
-				return &array{items: []any{}}, nil
 			}
 			n := limit
 			if limit > 0 {
@@ -747,10 +790,10 @@ func init() {
 			}
 			return &array{items: out}, nil
 		},
-		"toLowerCase":       func(r *rt, s string, _ []any) (any, error) { return strings.ToLower(s), nil },
-		"toLocaleLowerCase": func(r *rt, s string, _ []any) (any, error) { return strings.ToLower(s), nil },
-		"toUpperCase":       func(r *rt, s string, _ []any) (any, error) { return strings.ToUpper(s), nil },
-		"toLocaleUpperCase": func(r *rt, s string, _ []any) (any, error) { return strings.ToUpper(s), nil },
+		"toLowerCase":       func(r *rt, s string, _ []any) (any, error) { return toLowerJS(s), nil },
+		"toLocaleLowerCase": func(r *rt, s string, _ []any) (any, error) { return toLowerJS(s), nil },
+		"toUpperCase":       func(r *rt, s string, _ []any) (any, error) { return toUpperJS(s), nil },
+		"toLocaleUpperCase": func(r *rt, s string, _ []any) (any, error) { return toUpperJS(s), nil },
 		"toString":          func(r *rt, s string, _ []any) (any, error) { return s, nil },
 		"valueOf":           func(r *rt, s string, _ []any) (any, error) { return s, nil },
 		"trim":              func(r *rt, s string, _ []any) (any, error) { return trimJS(s), nil },
@@ -982,19 +1025,19 @@ func init() {
 		"Math.max": func(r *rt, args []any) (any, error) { return r.minMax(args, true) },
 		"Math.min": func(r *rt, args []any) (any, error) { return r.minMax(args, false) },
 		"Math.round": math1(func(f float64) float64 {
-			if math.IsNaN(f) || math.IsInf(f, 0) {
+			// Ported from Goja: exact for large integers, keeps -0.
+			if math.IsNaN(f) || (f == 0 && math.Signbit(f)) {
 				return f
 			}
-			if f == 0 {
-				return f
+			t := math.Trunc(f)
+			if f >= 0 {
+				if f-t >= 0.5 {
+					return t + 1
+				}
+			} else if t-f > 0.5 {
+				return t - 1
 			}
-			if f > 0 && f < 0.5 {
-				return 0
-			}
-			if f < 0 && f >= -0.5 {
-				return math.Copysign(0, -1)
-			}
-			return math.Floor(f + 0.5)
+			return t
 		}),
 		"Math.pow": func(r *rt, args []any) (any, error) {
 			a, err := r.toNumber(arg(args, 0))
@@ -1545,7 +1588,7 @@ func (r *rt) console(level string, args []any) error {
 
 func (r *rt) consoleArg(v any) (string, error) {
 	switch v.(type) {
-	case *object, *array:
+	case *object, *array, *regexpValue:
 		exported, err := exportValue(v)
 		if err == nil {
 			if clean, err := MarshalExport(exported); err == nil {
@@ -1570,4 +1613,43 @@ func errorToStringOr(v any) string {
 		return errorToString(o)
 	}
 	return "[object Object]"
+}
+
+// toRegexp implements the RegExp coercion in String.prototype.match/search.
+func (r *rt) toRegexp(v any) (*regexpValue, error) {
+	if rx, ok := v.(*regexpValue); ok {
+		return rx, nil
+	}
+	var args []any
+	if !isUndefined(v) {
+		args = []any{v}
+	}
+	rx, err := r.newRegExp(args)
+	if err != nil {
+		return nil, err
+	}
+	return rx.(*regexpValue), nil
+}
+
+// Unicode case mapping follows Goja: x/text full case mapping, including
+// its workaround for final sigma after U+0345.
+func toUpperJS(s string) string {
+	if isASCII(s) {
+		return strings.ToUpper(s)
+	}
+	return cases.Upper(language.Und).String(s)
+}
+
+func toLowerJS(s string) string {
+	if isASCII(s) {
+		return strings.ToLower(s)
+	}
+	r := []rune(cases.Lower(language.Und).String(s))
+	for i := 0; i < len(r)-1; i++ {
+		if (i == 0 || r[i-1] != 0x3b1) && r[i] == 0x345 && r[i+1] == 0x3c2 {
+			i++
+			r[i] = 0x3c3
+		}
+	}
+	return string(r)
 }

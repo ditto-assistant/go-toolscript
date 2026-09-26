@@ -67,6 +67,7 @@ type Result struct {
 }
 
 type execution struct {
+	namespace any // the mcp/tools object, when the program uses it as a value
 	opts      ExecuteOptions
 	fatal     error
 	panicked  error
@@ -183,6 +184,11 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (res Result,
 		x.batch = 1
 	}
 	r := &rt{ctx: ctx, x: x}
+	if p.namespace != nil {
+		x.namespace = p.buildNamespace()
+	} else {
+		x.namespace = Undefined
+	}
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("toolscript: internal error: %v", p)
@@ -596,6 +602,8 @@ func export(v any, depth int, nodes *int) (any, error) {
 		return export(t.view, depth, nodes)
 	case *function, tdzMarker:
 		return Undefined, nil
+	case *regexpValue:
+		return map[string]any{}, nil
 	}
 	return v, nil
 }
@@ -670,4 +678,41 @@ func MarshalExport(v any) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(clean)
+}
+
+// buildNamespace mirrors a host's binding installation: `call` first, then
+// each tool in order, grouping server tools under a nested object.
+func (p *Program) buildNamespace() *object {
+	root := newObject(len(p.namespace) + 1)
+	if p.resolveCall != nil {
+		resolve := p.resolveCall
+		root.set("call", &function{name: "call", native: func(r *rt, _ any, args []any) (any, error) {
+			raw, err := r.toString(arg(args, 0))
+			if err != nil {
+				return nil, err
+			}
+			name, ok := resolve(raw)
+			if !ok {
+				return nil, goError(fmt.Errorf("unknown tool %q", raw))
+			}
+			return r.callTool(name, arg(args, 1))
+		}})
+	}
+	for _, b := range p.namespace {
+		name := b.name
+		fn := &function{name: b.path[len(b.path)-1], native: func(r *rt, _ any, args []any) (any, error) {
+			return r.callTool(name, arg(args, 0))
+		}}
+		parent := root
+		for _, k := range b.path[:len(b.path)-1] {
+			next, ok := parent.props[k].(*object)
+			if !ok {
+				next = newObject(4)
+				parent.set(k, next)
+			}
+			parent = next
+		}
+		parent.set(b.path[len(b.path)-1], fn)
+	}
+	return root
 }

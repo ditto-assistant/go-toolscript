@@ -1,0 +1,20 @@
+replace/replaceAll with regex: $1, $<name>, $&, $`, $', $$, function replacer.
+-- script.js --
+const t = mcp.tickets.get({id: 7});
+return [
+  t.title.replace(/(\w+)-(\d+)/g, "$2:$1"),
+  t.title.replace(/(?<k>[A-Z]+)-(?<n>\d+)/, "[$<n>/$<k>]"),
+  t.title.replace(/-/g, "$&$&"),
+  t.title.replace(/X/, "$`|$'"),
+  t.title.replace(/X/g, "$$"),
+  t.title.replaceAll(/[aeiou]/g, c => c.toUpperCase()),
+  t.title.replace(/(\d+)/g, (m, d, off) => `${Number(d) * 2}@${off}`),
+  t.slug.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase(),
+];
+-- tools.json --
+{
+  "tickets.get": {
+    "title": "ENG-12 and OPS-7 X fix",
+    "slug": "  Hello, World!! 2026 "
+  }
+}

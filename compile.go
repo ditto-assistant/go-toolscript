@@ -58,6 +58,13 @@ type CompileOptions struct {
 	// ResolveCall maps mcp.call("raw-name", args) separately from property
 	// bindings, so it cannot collide with mcp.call.some_tool(args).
 	ResolveCall func(string) (string, bool)
+	// Bindings optionally lists every tool binding path (e.g. {"search"},
+	// {"github", "list_prs"}) in the host's installation order. When set, the
+	// mcp/tools namespaces are also ordinary values (Object.keys(mcp),
+	// typeof mcp.x, mcp.srv ? ... : ...), and calls to paths that are not
+	// bindings compile to the runtime TypeError JavaScript would raise
+	// instead of declining. The list must be complete.
+	Bindings [][]string
 	// Batches admits await, async functions and Promise.all/allSettled.
 	// This is an explicit asynchronous-tool dialect, not arbitrary JS promises.
 	Batches bool
@@ -65,7 +72,14 @@ type CompileOptions struct {
 
 // Program is immutable and safe to execute concurrently with separate hosts.
 type Program struct {
-	main *funcCode
+	main        *funcCode
+	namespace   []nsBinding // non-nil when the namespace is used as a value
+	resolveCall func(string) (string, bool)
+}
+
+type nsBinding struct {
+	path []string
+	name string
 }
 
 type (
@@ -151,7 +165,8 @@ type cfunc struct {
 }
 
 type compiler struct {
-	opts       CompileOptions
+	opts          CompileOptions
+	namespaceUsed bool
 	fn         *cfunc
 	sc         *cscope
 	depth      int
@@ -192,7 +207,21 @@ func Compile(source string, opts CompileOptions) (prog *Program, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
 	}
-	return &Program{main: main}, nil
+	prog = &Program{main: main}
+	if c.namespaceUsed {
+		prog.resolveCall = opts.ResolveCall
+		prog.namespace = []nsBinding{}
+		for _, b := range opts.Bindings {
+			full := append([]string{"mcp"}, b...)
+			if opts.Resolve == nil || len(b) == 0 {
+				continue
+			}
+			if name, ok := opts.Resolve(full); ok {
+				prog.namespace = append(prog.namespace, nsBinding{path: b, name: name})
+			}
+		}
+	}
+	return prog, nil
 }
 
 func unsupported(n any) error { return fmt.Errorf("unsupported syntax %T", n) }

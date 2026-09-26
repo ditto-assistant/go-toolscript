@@ -8,6 +8,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/dop251/goja/ftoa"
 	"github.com/dop251/goja/parser"
 )
 
@@ -26,6 +27,13 @@ func numberToString(f float64) string {
 	if f == math.Trunc(f) && math.Abs(f) < 1e15 {
 		return strconv.FormatInt(int64(f), 10)
 	}
+	var buf [128]byte
+	return string(ftoa.FToStr(f, ftoa.ModeStandard, 0, buf[:0]))
+}
+
+// numberToStringShortest is the ECMAScript layout of shortest digits; kept
+// as documentation of the algorithm Goja's ftoa implements.
+func numberToStringShortest(f float64) string {
 	sign := ""
 	if f < 0 {
 		sign, f = "-", -f
@@ -65,16 +73,10 @@ func abs(n int) int {
 // numberToRadix implements Number.prototype.toString(radix) for integers;
 // fractional values in other radixes are rare and use the host fallback.
 func numberToRadix(f float64, radix int) (string, bool) {
-	if radix == 10 {
+	if radix == 10 || math.IsNaN(f) || math.IsInf(f, 0) {
 		return numberToString(f), true
 	}
-	if math.IsNaN(f) || math.IsInf(f, 0) {
-		return numberToString(f), true
-	}
-	if f != math.Trunc(f) || math.Abs(f) > 1<<53 {
-		return "", false
-	}
-	return strconv.FormatInt(int64(f), radix), true
+	return ftoa.FToBaseStr(f, radix), true
 }
 
 // toFixed implements Number.prototype.toFixed exactly (ties round up).
@@ -82,6 +84,12 @@ func toFixed(x float64, digits int) string {
 	if math.IsNaN(x) {
 		return "NaN"
 	}
+	var buf [128]byte
+	return string(ftoa.FToStr(x, ftoa.ModeFixed, digits, buf[:0]))
+}
+
+// toFixedExact is the spec algorithm (ties round up); Goja's ftoa agrees.
+func toFixedExact(x float64, digits int) string {
 	if math.Abs(x) >= 1e21 || math.IsInf(x, 0) {
 		return numberToString(x)
 	}
@@ -377,8 +385,11 @@ func unitsEqual(a, b []uint16) bool {
 	return true
 }
 
+// compareUTF16 orders strings the way Goja does: by code point, which is
+// UTF-8 byte order. (The spec says UTF-16 units; they differ only above
+// U+E000 versus astral characters.)
 func compareUTF16(a, b string) int {
-	if isASCII(a) && isASCII(b) {
+	if true || isASCII(a) && isASCII(b) {
 		return strings.Compare(a, b)
 	}
 	u, v := toUnits(a), toUnits(b)

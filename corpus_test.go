@@ -22,12 +22,13 @@ import (
 
 // corpusCase is one script from testdata/corpus (txtar) or an external JSONL.
 type corpusCase struct {
-	name      string
-	script    string
-	tools     map[string]json.RawMessage
-	bash      map[string]json.RawMessage
-	workspace map[string]json.RawMessage
-	generic   bool // unknown tools answer with a generic fixture
+	divergence string // documented, intentional difference from Goja
+	name       string
+	script     string
+	tools      map[string]json.RawMessage
+	bash       map[string]json.RawMessage
+	workspace  map[string]json.RawMessage
+	generic    bool // unknown tools answer with a generic fixture
 }
 
 func parseTxtar(data []byte) map[string][]byte {
@@ -65,7 +66,7 @@ func loadCorpus(t testing.TB) []corpusCase {
 			t.Fatal(err)
 		}
 		files := parseTxtar(data)
-		c := corpusCase{name: strings.TrimSuffix(strings.TrimPrefix(p, "testdata/corpus/"), ".txtar"), script: string(files["script.js"])}
+		c := corpusCase{name: strings.TrimSuffix(strings.TrimPrefix(p, "testdata/corpus/"), ".txtar"), script: string(files["script.js"]), divergence: strings.TrimSpace(string(files["divergence"]))}
 		for section, into := range map[string]*map[string]json.RawMessage{"tools.json": &c.tools, "bash.json": &c.bash, "workspace.json": &c.workspace} {
 			if raw := files[section]; len(bytes.TrimSpace(raw)) > 0 {
 				if err := json.Unmarshal(raw, into); err != nil {
@@ -184,8 +185,27 @@ func toolName(path []string) (string, bool) {
 	return strings.Join(path[1:], "."), true
 }
 
+func (c *corpusCase) sortedTools() []string {
+	names := make([]string, 0, len(c.tools))
+	for name := range c.tools {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 func (c *corpusCase) compileOptions() CompileOptions {
+	bindings := [][]string{}
+	for _, name := range c.sortedTools() {
+		server, local, nested := strings.Cut(name, ".")
+		if nested {
+			bindings = append(bindings, []string{server, local})
+		} else {
+			bindings = append(bindings, []string{name})
+		}
+	}
 	return CompileOptions{
+		Bindings:      bindings,
 		Batches: true,
 		HostFunctions: map[string]HostFunction{
 			"bash":            {MinArgs: 1, MaxArgs: 3, StringArgs: []int{0}, JSONArgs: []int{1, 2}},
@@ -318,13 +338,12 @@ func runGoja(c *corpusCase) outcome {
 		return toJS(v)
 	}
 	root := vm.NewObject()
+	// Ditto's installBindings sets `call` first, then each catalog tool.
+	_ = root.Set("call", func(call goja.FunctionCall) goja.Value {
+		return dispatch(call.Argument(0).String(), call.Argument(1))
+	})
 	servers := map[string]*goja.Object{}
-	names := make([]string, 0, len(c.tools))
-	for name := range c.tools {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range c.sortedTools() {
 		name := name
 		fn := func(call goja.FunctionCall) goja.Value { return dispatch(name, call.Argument(0)) }
 		server, local, nested := strings.Cut(name, ".")
@@ -338,9 +357,6 @@ func runGoja(c *corpusCase) outcome {
 		}
 		_ = servers[server].Set(local, fn)
 	}
-	_ = root.Set("call", func(call goja.FunctionCall) goja.Value {
-		return dispatch(call.Argument(0).String(), call.Argument(1))
-	})
 	_ = vm.Set("mcp", root)
 	_ = vm.Set("tools", root)
 	stringify, _ := goja.AssertFunction(vm.Get("JSON").ToObject(vm).Get("stringify"))
@@ -525,7 +541,10 @@ func TestCorpusDifferential(t *testing.T) {
 		native++
 		got, want := runNative(c, p), runGoja(c)
 		got.async = strings.Contains(c.script, "await") || strings.Contains(c.script, "Promise")
-		if ok, what := got.equal(want); !ok {
+		if ok, what := got.equal(want); !ok && c.divergence != "" {
+			report = append(report, fmt.Sprintf("%-50s divergent %s", c.name, firstLine(c.divergence)))
+			continue
+		} else if !ok {
 			mismatched[what]++
 			report = append(report, fmt.Sprintf("%-50s MISMATCH  %s", c.name, what))
 			if os.Getenv("TOOLSCRIPT_CORPUS_VERBOSE") != "" || !c.generic {

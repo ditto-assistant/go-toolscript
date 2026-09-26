@@ -74,7 +74,7 @@ func (c *compiler) arguments(list []ast.Expression) (argsFn, error) {
 // to these names decline compilation instead of diverging at run time.
 var declinedMethods = map[string]bool{
 	"copyWithin": true, "entries": true, "keys": true, "values": true, "toLocaleString": true,
-	"localeCompare": true, "match": true, "matchAll": true, "normalize": true, "search": true,
+	"localeCompare": true, "matchAll": true, "normalize": true,
 	"toExponential": true, "toPrecision": true, "isPrototypeOf": true, "propertyIsEnumerable": true,
 	"apply": true, "bind": true, "call": true,
 }
@@ -88,7 +88,7 @@ func (c *compiler) call(n *ast.CallExpression, _ bool) (evalFn, error) {
 		callee = o.Expression
 	}
 	if !optionalCallee {
-		if path, ok := c.namespacePath(callee); ok {
+		if path, ok := c.namespacePath(callee); ok && (c.opts.Bindings == nil || c.staticTool(path)) {
 			return c.toolCall(path, n)
 		}
 		if f, ok, err := c.globalCall(callee, n); ok || err != nil {
@@ -184,6 +184,19 @@ func (r *rt) getMethodValue(o any, k string) (any, error) {
 	return r.getProp(o, k)
 }
 
+// staticTool reports whether a namespace path resolves to a tool at compile
+// time (or is mcp.call with a literal name); others use runtime lookup.
+func (c *compiler) staticTool(path []string) bool {
+	if len(path) == 2 && (path[0] == "mcp" || path[0] == "tools") && path[1] == "call" {
+		return c.opts.ResolveCall != nil
+	}
+	if c.opts.Resolve == nil {
+		return false
+	}
+	_, ok := c.opts.Resolve(path)
+	return ok
+}
+
 func (c *compiler) toolCall(path []string, n *ast.CallExpression) (evalFn, error) {
 	var name string
 	var ok bool
@@ -244,6 +257,22 @@ func (c *compiler) globalCall(callee ast.Expression, n *ast.CallExpression) (eva
 		if spec, ok := c.opts.HostFunctions[name]; ok {
 			f, err := c.hostCall(name, spec, n)
 			return f, true, err
+		}
+		if name == "RegExp" {
+			args, err := c.arguments(n.ArgumentList)
+			if err != nil {
+				return nil, true, err
+			}
+			return func(r *rt, s *scope) (any, error) {
+				a, err := args(r, s)
+				if err != nil {
+					return nil, err
+				}
+				if rx, ok := arg(a, 0).(*regexpValue); ok && isUndefined(arg(a, 1)) {
+					return rx, nil
+				}
+				return r.newRegExp(a)
+			}, true, nil
 		}
 		if isErrorConstructor(name) {
 			args, err := c.arguments(n.ArgumentList)

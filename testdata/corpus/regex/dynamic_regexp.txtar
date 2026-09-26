@@ -1,0 +1,18 @@
+new RegExp built from tool data, escaped; flags; source/flags/toString.
+-- script.js --
+const q = mcp.search.query({});
+const esc = q.term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const re = new RegExp(esc, "gi");
+const hits = q.docs.filter(d => new RegExp(esc, "i").test(d));
+return {source: re.source, flags: re.flags, str: String(re), global: re.global, hits, count: q.docs.join(" ").match(re).length, json: JSON.stringify({re}), typeof: typeof re, isRe: re instanceof RegExp};
+-- tools.json --
+{
+  "search.query": {
+    "term": "a.b (c)",
+    "docs": [
+      "x A.B (C) y",
+      "a-b c",
+      "zz a.b (c) a.b (c)"
+    ]
+  }
+}

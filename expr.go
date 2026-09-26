@@ -191,6 +191,13 @@ func (c *compiler) expression(node ast.Expression) (evalFn, error) {
 		return c.expression(n.Argument)
 	case *ast.NewExpression:
 		return c.newExpression(n)
+	case *ast.RegExpLiteral:
+		p, ok, bad := compileRegexp(n.Pattern, n.Flags)
+		if !ok || bad != "" {
+			return nil, unsupported(n)
+		}
+		// Each evaluation of a literal creates a fresh RegExp object.
+		return func(*rt, *scope) (any, error) { return &regexpValue{pat: p, lastIndex: float64(0)}, nil }, nil
 	}
 	return nil, unsupported(node)
 }
@@ -285,6 +292,9 @@ func init() {
 
 // Global namespaces whose members compile to built-ins.
 func isGlobalNamespace(name string) bool {
+	if name == "RegExp" {
+		return false
+	}
 	switch name {
 	case "JSON", "Math", "Object", "Array", "Number", "String", "console", "Promise":
 		return true
@@ -314,10 +324,29 @@ func (c *compiler) identifier(name string) (evalFn, error) {
 		if f, ok := globalFunctionValues[name]; ok {
 			return constant(f), nil
 		}
+		if (name == "mcp" || name == "tools") && c.opts.Bindings != nil {
+			c.namespaceUsed = true
+			return func(r *rt, _ *scope) (any, error) { return r.x.namespace, nil }, nil
+		}
 		return nil, fmt.Errorf("unbound identifier %s", name)
 	}
 	if v.alias != nil {
-		return nil, fmt.Errorf("namespace alias %s used as a value", name)
+		if c.opts.Bindings == nil {
+			return nil, fmt.Errorf("namespace alias %s used as a value", name)
+		}
+		c.namespaceUsed = true
+		path := v.alias[1:]
+		return func(r *rt, _ *scope) (any, error) {
+			var cur any = r.x.namespace
+			for _, k := range path {
+				next, err := r.getProp(cur, k)
+				if err != nil {
+					return nil, err
+				}
+				cur = next
+			}
+			return cur, nil
+		}, nil
 	}
 	slot := v.slot
 	if v.kind == kindLet || v.kind == kindConst {
@@ -502,6 +531,11 @@ func (r *rt) copyProps(dst *object, src any) error {
 		for i, v := range t.items {
 			dst.set(strconv.Itoa(i), v)
 		}
+		if t.props != nil {
+			for _, k := range t.props.ownKeys() {
+				dst.set(k, t.props.props[k])
+			}
+		}
 	case string:
 		i := 0
 		for _, u := range toUnits(t) {
@@ -547,7 +581,7 @@ func (c *compiler) memberParts(node ast.Expression) (evalFn, func(*rt, *scope) (
 	default:
 		return nil, nil, unsupported(node)
 	}
-	if path, ok := c.namespacePath(left); ok {
+	if path, ok := c.namespacePath(left); ok && c.opts.Bindings == nil {
 		return nil, nil, fmt.Errorf("tool namespace %s used as a value", strings.Join(path, "."))
 	}
 	if id, ok := left.(*ast.Identifier); ok {
@@ -624,7 +658,7 @@ func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
 		return nil, unsupported(n)
 	}
 	name := id.Name.String()
-	if v, _ := c.lookup(name); v != nil || !isErrorConstructor(name) {
+	if v, _ := c.lookup(name); v != nil || !(isErrorConstructor(name) || name == "RegExp") {
 		return nil, unsupported(n)
 	}
 	args, err := c.arguments(n.ArgumentList)
@@ -635,6 +669,9 @@ func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
 		a, err := args(r, s)
 		if err != nil {
 			return nil, err
+		}
+		if name == "RegExp" {
+			return r.newRegExp(a)
 		}
 		return r.makeError(name, a)
 	}, nil
@@ -1040,6 +1077,8 @@ func (c *compiler) instanceOf(n *ast.BinaryExpression) (evalFn, error) {
 		test = func(v any) bool { _, ok := v.(*array); return ok }
 	case name == "Object":
 		test = isObjectValue
+	case name == "RegExp":
+		test = func(v any) bool { _, ok := v.(*regexpValue); return ok }
 	default:
 		return nil, unsupported(n)
 	}
@@ -1086,7 +1125,7 @@ func binaryOp(op token.Token) (binop, error) {
 		return func(r *rt, a, b any) (any, error) {
 			if x, ok := a.(float64); ok {
 				if y, ok := b.(float64); ok {
-					if x >= 0 && y > 0 && x < 1<<53 && y < 1<<53 && x == math.Trunc(x) && y == math.Trunc(y) {
+					if x >= 0 && !math.Signbit(x) && y > 0 && x < 1<<53 && y < 1<<53 && x == math.Trunc(x) && y == math.Trunc(y) {
 						return num(float64(int64(x) % int64(y))), nil
 					}
 					return num(jsMod(x, y)), nil

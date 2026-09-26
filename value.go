@@ -21,7 +21,10 @@ type object struct {
 	indexKey bool // at least one key is a canonical array index
 }
 
-type array struct{ items []any }
+type array struct {
+	items []any
+	props *object // named own properties (exec results carry index/input/groups)
+}
 
 // function is a user closure or a built-in (native != nil).
 type function struct {
@@ -189,7 +192,7 @@ func toBoolean(v any) bool {
 // Objects have no user-defined valueOf/toString, so both hints yield strings.
 func (r *rt) toPrimitive(v any) (any, error) {
 	switch v := v.(type) {
-	case *object, *array, *function, *hostObject:
+	case *object, *array, *function, *hostObject, *regexpValue:
 		s, err := r.toString(v)
 		return s, err
 	}
@@ -220,6 +223,8 @@ func (r *rt) toString(v any) (string, error) {
 		return "[object Object]", nil
 	case *hostObject:
 		return "[object Object]", nil
+	case *regexpValue:
+		return "/" + v.pat.source + "/" + v.pat.flags, nil
 	case *function:
 		if v.native != nil {
 			return "function " + v.name + "() { [native code] }", nil
@@ -356,7 +361,7 @@ func sameValueZero(a, b any) bool {
 
 func isObjectValue(v any) bool {
 	switch v.(type) {
-	case *object, *array, *function, *hostObject:
+	case *object, *array, *function, *hostObject, *regexpValue:
 		return true
 	}
 	return false
@@ -464,7 +469,21 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			}
 			return Undefined, nil
 		}
+		if v.props != nil {
+			if p, ok := v.props.get(key); ok {
+				return p, nil
+			}
+		}
 		if arrayMethods[key] != nil {
+			return boundMethod(v, key), nil
+		}
+		return Undefined, nil
+	case *regexpValue:
+		if p, ok := v.get(key); ok {
+			return p, nil
+		}
+		switch key {
+		case "test", "exec", "toString":
 			return boundMethod(v, key), nil
 		}
 		return Undefined, nil
@@ -551,7 +570,16 @@ func (r *rt) setProp(target any, key string, v any) error {
 			t.items[i] = v
 			return nil
 		}
-		return errRuntimeUnsupported("named property on an array")
+		if t.props == nil {
+			t.props = newObject(1)
+		}
+		t.props.set(key, v)
+		return nil
+	case *regexpValue:
+		if key == "lastIndex" {
+			t.lastIndex = v
+		}
+		return nil
 	case *hostObject:
 		t.dirty = true
 		t.view.set(key, v)
@@ -598,6 +626,9 @@ func (r *rt) deleteProp(target any, key string) (bool, error) {
 			}
 			return true, nil
 		}
+		if t.props != nil {
+			t.props.delete(key)
+		}
 		return key != "length", nil
 	case nil, undefined:
 		return false, r.typeError("Cannot convert undefined or null to object")
@@ -618,8 +649,16 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 		if key == "length" || arrayMethods[key] != nil {
 			return true, nil
 		}
+		if t.props != nil {
+			if _, ok := t.props.props[key]; ok {
+				return true, nil
+			}
+		}
 		i := arrayIndex(key)
 		return i >= 0 && i < len(t.items), nil
+	case *regexpValue:
+		_, ok := t.get(key)
+		return ok, nil
 	case *function:
 		return key == "name" || key == "length", nil
 	}
@@ -636,6 +675,9 @@ func ownEnumerableKeys(v any) []string {
 		keys := make([]string, len(v.items))
 		for i := range v.items {
 			keys[i] = strconv.Itoa(i)
+		}
+		if v.props != nil {
+			keys = append(keys, v.props.ownKeys()...)
 		}
 		return keys
 	case string:

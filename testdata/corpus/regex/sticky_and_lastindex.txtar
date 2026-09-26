@@ -1,0 +1,17 @@
+Sticky regex tokenizer and manual lastIndex resets.
+-- script.js --
+const src = mcp.expr.get({}).text;
+const tok = /\s*(\d+|[-+*/()])/y;
+const out = [];
+let m;
+while ((m = tok.exec(src)) !== null) out.push(m[1]);
+const g = /o/g;
+const a = [g.test("foo"), g.lastIndex, g.test("foo"), g.lastIndex, g.test("foo"), g.lastIndex];
+g.lastIndex = 0;
+return {out, rest: src.slice(tok.lastIndex), a, again: g.test("foo")};
+-- tools.json --
+{
+  "expr.get": {
+    "text": "12 + 3*(4-1) ?"
+  }
+}

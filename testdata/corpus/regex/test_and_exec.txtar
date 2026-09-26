@@ -1,0 +1,29 @@
+Regex test/exec with captures and named groups.
+-- script.js --
+const r = mcp.notes.search({q: "release"});
+const out = [];
+for (const n of r.items) {
+  const m = /v(\d+)\.(\d+)(?:\.(\d+))?/.exec(n.title);
+  out.push({title: n.title, ok: /release/i.test(n.title), m: m ? [m[0], m[1], m[2], m[3], m.index] : null});
+}
+const named = /(?<year>\d{4})-(?<month>\d{2})/.exec(r.items[0].date);
+return {out, year: named.groups.year, month: named.groups.month, input: named.input, keys: Object.keys(named)};
+-- tools.json --
+{
+  "notes.search": {
+    "items": [
+      {
+        "title": "Release v2.10.3 notes",
+        "date": "2026-09-14"
+      },
+      {
+        "title": "Draft v3.0",
+        "date": "2026-10-01"
+      },
+      {
+        "title": "misc",
+        "date": "n/a"
+      }
+    ]
+  }
+}

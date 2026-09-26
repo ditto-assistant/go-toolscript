@@ -708,6 +708,9 @@ func (c *compiler) unary(n *ast.UnaryExpression) (evalFn, error) {
 			name := id.Name.String()
 			if v, _ := c.lookup(name); v == nil {
 				switch {
+				case name == "Promise":
+					// Hosts differ on whether a Promise global exists.
+					return nil, fmt.Errorf("typeof Promise")
 				case name == "mcp" || name == "tools" || isGlobalNamespace(name):
 					if name == "String" || name == "Number" {
 						return constant("function"), nil

@@ -833,6 +833,8 @@ func classString(v any) string {
 		if t.errName != "" {
 			return "[object Error]"
 		}
+	case *intlObject:
+		return "[object Intl." + t.kind.name + "]"
 	}
 	return "[object Object]"
 }

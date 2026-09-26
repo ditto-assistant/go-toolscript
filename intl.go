@@ -239,18 +239,24 @@ func (r *rt) optionValue(o *intlOptions, prop string) (any, error) {
 
 // stringOption returns the option's string value, or "" when undefined.
 func (r *rt) stringOption(o *intlOptions, prop string, allowed ...string) (string, error) {
+	s, _, err := r.stringOpt(o, prop, allowed...)
+	return s, err
+}
+
+// stringOpt is GetOption(..., "string", allowed, undefined) reporting presence.
+func (r *rt) stringOpt(o *intlOptions, prop string, allowed ...string) (string, bool, error) {
 	v, err := r.optionValue(o, prop)
 	if err != nil || isUndefined(v) {
-		return "", err
+		return "", false, err
 	}
 	s, err := r.toString(v)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if len(allowed) > 0 && !contains(allowed, s) {
-		return "", r.rangeError("Value " + s + " out of range for " + o.service + " options property " + prop)
+		return "", false, r.rangeError("Value " + s + " out of range for " + o.service + " options property " + prop)
 	}
-	return s, nil
+	return s, true, nil
 }
 
 // boolOption returns (value, present).
@@ -567,6 +573,11 @@ func (r *rt) resolveLocale(locales any, relevant map[string][]string) (resolvedL
 	if err != nil {
 		return resolvedLocale{}, err
 	}
+	return r.resolveLocaleList(requested, relevant), nil
+}
+
+// resolveLocaleList is ResolveLocale over a canonicalized locale list.
+func (r *rt) resolveLocaleList(requested []string, relevant map[string][]string) resolvedLocale {
 	for _, tag := range requested {
 		t, _, _ := parseLanguageTag(tag)
 		found, ok := lookupLocale(t.base)
@@ -592,9 +603,9 @@ func (r *rt) resolveLocale(locales any, relevant map[string][]string) (resolvedL
 			}
 		}
 		res.locale = kept.String()
-		return res, nil
+		return res
 	}
-	return resolvedLocale{locale: intlDefaultLocale, extension: map[string]string{}}, nil
+	return resolvedLocale{locale: intlDefaultLocale, extension: map[string]string{}}
 }
 
 // supportedLocalesOf implements Intl.X.supportedLocalesOf.
@@ -661,4 +672,7 @@ var (
 	intlSanctionedUnits = func() []string { return nil }
 )
 
-func tzCanonicalIDs() []string { return nil } // replaced by the time zone data
+// intlArgs reports whether a toLocale*String call passes locales or options.
+func intlArgs(args []any) bool {
+	return !isUndefined(arg(args, 0)) || !isUndefined(arg(args, 1))
+}

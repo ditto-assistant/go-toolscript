@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/text/collate"
 )
@@ -58,6 +59,10 @@ type ExecuteOptions struct {
 	MaxArrayLength int
 	MaxStringBytes int
 	MaxCallDepth   int // default 1000 nested function calls
+	// Now is the clock for Date (default time.Now); Location is the local
+	// time zone for Date (default time.Local), both as in Goja.
+	Now      func() time.Time
+	Location *time.Location
 }
 
 // Result retains the call count and fatal status even after execution fails.
@@ -213,7 +218,7 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (res Result,
 		x.steps.Add(int64(r.pending))
 	}
 	if err == nil {
-		v, err = exportValue(v)
+		v, err = exportValue(v, r.location())
 	}
 	if x.fatal != nil {
 		err = x.fatal
@@ -386,14 +391,19 @@ func (r *rt) runBody(f *function, s *scope) (any, error) {
 	return Undefined, nil
 }
 
-// call applies a callable value.
-func (r *rt) call(f any, args []any) (any, error) {
+// call applies a callable value with an undefined receiver.
+func (r *rt) call(f any, args []any) (any, error) { return r.callThis(f, Undefined, args) }
+
+// callThis applies a callable with an explicit receiver. Script functions
+// cannot observe `this` (it declines compilation); built-in prototype
+// methods operate on it.
+func (r *rt) callThis(f any, this any, args []any) (any, error) {
 	fn, ok := f.(*function)
 	if !ok {
 		return nil, r.notCallable(f)
 	}
 	if fn.native != nil {
-		return fn.native(r, Undefined, args)
+		return fn.native(r, this, args)
 	}
 	return r.invoke(fn, args)
 }
@@ -407,7 +417,7 @@ func (r *rt) notCallable(f any) error {
 }
 
 func (r *rt) callTool(name string, arg any) (any, error) {
-	exported, err := exportArgument(arg)
+	exported, err := exportArgument(arg, r.location())
 	if err != nil {
 		return nil, r.typeError("invalid arguments for " + name + ": " + err.Error())
 	}
@@ -426,7 +436,7 @@ func (r *rt) callTool(name string, arg any) (any, error) {
 func (r *rt) callHost(name string, args []any) (any, error) {
 	exported := make([]any, len(args))
 	for i, a := range args {
-		v, err := exportValue(a)
+		v, err := exportValue(a, r.location())
 		if err != nil {
 			return nil, r.typeError("invalid arguments for " + name + ": " + err.Error())
 		}
@@ -581,27 +591,28 @@ const (
 // exportValue converts a runtime value to host data like Goja's Value.Export:
 // objects become map[string]any (undefined properties keep the Undefined
 // sentinel), arrays []any, functions Undefined.
-func exportValue(v any) (any, error) {
-	x := exporter{clamp: true}
+func exportValue(v any, loc *time.Location) (any, error) {
+	x := exporter{clamp: true, loc: loc}
 	return x.export(v, 0)
 }
 
 // exportArgument exports a tool argument like Goja's Value.Export followed by
 // json.Marshal: no depth clamp, and functions, non-finite numbers and cycles
 // fail with encoding/json's messages (the host binding reports them).
-func exportArgument(v any) (any, error) {
-	x := exporter{strict: true, onStack: map[any]bool{}}
+func exportArgument(v any, loc *time.Location) (any, error) {
+	x := exporter{strict: true, onStack: map[any]bool{}, loc: loc}
 	return x.export(v, 0)
 }
 
 // exportConsole exports a console argument; a function inside fails so the
 // caller falls back to String(value), as Goja's console does.
-func exportConsole(v any) (any, error) {
-	x := exporter{clamp: true, funcsFail: true}
+func exportConsole(v any, loc *time.Location) (any, error) {
+	x := exporter{clamp: true, funcsFail: true, loc: loc}
 	return x.export(v, 0)
 }
 
 type exporter struct {
+	loc       *time.Location // Dates export as time.Time in this zone
 	onStack   map[any]bool
 	nodes     int
 	clamp     bool // replace values at maxExportDepth with a marker
@@ -671,6 +682,24 @@ func (x *exporter) export(v any, depth int) (any, error) {
 		return nil, nil // Goja exports a missing element as nil
 	case *regexpValue, *iterator:
 		return map[string]any{}, nil
+	case *dateValue:
+		// Goja exports a Date as time.Time (nil when invalid).
+		if !t.isSet() {
+			return nil, nil
+		}
+		loc := x.loc
+		if loc == nil {
+			loc = time.Local
+		}
+		tm := timeFromMsec(t.msec).In(loc)
+		if x.strict && (tm.Year() < 0 || tm.Year() > 9999) {
+			// Report exactly what encoding/json says for the exported value
+			// inside an argument map (the text varies across Go versions).
+			if _, err := json.Marshal(map[string]any{"": tm}); err != nil {
+				return nil, err
+			}
+		}
+		return tm, nil
 	case *collection:
 		// Goja exports a Set as its values and a Map as [key, value] pairs.
 		out := make([]any, 0, t.live)

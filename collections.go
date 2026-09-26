@@ -279,17 +279,12 @@ func collectionMember(c *collection, key string) (any, bool) {
 	if key == "size" {
 		return float64(c.live), true
 	}
-	switch key {
-	case "has", "delete", "clear", "keys", "values", "entries", "forEach":
-		return boundMethod(c, key), true
-	case "get", "set":
-		if c.isMap {
-			return boundMethod(c, key), true
-		}
-	case "add":
-		if !c.isMap {
-			return boundMethod(c, key), true
-		}
+	owner := "Set"
+	if c.isMap {
+		owner = "Map"
+	}
+	if f := protoFn(owner, key); f != nil {
+		return f, true
 	}
 	return nil, false
 }
@@ -322,7 +317,7 @@ func (r *rt) functionMethod(f *function, key string, args []any) (any, bool, err
 		if len(args) > 1 {
 			rest = args[1:]
 		}
-		v, err := r.call(f, rest)
+		v, err := r.callThis(f, arg(args, 0), rest)
 		return v, true, err
 	case "apply":
 		list := arg(args, 1)
@@ -334,7 +329,7 @@ func (r *rt) functionMethod(f *function, key string, args []any) (any, bool, err
 			}
 			items = denseItems(a.items)
 		}
-		v, err := r.call(f, items)
+		v, err := r.callThis(f, arg(args, 0), items)
 		return v, true, err
 	case "bind":
 		var bound []any
@@ -347,8 +342,9 @@ func (r *rt) functionMethod(f *function, key string, args []any) (any, bool, err
 		} else {
 			length = max(0, f.length-len(bound))
 		}
+		boundThis := arg(args, 0)
 		return &function{name: "bound " + f.name, length: length, native: func(r *rt, _ any, more []any) (any, error) {
-			return r.call(f, append(append([]any{}, bound...), more...))
+			return r.callThis(f, boundThis, append(append([]any{}, bound...), more...))
 		}}, true, nil
 	}
 	return nil, false, nil

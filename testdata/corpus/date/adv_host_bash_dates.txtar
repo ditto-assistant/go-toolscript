@@ -1,0 +1,10 @@
+Dates passed to the bash host function as JSON stdin and as the script string.
+-- script.js --
+const d = new Date(Date.UTC(2026, 8, 26, 1, 2, 3, 4));
+bash("cat", { d, bad: new Date(NaN), far: new Date(8.64e15) });
+bash("cat", [d]);
+bash(new Date(0));
+const r = mount_result(new Date(86400000));
+return r;
+-- tools.json --
+{}

@@ -286,7 +286,7 @@ func isGlobalNamespace(name string) bool {
 		return false
 	}
 	switch name {
-	case "JSON", "Math", "Object", "Array", "Number", "String", "console", "Promise":
+	case "JSON", "Math", "Object", "Array", "Number", "String", "console", "Promise", "Date":
 		return true
 	}
 	return false
@@ -531,6 +531,13 @@ func (r *rt) copyProps(dst *object, src any) error {
 				dst.set(k, v)
 			}
 		}
+	case *dateValue:
+		if t.props != nil {
+			for _, k := range t.props.ownKeys() {
+				v, _ := t.props.own(k)
+				dst.set(k, v)
+			}
+		}
 	case string:
 		i := 0
 		for _, u := range toUnits(t) {
@@ -645,7 +652,7 @@ func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
 		return nil, unsupported(n)
 	}
 	name := id.Name.String()
-	if v, _ := c.lookup(name); v != nil || !(isErrorConstructor(name) || name == "RegExp" || name == "Set" || name == "Map" || name == "Array") {
+	if v, _ := c.lookup(name); v != nil || !(isErrorConstructor(name) || name == "RegExp" || name == "Set" || name == "Map" || name == "Array" || name == "Date") {
 		return nil, unsupported(n)
 	}
 	args, err := c.arguments(n.ArgumentList)
@@ -664,6 +671,8 @@ func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
 			return r.newCollectionFrom(name == "Map", a)
 		case "Array":
 			return r.newArrayFromArgs(a)
+		case "Date":
+			return r.newDateFromArgs(a)
 		}
 		return r.makeError(name, a)
 	}, nil
@@ -705,7 +714,7 @@ func (c *compiler) unary(n *ast.UnaryExpression) (evalFn, error) {
 				case name == "Promise":
 					// Hosts differ on whether a Promise global exists.
 					return nil, fmt.Errorf("typeof Promise")
-				case name == "String" || name == "Number" || name == "Object" || name == "Array" || name == "Boolean" || name == "RegExp" || name == "Set" || name == "Map":
+				case name == "String" || name == "Number" || name == "Object" || name == "Array" || name == "Boolean" || name == "RegExp" || name == "Set" || name == "Map" || name == "Date":
 					return constant("function"), nil
 				case name == "mcp" || name == "tools" || isGlobalNamespace(name):
 					return constant("object"), nil
@@ -1075,6 +1084,8 @@ func (c *compiler) instanceOf(n *ast.BinaryExpression) (evalFn, error) {
 		test = isObjectValue
 	case name == "RegExp":
 		test = func(v any) bool { _, ok := v.(*regexpValue); return ok }
+	case name == "Date":
+		test = func(v any) bool { _, ok := v.(*dateValue); return ok }
 	case name == "Set" || name == "Map":
 		isMap := name == "Map"
 		test = func(v any) bool { c, ok := v.(*collection); return ok && c.isMap == isMap }

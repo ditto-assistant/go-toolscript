@@ -1,0 +1,7 @@
+String concatenation and template coercion (default hint gives a string).
+-- script.js --
+const a = new Date(Date.UTC(2020, 0, 1, 5, 6, 7, 8));
+const bad = new Date("nope");
+return [a + 1, 1 + a, a + "", `${a}`, "" + bad, `${bad}`, a + null, a + undefined, a + true, a + [1, 2], a + a === String(a) + String(a), bad + bad];
+-- tools.json --
+{}

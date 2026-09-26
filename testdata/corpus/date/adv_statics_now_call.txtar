@@ -1,0 +1,8 @@
+Date.now(), Date() string form (ignores arguments), and new Date() without parens.
+-- script.js --
+const a = Date.now();
+const b = new Date();
+const c = new Date;
+return [a, b.getTime(), c.getTime(), Date(), Date(0), Date(2020, 1, 1), typeof Date(), Date() === String(new Date()), new Date(...[]).getTime(), String(new Date(...[undefined]).getTime())];
+-- tools.json --
+{}

@@ -65,7 +65,7 @@ func TestExamples(t *testing.T) {
 	}
 }
 func TestUnsupportedBeforeDispatch(t *testing.T) {
-	for _, s := range []string{`mcp.echo({}); return Date.now()`, `mcp.echo({}); return eval('1')`, `return mcp.echo({...x})`, `return mcp.echo({get x(){return 1}})`, `return mcp.echo({__proto__:{x:1}})`, `return mcp.echo({}).constructor`, `return Promise.all([Promise.all([])])`, `const a=1;const a=2`, `return mcp.echo(/(a)\1/)`, `return /(?=x)/.test("x")`, `return /x/u.test("x")`, `return mcp.call(name,{})`, `return "x".matchAll(/x/g)`, `mcp.echo({}); label: function f(){}`, `return this`, `class A {}`, `return new WeakMap()`, `return Symbol("x")`, `return Object.keys(mcp)`, `return [1].map(function*(){})`, `"use strict"; return 1`, `return tools.echo`} {
+	for _, s := range []string{`mcp.echo({}); return new Intl.DateTimeFormat("en").format(0)`, `mcp.echo({}); return eval('1')`, `return mcp.echo({...x})`, `return mcp.echo({get x(){return 1}})`, `return mcp.echo({__proto__:{x:1}})`, `return mcp.echo({}).constructor`, `return Promise.all([Promise.all([])])`, `const a=1;const a=2`, `return mcp.echo(/(a)\1/)`, `return /(?=x)/.test("x")`, `return /x/u.test("x")`, `return mcp.call(name,{})`, `return "x".matchAll(/x/g)`, `mcp.echo({}); label: function f(){}`, `return this`, `class A {}`, `return new WeakMap()`, `return Symbol("x")`, `return Object.keys(mcp)`, `return [1].map(function*(){})`, `"use strict"; return 1`, `return tools.echo`} {
 		if _, err := Compile(s, options()); !errors.Is(err, ErrUnsupported) {
 			t.Errorf("accepted %q (%v)", s, err)
 		}
@@ -302,6 +302,61 @@ func TestRawCallDoesNotCollideWithPropertyPath(t *testing.T) {
 		r, err := p.Execute(context.Background(), ExecuteOptions{Dispatch: func(_ context.Context, name string, _ any) (any, error) { return name, nil }})
 		if err != nil || r.Value != tc.want {
 			t.Fatalf("%s: %+v %v", tc.source, r, err)
+		}
+	}
+}
+
+// Parallel batches: isolated items dispatch concurrently (race-checked),
+// host functions and shared mutation keep batches sequential.
+func TestParallelBatchesUnderRace(t *testing.T) {
+	opts := options()
+	opts.HostFunctions = map[string]HostFunction{"bash": {MinArgs: 1, MaxArgs: 1}}
+	opts.SequentialTools = func(name string) bool { return name == "artifacts" }
+	for _, tc := range []struct {
+		code     string
+		parallel bool
+	}{
+		{`const re = /x/g; const ids = ["a","b","c","d","e","f"]; return await Promise.all(ids.map(async id => { const r = await mcp.get({id}); return {id, n: r.id.length, m: "xx".match(re), t: [1,2,3].map(x => x * 2).join("-"), d: new Date(0).toISOString()}; }));`, true},
+		{`return await Promise.all([mcp.get({id:"a"}), mcp.get({id:"b"}), mcp.get({id:"c"}), mcp.get({id:"d"})]);`, true},
+		{`const out = []; await Promise.all(["a","b","c"].map(async id => { out.push(await mcp.get({id})); })); return out;`, false},
+		{`return await Promise.all(["a","b","c"].map(async id => bash("echo " + id)));`, false},
+		{`let n = 0; return await Promise.all(["a","b"].map(async id => { n++; return mcp.get({id}); }));`, false},
+		{`return await Promise.all([mcp.get({id:"a"}), mcp.artifacts({op:"append"}), mcp.get({id:"b"})]);`, false},
+		{`return await Promise.all(["x","y"].map(async id => mcp.call("artifacts", {id})));`, false},
+	} {
+		p, err := Compile(tc.code, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var active, peak atomic.Int64
+		r, err := p.Execute(context.Background(), ExecuteOptions{Parallelism: 4,
+			Dispatch: func(_ context.Context, _ string, a any) (any, error) {
+				v := active.Add(1)
+				for {
+					p := peak.Load()
+					if v <= p || peak.CompareAndSwap(p, v) {
+						break
+					}
+				}
+				time.Sleep(2 * time.Millisecond)
+				active.Add(-1)
+				return a, nil
+			},
+			HostDispatch: func(_ context.Context, _ string, args []any) (any, error) {
+				v := active.Add(1)
+				if v > peak.Load() {
+					peak.Store(v)
+				}
+				time.Sleep(2 * time.Millisecond)
+				active.Add(-1)
+				return args[0], nil
+			},
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", tc.code, err)
+		}
+		if got := peak.Load() > 1; got != tc.parallel {
+			t.Fatalf("%s: parallel=%v (peak %d) want %v; value %s", tc.code, got, peak.Load(), tc.parallel, encoded(t, r.Value))
 		}
 	}
 }

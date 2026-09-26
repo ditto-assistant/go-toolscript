@@ -1,0 +1,6 @@
+Negative zero from date arithmetic survives into the returned JSON.
+-- script.js --
+const z = new Date(0);
+return [-z, z * -1, -z.getTime(), Math.round(new Date(-400) / 1000), new Date(-0).getTime(), z.setTime(-0), Date.UTC(1970, 0, 1, 0, 0, 0, -0), new Date(-400).getTime() / 1000 | 0, Math.trunc(new Date(-1) / 1000)];
+-- tools.json --
+{}

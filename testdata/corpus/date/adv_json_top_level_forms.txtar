@@ -1,0 +1,6 @@
+JSON.stringify of a top-level date with indents and replacers.
+-- script.js --
+const d = new Date(Date.UTC(2026, 8, 26, 14, 30, 15, 123));
+return [JSON.stringify(d, null, 2), JSON.stringify([d], null, "--"), JSON.stringify(d, (k, v) => (k === "" ? [typeof v, v] : v)), JSON.stringify({ a: [d, { b: d }] }, (k, v) => (typeof v === "string" ? v.slice(0, 4) : v)), JSON.stringify(d, ["x"]), JSON.stringify({ d }, null, 100)];
+-- tools.json --
+{}

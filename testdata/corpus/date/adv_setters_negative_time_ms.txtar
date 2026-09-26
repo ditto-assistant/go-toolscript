@@ -1,0 +1,11 @@
+setMilliseconds with negative time values (Goja truncates the seconds toward zero).
+-- script.js --
+const out = [];
+for (const t of [-1500, -1, -1000, -999, 1500, -86400001]) {
+  const a = new Date(t);
+  const b = new Date(t);
+  out.push([t, a.setMilliseconds(0), b.setUTCMilliseconds(250), a.getMilliseconds(), b.getUTCMilliseconds(), new Date(t).getMilliseconds(), new Date(t).getUTCSeconds()]);
+}
+return out;
+-- tools.json --
+{}

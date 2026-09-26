@@ -1,0 +1,10 @@
+console.log of Date method values.
+-- script.js --
+const d = new Date(0);
+console.log(d.getTime);
+console.log(String(d.toISOString));
+console.log([d.getTime]);
+console.log({ f: d.getTime });
+return typeof d.getTime;
+-- tools.json --
+{}

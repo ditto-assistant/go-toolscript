@@ -1,0 +1,9 @@
+console.log of dates in arrays/objects in each zone (time.Time JSON with offsets).
+-- script.js --
+const ds = [new Date(), new Date(Date.UTC(1850, 0, 1)), new Date(Date.UTC(2026, 3, 5, 15, 30)), new Date(-1)];
+console.log(ds);
+console.log({ ds, s: String(ds[0]) });
+console.log(ds[1], ds[2]);
+return ds.length;
+-- tools.json --
+{}

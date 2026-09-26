@@ -1,0 +1,6 @@
+An uncaught RangeError from toISOString ends the script.
+-- script.js --
+const stamps = ["2026-09-26", "not a date"];
+return stamps.map(s => new Date(s).toISOString());
+-- tools.json --
+{}

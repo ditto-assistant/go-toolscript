@@ -1,0 +1,39 @@
+Report formatting: zero-padded manual dates, grouping by ISO week-ish buckets, relative days.
+-- script.js --
+const r = mcp.notes.list({});
+const pad = n => String(n).padStart(2, "0");
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const now = new Date();
+const groups = {};
+for (const n of r.notes) {
+  const d = new Date(n.ts);
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+  const key = monday.toISOString().slice(0, 10);
+  (groups[key] ||= []).push(`${fmt(d)} (${Math.floor((now - d) / 864e5)}d ago) ${n.title}`);
+}
+return groups;
+-- tools.json --
+{
+  "notes.list": {
+    "notes": [
+      {
+        "ts": 1790000000000,
+        "title": "a"
+      },
+      {
+        "ts": 1789500000000,
+        "title": "b"
+      },
+      {
+        "ts": 1788000000000,
+        "title": "c"
+      },
+      {
+        "ts": "2026-09-25T23:30:00Z",
+        "title": "d"
+      }
+    ]
+  }
+}

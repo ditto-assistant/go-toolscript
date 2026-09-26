@@ -1,0 +1,8 @@
+Object.keys/entries/assign/spread/for-in on a Date.
+-- script.js --
+const d = new Date(0);
+const ks = [];
+for (const k in d) ks.push(k);
+return [Object.keys(d), Object.entries(d), Object.assign({}, d), { ...d }, ks, Object.values(d)];
+-- tools.json --
+{}

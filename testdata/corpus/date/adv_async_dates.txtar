@@ -1,0 +1,9 @@
+Dates through await and Promise.all in the async dialect.
+-- script.js --
+const r = await mcp.clock.now({ at: new Date(0) });
+const d = new Date(r.iso);
+const same = await d;
+const [a, b] = await Promise.all([mcp.clock.now({ at: d }), mcp.clock.now({ at: new Date(NaN) })]);
+return [same === d, same.getTime(), a, b, r];
+-- tools.json --
+{"clock.now": {"iso": "2026-09-26T14:30:15.123Z"}}

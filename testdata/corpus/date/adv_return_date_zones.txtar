@@ -1,0 +1,5 @@
+Returned and nested dates export as RFC3339 in the local zone, including LMT-era and fractional-offset dates.
+-- script.js --
+return { now: new Date(), lmt: new Date(Date.UTC(1850, 0, 1, 0, 0, 0, 500)), frac: new Date(Date.UTC(2026, 0, 1, 0, 0, 0, 120)), list: [new Date(0), new Date(-1)] };
+-- tools.json --
+{}

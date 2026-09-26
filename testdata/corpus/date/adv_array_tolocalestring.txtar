@@ -1,0 +1,6 @@
+Array.prototype.toLocaleString calls each element's toLocaleString (en_GB layout for dates).
+-- script.js --
+const ds = [new Date(Date.UTC(2026, 8, 26, 14, 30, 15)), new Date(NaN), null, undefined, 5];
+return [ds.toLocaleString(), [new Date(0)].toLocaleString(), [[new Date(0)]].toLocaleString(), String(ds), ds.join(";")];
+-- tools.json --
+{}

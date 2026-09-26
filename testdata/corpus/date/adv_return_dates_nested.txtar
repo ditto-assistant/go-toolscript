@@ -1,0 +1,5 @@
+Returning dates nested in objects, including invalid ones.
+-- script.js --
+return { a: new Date(0), b: [new Date(1), new Date(NaN)], c: { d: new Date(Date.UTC(1800, 0, 1)) } };
+-- tools.json --
+{}

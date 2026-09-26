@@ -1,0 +1,7 @@
+Calling a Date method with .call on another Date uses that receiver.
+-- script.js --
+const a = new Date(1000);
+const b = new Date(2000);
+return [a.getTime.call(b), a.toISOString.call(b), a.getTime.apply(b, [])];
+-- tools.json --
+{}

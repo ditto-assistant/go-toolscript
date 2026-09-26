@@ -1,0 +1,7 @@
+new Date over tool-result objects, arrays and numeric fields.
+-- script.js --
+const s = mcp.stats.get({});
+const show = d => (isNaN(d) ? "Invalid" : d.toISOString());
+return [show(new Date(s.ts)), show(new Date(s.sec * 1000)), show(new Date(s.parts)), show(new Date(...s.parts)), show(new Date(s.obj)), show(new Date(s)), show(new Date(s.iso)), show(new Date(s.neg)), show(new Date(s.float)), show(new Date(s.missing))];
+-- tools.json --
+{"stats.get": {"ts": 1790433015123, "sec": 1790433015, "parts": [2026, 8, 26], "obj": {"a": 1}, "iso": "2026-09-26T14:30:15.123Z", "neg": -1, "float": 1790433015123.9}}

@@ -1,0 +1,8 @@
+Assigning an expando property to a Date and reading it back.
+-- script.js --
+const d = new Date(0);
+d.label = "epoch";
+d.count = 3;
+return [d.label, d.count, typeof d.label, Object.keys(d)];
+-- tools.json --
+{}

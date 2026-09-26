@@ -386,7 +386,7 @@ func (r *rt) stringMatch(s string, rx *regexpValue) (any, error) {
 		}
 		return rx.pat.matchArray(sub, m), nil
 	}
-	rx.lastIndex = float64(0)
+	rx.resetLastIndex()
 	sub := newSubject(s)
 	all := rx.pat.findAll(sub)
 	if len(all) == 0 {
@@ -420,7 +420,7 @@ func (r *rt) stringReplaceRegexp(s string, rx *regexpValue, repl any, all bool) 
 	var found [][]int
 	if p.global {
 		found = p.findAll(sub)
-		rx.lastIndex = float64(0)
+		rx.resetLastIndex()
 	} else {
 		start := 0
 		if p.sticky {
@@ -669,4 +669,13 @@ func (r *rt) newRegExp(args []any) (any, error) {
 		return nil, errRuntimeUnsupported("regular expression outside the RE2 subset: /" + pattern + "/")
 	}
 	return &regexpValue{pat: p, lastIndex: float64(0)}, nil
+}
+
+// resetLastIndex writes only when needed, so parallel batch items sharing a
+// global regex through match/replace never write concurrently.
+func (rx *regexpValue) resetLastIndex() {
+	if f, ok := rx.lastIndex.(float64); ok && f == 0 {
+		return
+	}
+	rx.lastIndex = float64(0)
 }

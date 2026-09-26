@@ -324,6 +324,15 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 			return nil, r.typeError("Cannot convert object to primitive value")
 		}
 		return r.defaultObjectString(t), nil
+	case *dateValue:
+		// Date's @@toPrimitive: "number" gives the time value, else a string.
+		if hint == "number" {
+			if !t.isSet() {
+				return math.NaN(), nil
+			}
+			return float64(t.msec), nil
+		}
+		return r.dateString(t, dateTimeLayout, false), nil
 	case *array, *function, *hostObject, *regexpValue, *collection, *iterator:
 		s, err := r.toString(v)
 		return s, err
@@ -383,6 +392,8 @@ func (r *rt) toString(v any) (string, error) {
 		return "[object Set]", nil
 	case *iterator:
 		return "[object " + v.name + " Iterator]", nil
+	case *dateValue:
+		return r.dateString(v, dateTimeLayout, false), nil
 	case *function:
 		if v.native != nil {
 			return "function " + v.name + "() { [native code] }", nil
@@ -526,7 +537,7 @@ func sameValueZero(a, b any) bool {
 
 func isObjectValue(v any) bool {
 	switch v.(type) {
-	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator:
+	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator, *dateValue:
 		return true
 	}
 	return false
@@ -589,11 +600,11 @@ func boolNumber(b bool) float64 {
 
 // compareValues implements IsLessThan. It returns (less, undefinedResult).
 func (r *rt) compareValues(a, b any) (bool, bool, error) {
-	pa, err := r.toPrimitive(a)
+	pa, err := r.toPrimitiveHint(a, "number")
 	if err != nil {
 		return false, false, err
 	}
-	pb, err := r.toPrimitive(b)
+	pb, err := r.toPrimitiveHint(b, "number")
 	if err != nil {
 		return false, false, err
 	}
@@ -646,11 +657,8 @@ func (r *rt) getProp(v any, key string) (any, error) {
 				return p, nil
 			}
 		}
-		if arrayMethods[key] != nil {
-			return boundMethod(v, key), nil
-		}
-		if declinedArrayMembers[key] {
-			return declinedMethod(key), nil
+		if f := protoFn("Array", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Array"); ok {
 			return p, err
@@ -664,9 +672,22 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			return p, err
 		}
 		return Undefined, nil
+	case *dateValue:
+		if v.props != nil {
+			if p, ok := v.props.get(key); ok {
+				return p, nil
+			}
+		}
+		if f := protoFn("Date", key); f != nil {
+			return f, nil
+		}
+		if p, ok, err := inherited(key, "Date"); ok {
+			return p, err
+		}
+		return Undefined, nil
 	case *iterator:
-		if key == "next" || key == "toString" {
-			return boundMethod(v, key), nil
+		if f := protoFn("Iterator", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Object"); ok {
 			return p, err
@@ -676,9 +697,8 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		if p, ok := v.get(key); ok {
 			return p, nil
 		}
-		switch key {
-		case "test", "exec", "toString":
-			return boundMethod(v, key), nil
+		if f := protoFn("RegExp", key); f != nil {
+			return f, nil
 		}
 		return Undefined, nil
 	case string:
@@ -691,11 +711,8 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			}
 			return Undefined, nil
 		}
-		if stringMethods[key] != nil {
-			return boundMethod(v, key), nil
-		}
-		if declinedStringMembers[key] {
-			return declinedMethod(key), nil
+		if f := protoFn("String", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "String"); ok {
 			return p, err
@@ -704,19 +721,16 @@ func (r *rt) getProp(v any, key string) (any, error) {
 	case *hostObject:
 		return r.getProp(v.view, key)
 	case float64:
-		if numberMethods[key] != nil {
-			return boundMethod(v, key), nil
-		}
-		if declinedNumberMembers[key] {
-			return declinedMethod(key), nil
+		if f := protoFn("Number", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Number"); ok {
 			return p, err
 		}
 		return Undefined, nil
 	case bool:
-		if key == "toString" || key == "valueOf" {
-			return boundMethod(v, key), nil
+		if f := protoFn("Boolean", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Boolean"); ok {
 			return p, err
@@ -744,14 +758,6 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		return nil, r.referenceError("Cannot access a variable before initialization")
 	}
 	return Undefined, nil
-}
-
-// boundMethod lets scripts read built-in methods as values (e.g. to test
-// typeof). Calling the value applies the method to its original receiver.
-func boundMethod(recv any, key string) *function {
-	return &function{name: key, native: func(r *rt, _ any, args []any) (any, error) {
-		return r.callBuiltinMethod(recv, key, args)
-	}}
 }
 
 func (r *rt) setProp(target any, key string, v any) error {
@@ -791,6 +797,12 @@ func (r *rt) setProp(target any, key string, v any) error {
 		if key == "lastIndex" {
 			t.lastIndex = v
 		}
+		return nil
+	case *dateValue:
+		if t.props == nil {
+			t.props = newObject(1)
+		}
+		t.props.set(key, v)
 		return nil
 	case *hostObject:
 		t.dirty = true
@@ -883,6 +895,13 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 		return ok || objectProtoMember(key), nil
 	case *iterator:
 		return key == "next" || objectProtoMember(key), nil
+	case *dateValue:
+		if t.props != nil {
+			if _, ok := t.props.own(key); ok {
+				return true, nil
+			}
+		}
+		return dateMethods[key] != nil || objectProtoMember(key), nil
 	case *function:
 		if t.props != nil {
 			if _, ok := t.props.own(key); ok {
@@ -906,6 +925,11 @@ func ownEnumerableKeys(v any) []string {
 	case *hostObject:
 		return v.view.ownKeys()
 	case *function:
+		if v.props != nil {
+			return v.props.ownKeys()
+		}
+		return nil
+	case *dateValue:
 		if v.props != nil {
 			return v.props.ownKeys()
 		}
@@ -960,7 +984,7 @@ func protoFunction(key, ctor string) *function {
 }
 
 func init() {
-	for _, ctor := range []string{"Object", "Array", "String", "Number", "Boolean", "Function", "Error", "RegExp"} {
+	for _, ctor := range []string{"Object", "Array", "String", "Number", "Boolean", "Function", "Error", "RegExp", "Date"} {
 		for _, key := range []string{"constructor", "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
 			name := key
 			if key == "constructor" {
@@ -993,9 +1017,3 @@ var (
 	declinedStringMembers = map[string]bool{"matchAll": true, "normalize": true}
 	declinedNumberMembers = map[string]bool{"toExponential": true}
 )
-
-func declinedMethod(key string) *function {
-	return &function{name: key, native: func(*rt, any, []any) (any, error) {
-		return nil, errRuntimeUnsupported("method " + key)
-	}}
-}

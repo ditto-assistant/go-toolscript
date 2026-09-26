@@ -1,0 +1,9 @@
+Relational and equality comparisons with dates, numbers and strings.
+-- script.js --
+const a = new Date(Date.UTC(2020, 0, 1));
+const a2 = new Date(Date.UTC(2020, 0, 1));
+const b = new Date(Date.UTC(2021, 0, 1));
+const bad = new Date(NaN);
+return [a < b, a > b, a <= a2, a >= a2, a == a2, a === a2, a == a, a == a.getTime(), a == String(a), a == a.toString(), a < "2021", a > 0, bad < a, bad > a, bad <= bad, bad == bad, bad != bad, a != a2, a == "x", a < b.getTime(), null == a, a == undefined];
+-- tools.json --
+{}

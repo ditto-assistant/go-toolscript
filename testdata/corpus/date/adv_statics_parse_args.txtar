@@ -1,0 +1,7 @@
+Date.parse with non-string arguments.
+-- script.js --
+const s = v => String(v);
+return [s(Date.parse()), s(Date.parse(undefined)), s(Date.parse(null)), s(Date.parse(2020)), s(Date.parse(20201)), s(Date.parse(1e21)), s(Date.parse(true)),
+  s(Date.parse([2020, 1, 2])), s(Date.parse({ toString() { return "2020-06-01T00:00:00Z"; } })), s(Date.parse(new Date(1234567))), s(Date.parse(new Date(NaN))), s(Date.parse(-1)), s(Date.parse(0))];
+-- tools.json --
+{}

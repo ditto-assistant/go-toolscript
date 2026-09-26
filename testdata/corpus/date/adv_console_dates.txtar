@@ -1,0 +1,17 @@
+console.log of dates alone, in arrays and objects, invalid and extreme.
+-- script.js --
+const good = new Date(Date.UTC(2020, 1, 29, 23, 59, 59, 120));
+const zero = new Date(0);
+const bad = new Date(NaN);
+const far = new Date(-1e14);
+console.log(good);
+console.log(bad);
+console.log([good, zero]);
+console.log({ good, bad });
+console.log([far]);
+console.log({ far });
+console.log("at", good, "x", bad);
+console.info(good.getTime(), good.toISOString());
+return 1;
+-- tools.json --
+{}

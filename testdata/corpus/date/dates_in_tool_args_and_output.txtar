@@ -1,0 +1,12 @@
+Dates passed to tools, logged, returned and stringified.
+-- script.js --
+const d = new Date(Date.UTC(2026, 8, 26, 1, 2, 3, 4));
+console.log(d);
+console.log("at", d, [d]);
+console.log(JSON.stringify({d}));
+mcp.store.put({when: d, nested: {list: [d, new Date(NaN)]}});
+return {d, invalid: new Date("x"), list: [d], typeof: typeof d, isDate: d instanceof Date, tag: Object.prototype.toString.call(d), keys: Object.keys(d), s: JSON.stringify([d, new Date(NaN)])};
+-- tools.json --
+{
+  "store.put": null
+}

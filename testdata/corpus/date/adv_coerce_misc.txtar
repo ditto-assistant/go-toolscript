@@ -1,0 +1,7 @@
+Number(), String(), Boolean(), isNaN, isFinite, parseInt on dates.
+-- script.js --
+const a = new Date(1234567);
+const bad = new Date(NaN);
+return [Number(a), String(Number(bad)), String(a) === a.toString(), Boolean(bad), !!bad, bad ? 1 : 2, isNaN(bad), isNaN(a), isFinite(a), isFinite(bad), String(parseInt(a)), parseInt(a.getTime()), String(parseFloat(bad)), Math.max(a, 5), String(Math.min(a, bad)), Math.abs(new Date(-5))];
+-- tools.json --
+{}

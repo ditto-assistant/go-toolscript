@@ -268,6 +268,19 @@ func (c *compiler) globalCall(callee ast.Expression, n *ast.CallExpression) (eva
 			f, err := c.hostCall(name, spec, n)
 			return f, true, err
 		}
+		if name == "Date" {
+			// Date(...) called as a function ignores its arguments.
+			args, err := c.arguments(n.ArgumentList)
+			if err != nil {
+				return nil, true, err
+			}
+			return func(r *rt, s *scope) (any, error) {
+				if _, err := args(r, s); err != nil {
+					return nil, err
+				}
+				return r.dateCall()
+			}, true, nil
+		}
 		if name == "Array" {
 			args, err := c.arguments(n.ArgumentList)
 			if err != nil {
@@ -663,15 +676,26 @@ func (c *compiler) isolated(node ast.Node) bool {
 				}
 			}
 		case *ast.CallExpression:
+			if c.opts.SequentialTools != nil {
+				if name, isTool := c.toolName(n); isTool && c.opts.SequentialTools(name) {
+					ok = false
+					return false
+				}
+			}
 			switch cal := n.Callee.(type) {
 			case *ast.Identifier:
 				if v, _ := c.lookup(cal.Name.String()); v != nil && !local[cal.Name.String()] {
 					ok = false
 				}
+				// Host functions (a shell, a filesystem) share host state, so
+				// batches that use them stay sequential and ordered.
+				if v, _ := c.lookup(cal.Name.String()); v == nil && hasHost(c.opts.HostFunctions, cal.Name.String()) {
+					ok = false
+				}
 			case *ast.DotExpression:
 				name := cal.Identifier.Name.String()
-				if mutatingMethods[name] {
-					ok = false
+				if mutatingMethods[name] || strings.HasPrefix(name, "set") {
+					ok = false // includes Date setters
 				}
 				if p, isPath := staticPath(cal.Left); isPath && len(p) == 1 && p[0] == "console" {
 					ok = false
@@ -783,6 +807,8 @@ func classString(v any) string {
 		return "[object Function]"
 	case *regexpValue:
 		return "[object RegExp]"
+	case *dateValue:
+		return "[object Date]"
 	case *collection:
 		if t.isMap {
 			return "[object Map]"
@@ -794,4 +820,26 @@ func classString(v any) string {
 		}
 	}
 	return "[object Object]"
+}
+
+// toolName resolves the dispatcher name of a static tool call, if any.
+func (c *compiler) toolName(n *ast.CallExpression) (string, bool) {
+	path, ok := c.namespacePath(n.Callee)
+	if !ok {
+		return "", false
+	}
+	if len(path) == 2 && (path[0] == "mcp" || path[0] == "tools") && path[1] == "call" {
+		if c.opts.ResolveCall == nil || len(n.ArgumentList) == 0 {
+			return "", false
+		}
+		lit, isLit := n.ArgumentList[0].(*ast.StringLiteral)
+		if !isLit {
+			return "", false
+		}
+		return c.opts.ResolveCall(lit.Value.String())
+	}
+	if c.opts.Resolve == nil {
+		return "", false
+	}
+	return c.opts.Resolve(path)
 }

@@ -1,0 +1,9 @@
+Multi-argument local constructor at DST gap and overlap instants for several zones.
+-- script.js --
+const at = a => { const d = new Date(...a); return [d.getTime(), d.getHours(), d.getMinutes(), d.getTimezoneOffset(), d.toString()]; };
+return [
+  at([2026, 2, 8, 2, 30]), at([2026, 10, 1, 1, 30]), at([2026, 9, 4, 2, 15]), at([2026, 3, 5, 1, 45]),
+  at([2026, 9, 4, 2, 0]), at([2026, 3, 5, 2, 0]), at([1900, 0, 1]), at([1800, 5, 1, 12]), at([1945, 7, 15])
+];
+-- tools.json --
+{}

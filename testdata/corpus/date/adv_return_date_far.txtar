@@ -1,0 +1,5 @@
+Returning a date with year > 9999 fails encoding in both engines.
+-- script.js --
+return new Date(8.64e15);
+-- tools.json --
+{}

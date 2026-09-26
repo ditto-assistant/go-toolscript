@@ -1,0 +1,12 @@
+Every UTC setter with 0..N arguments, return values recorded.
+-- script.js --
+const base = Date.UTC(2024, 0, 31, 10, 20, 30, 400);
+const names = ["setUTCMilliseconds", "setUTCSeconds", "setUTCMinutes", "setUTCHours", "setUTCDate", "setUTCMonth", "setUTCFullYear", "setTime"];
+const argsets = [[], [5], [5, 6], [5, 6, 7], [5, 6, 7, 8], [5, 6, 7, 8, 9]];
+const out = {};
+for (const n of names) {
+  out[n] = argsets.map(a => { const d = new Date(base); const r = d[n](...a); return String(r) + "|" + (isNaN(d) ? "Invalid" : d.toISOString()); });
+}
+return out;
+-- tools.json --
+{}

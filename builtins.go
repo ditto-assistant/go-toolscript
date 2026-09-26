@@ -54,24 +54,34 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 		return nil, r.typeError("Cannot read property '" + key + "' of undefined or null")
 	case *object:
 		if f, ok := t.get(key); ok {
-			return r.call(f, args)
+			return r.callThis(f, t, args)
 		}
 		return r.objectMethod(t, key, args)
 	case *hostObject:
 		if f, ok := t.view.get(key); ok {
-			return r.call(f, args)
+			return r.callThis(f, t, args)
 		}
 		return r.objectMethod(t, key, args)
 	case *regexpValue:
 		return r.regexpMethod(t, key, args)
 	case *collection:
 		return r.collectionMethod(t, key, args)
+	case *dateValue:
+		if t.props != nil {
+			if f, ok := t.props.get(key); ok {
+				return r.callThis(f, t, args)
+			}
+		}
+		if m := dateMethods[key]; m != nil {
+			return m(r, t, args)
+		}
+		return r.objectMethod(t, key, args)
 	case *iterator:
 		return r.iteratorMethod(t, key)
 	case *function:
 		if t.props != nil {
 			if f, ok := t.props.get(key); ok {
-				return r.call(f, args)
+				return r.callThis(f, t, args)
 			}
 		}
 		if v, ok, err := r.functionMethod(t, key, args); ok {
@@ -104,6 +114,12 @@ func (r *rt) objectMethod(o any, key string, args []any) (any, error) {
 		case *hostObject:
 			_, ok := t.view.own(k)
 			return ok, nil
+		case *dateValue:
+			if t.props == nil {
+				return false, nil
+			}
+			_, ok := t.props.own(k)
+			return ok, nil
 		}
 	}
 	return nil, r.typeError("Object has no member '" + key + "'")
@@ -114,7 +130,7 @@ func (r *rt) callBuiltinMethod(recv any, key string, args []any) (any, error) {
 	case *array:
 		if t.props != nil {
 			if f, ok := t.props.get(key); ok {
-				return r.call(f, args)
+				return r.callThis(f, t, args)
 			}
 		}
 		if m := arrayMethods[key]; m != nil {
@@ -146,7 +162,7 @@ func (r *rt) callBuiltinMethod(recv any, key string, args []any) (any, error) {
 		case "valueOf":
 			return t, nil
 		}
-	case *object, *hostObject:
+	case *object, *hostObject, *dateValue:
 		return r.objectMethod(t, key, args)
 	}
 	return nil, r.typeError("Object has no member '" + key + "'")
@@ -1156,6 +1172,7 @@ func init() {
 			return math.Sqrt(sum), nil
 		},
 	}
+	registerDateStatics()
 	for name, f := range map[string]func(float64) float64{
 		"abs": math.Abs, "ceil": math.Ceil, "floor": math.Floor, "trunc": math.Trunc,
 		"sqrt": math.Sqrt, "cbrt": math.Cbrt, "exp": math.Exp, "expm1": math.Expm1,
@@ -1730,7 +1747,7 @@ func (r *rt) consoleArg(v any) (string, error) {
 	}
 	switch v.(type) {
 	case *object, *array, *regexpValue, *collection, *iterator:
-		exported, err := exportConsole(v)
+		exported, err := exportConsole(v, r.location())
 		if err == nil {
 			if clean, err := MarshalExport(exported); err == nil {
 				return string(clean), nil

@@ -1,0 +1,7 @@
+Dates passed where built-ins expect numbers or indices.
+-- script.js --
+const arr = ["a", "b", "c", "d"];
+const one = new Date(1);
+return ["ab".repeat(new Date(2)), arr.slice(one), arr.at(new Date(-1)), arr[new Date(0)], "hello".charAt(one), "hello".substring(one, new Date(3)), (12.345).toFixed(new Date(2)), Number.isInteger(one), Number.isNaN(new Date(NaN)), Math.floor(new Date(1234) / 1000), Math.round(new Date(1500) / 1000), arr.indexOf("b", one), new Array(3).fill(one).length];
+-- tools.json --
+{}

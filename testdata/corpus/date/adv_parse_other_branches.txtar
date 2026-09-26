@@ -1,0 +1,13 @@
+Legacy (non-ISO) parser: month names, abbreviations, am/pm, parentheses, two-digit years, separators, junk.
+-- script.js --
+const inputs = ["Sep 26 2026", "September 26, 2026", "Sept 26 2026", "Septem 26 2026", "sEp 26 2026", "26 Sep 2026", "2026 Sep 26", "Sep 2026 26", "Sep 26", "26 Sep", "Sep", "2026 Sep",
+  "9/26/2026", "9-26-2026", "9.26.2026", "2026/9/26", "9/26", "9/26/49", "9/26/50", "9/26/99", "9/26/100", "Sep 26 49", "Sep 26 50", "1/2/3", "1/2/3/4", "32/1/2026", "0/1/2026",
+  "Sep 26 2026 3:04 pm", "Sep 26 2026 12:00 am", "Sep 26 2026 12:00 pm", "Sep 26 2026 13:00 pm", "Sep 26 2026 11:59:59.999 PM", "Sep 26 2026 3:04pm", "Sep 26 2026 3:4:5",
+  "Sep 26 2026 10:20 EST", "Sep 26 2026 10:20 est", "Sep 26 2026 10:20 PDT", "Sep 26 2026 10:20 CEST", "Sep 26 2026 10:20 EEST", "Sep 26 2026 10:20 UT", "Sep 26 2026 10:20 Z",
+  "Sep 26 2026 10:20 UTCX", "Sep 26 2026 10:20 GMT+0530", "Sep 26 2026 10:20 GMT-05:30", "Sep 26 2026 10:20 +5", "Sep 26 2026 10:20 +123456", "Sep 26 2026 -10:20",
+  "Sep 26 2026 (note (nested)) 10:20", "Sep 26 2026 (unclosed", "Sep 26 2026 )", "Saturday, September 26, 2026", "Sat Sep 26 2026 10:20:30 GMT+0000 (Coordinated Universal Time)",
+  "Tomorrow Sep 26 2026", "Sep 26 2026 junk", "  Sep   26   2026  ", "Sep,26,,2026", "Sep 26 -2026", "Sep 26 +2026", "Sep 26 -0", "Sep 26 2026 24:00", "Sep 26 2026 24:01", "Sep 26 2026 10:60",
+  "Sep 26 1000000000", "Sep 26 999999999", "Jan 1 275760", "Dec 31 -271821", "12:30", "2026", "20260926", "Sep 26 2026 10:20:30,5"];
+return inputs.map(s => [s, String(Date.parse(s))]);
+-- tools.json --
+{}

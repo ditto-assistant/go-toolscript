@@ -1,0 +1,18 @@
+Constructor argument coercion through valueOf/toString objects, arrays, booleans, null/undefined.
+-- script.js --
+const show = d => (isNaN(d) ? "Invalid" : d.toISOString());
+const out = [];
+out.push(show(new Date({ valueOf() { return 86400000; } })));
+out.push(show(new Date({ toString() { return "2020-02-02"; } })));
+out.push(show(new Date({ valueOf() { return "2021-03-04T05:06:07Z"; }, toString() { return "ignored"; } })));
+out.push(show(new Date({ valueOf() { return {}; }, toString() { return "1999-12-31"; } })));
+out.push(show(new Date({})));
+out.push(show(new Date([2020])));
+out.push(show(new Date([2020, 5, 6])));
+out.push(show(new Date([])));
+out.push(show(new Date(true)), show(new Date(false)), show(new Date(null)), show(new Date(undefined)));
+out.push(show(new Date("123")), show(new Date("  2020-01-01")), show(new Date("0")), show(new Date("-1")));
+out.push(show(new Date(1.9)), show(new Date(-1.9)), show(new Date(-0)));
+return out;
+-- tools.json --
+{}

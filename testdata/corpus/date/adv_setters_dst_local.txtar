@@ -1,0 +1,19 @@
+Local setters landing in DST gaps and overlaps in the zone runs.
+-- script.js --
+const r = [];
+const push = d => r.push([d.getTime(), d.getHours(), d.getMinutes(), d.getTimezoneOffset()]);
+let d = new Date(2026, 2, 8, 0, 0); d.setHours(2, 30); push(d);
+d = new Date(2026, 10, 1, 0, 0); d.setHours(1, 30); push(d);
+d = new Date(2026, 10, 1, 0, 0); d.setMinutes(90); push(d);
+d = new Date(2026, 9, 4, 0, 0); d.setHours(2, 15); push(d);
+d = new Date(2026, 3, 5, 0, 0); d.setMinutes(105); push(d);
+d = new Date(2026, 2, 7, 2, 30); d.setDate(8); push(d);
+d = new Date(2026, 9, 3, 2, 15); d.setDate(d.getDate() + 1); push(d);
+d = new Date(2026, 1, 8, 2, 30); d.setMonth(2); push(d);
+d = new Date(2026, 10, 1, 1, 30); d.setSeconds(3600); push(d);
+d = new Date(2026, 10, 1, 1, 30); d.setMilliseconds(3600000); push(d);
+d = new Date(2026, 10, 1, 1, 30); d.setTime(d.getTime() + 3600000); push(d);
+d = new Date(2025, 2, 8, 2, 30); d.setFullYear(2026); push(d);
+return r;
+-- tools.json --
+{}

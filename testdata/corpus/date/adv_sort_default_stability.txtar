@@ -1,0 +1,7 @@
+Default sort of dates whose strings tie (same second) must keep input order.
+-- script.js --
+const ms = [900, 5, 400, 0, 999, 1, 500, 250, 750, 3, 2, 800, 600, 100];
+const ds = ms.map(m => new Date(Date.UTC(2026, 0, 1, 0, 0, m < 500 ? 1 : 0, m)));
+return ds.sort().map(d => d.getTime() % 100000);
+-- tools.json --
+{}

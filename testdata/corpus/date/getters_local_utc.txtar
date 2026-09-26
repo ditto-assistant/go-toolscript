@@ -1,0 +1,10 @@
+Local and UTC getters across DST boundaries and offsets.
+-- script.js --
+const stamps = [0, 1772949600000, 1772953200000, 1793516400000, 1793520000000, 1790000000000, -86400001];
+return stamps.map(ms => {
+  const d = new Date(ms);
+  return [d.getFullYear(), d.getMonth(), d.getDate(), d.getDay(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds(), d.getTimezoneOffset(),
+    d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCDay(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()];
+});
+-- tools.json --
+{}

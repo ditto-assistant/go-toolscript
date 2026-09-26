@@ -1,0 +1,8 @@
+Picking earliest/latest dates with Math.max, reduce and comparisons.
+-- script.js --
+const ds = ["2026-03-01T00:00:00Z", "2025-12-31T23:59:59Z", "2026-09-26T14:30:15.123Z"].map(s => new Date(s));
+const latest = ds.reduce((a, b) => (a > b ? a : b));
+const earliest = ds.reduce((a, b) => (a < b ? a : b));
+return [new Date(Math.max(...ds)).toISOString(), new Date(Math.min(...ds)).toISOString(), latest.toISOString(), earliest.toISOString(), latest === ds[2], String(Math.max(...ds, new Date(NaN)))];
+-- tools.json --
+{}

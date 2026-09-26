@@ -1,0 +1,6 @@
+Setter and constructor arguments given as numeric strings in unusual notations.
+-- script.js --
+const strs = ["0x10", "1e1", " 12 ", "", "  ", "Infinity", "-0", "0b11", "0o7", ".5", "5.", "1e", " 7 ", "+3", "-0x10", "1_0", "\n4\t", "00012"];
+return strs.map(s => { const d = new Date(Date.UTC(2020, 0, 1)); const r = d.setUTCHours(s); return [s, String(r), String(new Date(2020, s).getTime())]; });
+-- tools.json --
+{}

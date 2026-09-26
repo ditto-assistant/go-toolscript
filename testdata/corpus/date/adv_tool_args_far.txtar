@@ -1,0 +1,10 @@
+A date with year > 9999 in tool arguments cannot be encoded.
+-- script.js --
+try {
+  mcp.calendar.create_event({ when: new Date(8.64e15) });
+  return "sent";
+} catch (e) {
+  return ["caught", e.name, e.message];
+}
+-- tools.json --
+{"calendar.create_event": {"ok": true}}

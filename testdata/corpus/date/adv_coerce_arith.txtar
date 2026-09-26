@@ -1,0 +1,8 @@
+Arithmetic coercions of valid and invalid dates.
+-- script.js --
+const a = new Date(Date.UTC(2020, 0, 1));
+const b = new Date(Date.UTC(2020, 0, 2));
+const bad = new Date(NaN);
+return [b - a, +a, -a, a * 1, a / 1000, a % 7, ~~(a / 1e3), a | 0, String(+bad), String(bad - a), String(bad * 2), a - "1", a - true, a - null, String(a - undefined)];
+-- tools.json --
+{}

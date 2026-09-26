@@ -1,0 +1,6 @@
+Parsing strings with tabs, newlines, NBSP and non-ASCII characters.
+-- script.js --
+const inputs = ["\t2026-09-26", "2026-09-26\n", "2026-09-26 ", " 2026-09-26", "Sep\t26 2026", "Sep 26 2026", "Sep 26 2026 10:20 é", "é Sep 26 2026", "Sep 26 2026 —", "２０２６-09-26", "Sep 26 2026 10:20 GÉT"];
+return inputs.map(s => String(Date.parse(s)));
+-- tools.json --
+{}

@@ -1,0 +1,9 @@
+A replacer or toJSON that returns a Date serializes it as a plain object (toJSON is not re-applied).
+-- script.js --
+const out = [];
+out.push(JSON.stringify({ a: 1 }, (k, v) => (k === "a" ? new Date(0) : v)));
+out.push(JSON.stringify({ a: { toJSON() { return new Date(0); } } }));
+out.push(JSON.stringify([{ toJSON: () => new Date(NaN) }]));
+return out;
+-- tools.json --
+{}

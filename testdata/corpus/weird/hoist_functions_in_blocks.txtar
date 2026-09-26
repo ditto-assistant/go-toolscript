@@ -1,0 +1,21 @@
+Function declarations inside if/try blocks called from outside (sloppy-mode block function semantics).
+-- script.js --
+const r = mcp.flags.get({});
+const out = [];
+if (r.enabled) {
+  function helper(x) { return "enabled:" + x; }
+}
+out.push(typeof helper === "function" ? helper(1) : "no helper");
+try {
+  function fromTry() { return "try"; }
+} finally {}
+out.push(fromTry());
+out.push(late());
+function late() { return "hoisted"; }
+return out;
+-- tools.json --
+{
+  "flags.get": {
+    "enabled": true
+  }
+}

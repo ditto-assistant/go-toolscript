@@ -1,0 +1,24 @@
+[..].map(parseInt), map(Number), map(parseFloat), filter(Boolean) on tool strings.
+-- script.js --
+const ids = mcp.store.ids({}).ids;
+return {
+  parseIntMap: ids.map(parseInt),
+  numberMap: ids.map(Number),
+  floatMap: ids.map(parseFloat),
+  truthy: ids.filter(Boolean),
+  radix: [parseInt("11", 2), parseInt("z", 36), parseInt(null, 36), parseInt("0.0000005"), parseInt(0.0000005), parseInt("  -0x1a"), parseInt("123", 1), parseInt("123", 37), parseInt("9", 8)]
+};
+-- tools.json --
+{
+  "store.ids": {
+    "ids": [
+      "10",
+      "10",
+      "10",
+      "7",
+      "3",
+      "",
+      "0"
+    ]
+  }
+}

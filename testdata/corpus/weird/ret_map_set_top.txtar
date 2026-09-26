@@ -1,0 +1,26 @@
+Script returns a Map and, separately logs a Set of results.
+-- script.js --
+const r = mcp.crm.rows({}).rows;
+const byRegion = new Map();
+for (const row of r) byRegion.set(row.region, (byRegion.get(row.region) || 0) + row.n);
+console.log(new Set(r.map(x => x.region)));
+return byRegion;
+-- tools.json --
+{
+  "crm.rows": {
+    "rows": [
+      {
+        "region": "EU",
+        "n": 3
+      },
+      {
+        "region": "US",
+        "n": 1
+      },
+      {
+        "region": "EU",
+        "n": 2
+      }
+    ]
+  }
+}

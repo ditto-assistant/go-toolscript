@@ -1,0 +1,11 @@
+Uncaught throw of undefined.
+-- script.js --
+const r = mcp.jobs.status({id: "job_2"});
+if (!r.ok) throw r.err;
+return "unreachable";
+-- tools.json --
+{
+  "jobs.status": {
+    "ok": false
+  }
+}

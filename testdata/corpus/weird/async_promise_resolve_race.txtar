@@ -1,0 +1,14 @@
+Promise.resolve/race/any a model reaches for in the async dialect.
+-- script.js --
+const first = await Promise.race([mcp.s.fast({}), mcp.s.slow({})]);
+const r = await Promise.resolve(mcp.s.fast({}));
+return {first, r};
+-- tools.json --
+{
+  "s.fast": {
+    "who": "fast"
+  },
+  "s.slow": {
+    "who": "slow"
+  }
+}

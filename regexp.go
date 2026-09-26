@@ -1,12 +1,14 @@
 package toolscript
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"regexp/syntax"
 	"strings"
 	"unicode/utf16"
 
+	"github.com/dlclark/regexp2/v2"
 	"github.com/dop251/goja/parser"
 )
 
@@ -30,6 +32,7 @@ type compiledRegexp struct {
 type regexpValue struct {
 	pat       *compiledRegexp
 	lastIndex any
+	props     *object // own properties assigned by the script
 }
 
 // compileRegexp validates flags and translates a JavaScript pattern.
@@ -84,9 +87,10 @@ func compileRegexp(pattern, flags string) (p *compiledRegexp, ok bool, syntaxErr
 	if err != nil {
 		var incompat parser.RegexpErrorIncompatible
 		if asIncompatible(err, &incompat) {
-			return nil, false, ""
+			bad := backtrackingSyntaxError(pattern, p)
+			return nil, bad != "", bad
 		}
-		return nil, true, "Invalid regular expression: /" + pattern + "/: " + err.Error()
+		return nil, true, err.Error() // Goja throws the parser's text as is
 	}
 	prefix := ""
 	if p.multiline {
@@ -103,12 +107,41 @@ func compileRegexp(pattern, flags string) (p *compiledRegexp, ok bool, syntaxErr
 	}
 	re, err := regexp.Compile(re2)
 	if err != nil {
-		return nil, false, ""
+		// Goja reports RE2's rejection as a SyntaxError, except an invalid
+		// repeat size, which it retries with its backtracking engine.
+		var serr *syntax.Error
+		if !errors.As(err, &serr) || serr.Code != syntax.ErrInvalidRepeatSize {
+			return nil, true, fmt.Sprintf("Invalid regular expression (re2): %s (%v)", re2, err)
+		}
+		bad := backtrackingSyntaxError(pattern, p)
+		return nil, bad != "", bad
 	}
 	p.re = re
 	parsed, err := syntax.Parse(re2, syntax.Perl)
 	p.contextFree = err == nil && !hasContextAssertion(parsed)
 	return p, true, ""
+}
+
+// backtrackingSyntaxError validates a pattern RE2 cannot run the way Goja
+// does, with regexp2 (never used for matching here). It returns Goja's
+// SyntaxError text when regexp2 rejects the pattern too; "" means valid,
+// so the caller declines instead.
+func backtrackingSyntaxError(pattern string, p *compiledRegexp) string {
+	opts := regexp2.ECMAScript
+	if p.multiline {
+		opts |= regexp2.Multiline
+	}
+	if p.dotAll {
+		opts |= regexp2.Singleline
+	}
+	if p.ignoreCase {
+		opts |= regexp2.IgnoreCase
+	}
+	if _, err := regexp2.Compile(pattern, opts); err != nil {
+		inner := fmt.Sprintf("Invalid regular expression (regexp2): %s (%v)", pattern, err)
+		return fmt.Sprintf("Invalid regular expression (regexp2): %s (%s)", pattern, inner)
+	}
+	return ""
 }
 
 func asIncompatible(err error, target *parser.RegexpErrorIncompatible) bool {

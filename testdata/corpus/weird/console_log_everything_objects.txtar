@@ -1,0 +1,26 @@
+console.log of Map/Set/nested/sparse/undefined-bearing structures and big numbers.
+-- script.js --
+const r = mcp.dump.get({});
+const m = new Map([["a", {x: 1}], ["b", [1, 2]]]);
+const s = new Set(["x", 1, null]);
+console.log(m);
+console.log(s);
+console.log([m, s], {m, s});
+const holes = [1, 2, 3]; delete holes[1];
+console.log(holes, [undefined], {u: undefined, n: null, f() {}, nested: {deep: {deeper: {deepest: [1, {x: [2]}]}}}});
+console.log(r, r.big, r.list);
+console.log(new Error("plain"), [new Error("in array")], {err: new TypeError("in obj")});
+return "ok";
+-- tools.json --
+{
+  "dump.get": {
+    "big": 12345678901234567890,
+    "list": [
+      1.0,
+      2.5,
+      -0.0,
+      1e+300
+    ],
+    "neg": -5
+  }
+}

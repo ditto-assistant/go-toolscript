@@ -1,0 +1,19 @@
+Title-casing words split on single spaces crashes on empty words (double spaces) — uncaught.
+-- script.js --
+const titles = mcp.docs.titles({}).titles;
+const out = [];
+for (const t of titles) {
+  out.push(t.split(" ").map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+  console.log(out[out.length - 1]);
+}
+return out;
+-- tools.json --
+{
+  "docs.titles": {
+    "titles": [
+      "hello world",
+      "SHOUTING TEXT",
+      "double  space"
+    ]
+  }
+}

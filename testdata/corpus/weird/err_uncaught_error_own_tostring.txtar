@@ -1,0 +1,8 @@
+Uncaught Error whose toString was reassigned: the runner reports ToString(value).
+-- script.js --
+const r = mcp.a.b({});
+const e = new Error("m");
+e.toString = () => "E!";
+throw e;
+-- tools.json --
+{"a.b": {"v": 1}}

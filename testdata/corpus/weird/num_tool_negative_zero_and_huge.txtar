@@ -1,0 +1,13 @@
+Tool JSON carrying -0, huge integers and tiny floats; model formats and compares them.
+-- script.js --
+const r = mcp.m.get({});
+return {negz: [1 / r.z, r.z === 0, String(r.z), JSON.stringify(r.z), `${r.z}`, r.z.toFixed(2), Math.sign(r.z) === 0], big: [r.big, String(r.big), r.big + 1 === r.big, r.big.toFixed(0), r.big.toString(16)], tiny: [r.tiny, r.tiny * 1e300, r.tiny.toFixed(5), String(r.tiny)], keysOrder: Object.keys(r)};
+-- tools.json --
+{
+  "m.get": {
+    "z": -0.0,
+    "big": 12345678901234567890123,
+    "tiny": 5e-324,
+    "a": 1
+  }
+}

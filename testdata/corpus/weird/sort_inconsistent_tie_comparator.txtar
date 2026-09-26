@@ -1,0 +1,109 @@
+Comparator `a.score > b.score ? -1 : 1` never returns 0; order of ties depends on the sort algorithm.
+-- script.js --
+const rows = mcp.board.list({}).rows;
+const sorted = rows.slice().sort((a, b) => a.score > b.score ? -1 : 1).map(r => r.id);
+const sorted2 = rows.slice().sort((a, b) => a.score < b.score ? 1 : -1).map(r => r.id);
+return {sorted, sorted2};
+-- tools.json --
+{
+  "board.list": {
+    "rows": [
+      {
+        "id": "r00",
+        "score": 3
+      },
+      {
+        "id": "r01",
+        "score": 1
+      },
+      {
+        "id": "r02",
+        "score": 3
+      },
+      {
+        "id": "r03",
+        "score": 2
+      },
+      {
+        "id": "r04",
+        "score": 1
+      },
+      {
+        "id": "r05",
+        "score": 3
+      },
+      {
+        "id": "r06",
+        "score": 2
+      },
+      {
+        "id": "r07",
+        "score": 2
+      },
+      {
+        "id": "r08",
+        "score": 1
+      },
+      {
+        "id": "r09",
+        "score": 3
+      },
+      {
+        "id": "r10",
+        "score": 3
+      },
+      {
+        "id": "r11",
+        "score": 1
+      },
+      {
+        "id": "r12",
+        "score": 2
+      },
+      {
+        "id": "r13",
+        "score": 3
+      },
+      {
+        "id": "r14",
+        "score": 1
+      },
+      {
+        "id": "r15",
+        "score": 1
+      },
+      {
+        "id": "r16",
+        "score": 2
+      },
+      {
+        "id": "r17",
+        "score": 3
+      },
+      {
+        "id": "r18",
+        "score": 2
+      },
+      {
+        "id": "r19",
+        "score": 1
+      },
+      {
+        "id": "r20",
+        "score": 3
+      },
+      {
+        "id": "r21",
+        "score": 2
+      },
+      {
+        "id": "r22",
+        "score": 1
+      },
+      {
+        "id": "r23",
+        "score": 1
+      }
+    ]
+  }
+}

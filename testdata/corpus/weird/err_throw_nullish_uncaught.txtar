@@ -1,0 +1,13 @@
+Uncaught throw of null after logging (model rethrows a missing error field).
+-- script.js --
+const r = mcp.jobs.status({id: "job_1"});
+console.log("status", r.status);
+if (r.status !== "ok") throw r.error;
+return r;
+-- tools.json --
+{
+  "jobs.status": {
+    "status": "failed",
+    "error": null
+  }
+}

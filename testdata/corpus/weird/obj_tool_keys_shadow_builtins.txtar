@@ -1,0 +1,31 @@
+Tool JSON with keys named toString/valueOf/hasOwnProperty/length; model stringifies and calls helpers on it.
+-- script.js --
+const r = mcp.kv.get({});
+const out = [];
+const t = (k, f) => { try { out.push([k, f()]); } catch (e) { out.push([k, e.name + ": " + e.message]); } };
+t("keys", () => Object.keys(r).join(","));
+t("len", () => r.length);
+t("fromLen", () => Array.from(r).length);
+t("hasOwn", () => Object.hasOwn(r, "valueOf"));
+t("hopCall", () => r.hasOwnProperty("x"));
+t("protoHop", () => Object.prototype.hasOwnProperty.call(r, "toString"));
+const nameOnly = (k, f) => { try { out.push([k, f()]); } catch (e) { out.push([k, e.name]); } };
+nameOnly("string", () => String(r));
+nameOnly("tmpl", () => `${r}`);
+nameOnly("concat", () => "v=" + r);
+nameOnly("strOnlyBadToString", () => String({toString: "x"}));
+nameOnly("numOnlyBadValueOf", () => Number({valueOf: "x", toString: () => "7"}));
+t("json", () => JSON.stringify(r));
+t("inOp", () => ["toString" in r, "constructor" in r, "nope" in r]);
+return out;
+-- tools.json --
+{
+  "kv.get": {
+    "toString": "not a function",
+    "valueOf": 5,
+    "hasOwnProperty": true,
+    "length": "3",
+    "0": "zero",
+    "2": "two"
+  }
+}

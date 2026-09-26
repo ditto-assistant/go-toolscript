@@ -1,0 +1,31 @@
+String helpers applied to non-string tool fields: some coerce, some throw.
+-- script.js --
+const r = mcp.crm.get({});
+const out = [];
+const t = (k, f) => { try { out.push([k, f()]); } catch (e) { out.push([k, e.message]); } };
+t("numPad", () => String(r.id).padStart(6, "0"));
+t("numSlice", () => r.id.slice(0, 2));
+t("nullTrim", () => (r.nick || "").trim() || "-");
+t("nullTrimRaw", () => r.nick.trim());
+t("arrIncl", () => r.tags.includes("vip"));
+t("objSplit", () => r.meta.split(","));
+t("boolLen", () => r.active.length);
+t("numLen", () => r.id.length);
+t("concat", () => "".concat(r.id, r.nick, r.tags, r.meta, r.active));
+t("tmpl", () => `${r.id}${r.nick}${r.tags}${r.meta}${r.active}${r.missing}`);
+return out;
+-- tools.json --
+{
+  "crm.get": {
+    "id": 1234,
+    "nick": null,
+    "tags": [
+      "vip",
+      "beta"
+    ],
+    "meta": {
+      "k": 1
+    },
+    "active": true
+  }
+}

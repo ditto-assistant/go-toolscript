@@ -1,0 +1,17 @@
+Mutate a tool result, then call the same tool again: the second result must be a fresh copy.
+-- script.js --
+const a = mcp.crm.get({id: 1});
+a.name = "mutated";
+a.tags.push("added");
+const b = mcp.crm.get({id: 1});
+const c = mcp.crm.get({id: 1});
+return {a: a.name, b: b.name, bTags: b.tags, same: b === c, sameTags: b.tags === c.tags};
+-- tools.json --
+{
+  "crm.get": {
+    "name": "orig",
+    "tags": [
+      "t1"
+    ]
+  }
+}

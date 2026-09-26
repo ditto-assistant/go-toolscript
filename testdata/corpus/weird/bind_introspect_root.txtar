@@ -1,0 +1,21 @@
+Model introspects the tool root: typeof, in, keys, JSON of the root.
+-- script.js --
+const out = {};
+out.t = [typeof mcp, typeof mcp.search_memories, typeof mcp.github, typeof mcp.nope, typeof mcp.call];
+out.has = ["search_memories" in mcp, "nope" in mcp, "list_pull_requests" in mcp.github];
+out.keys = Object.keys(mcp);
+out.ghKeys = Object.keys(tools.github);
+out.json = JSON.stringify(mcp);
+return out;
+-- tools.json --
+{
+  "search_memories": {
+    "hits": []
+  },
+  "github.list_pull_requests": {
+    "prs": []
+  },
+  "github.get_issue": {
+    "n": 1
+  }
+}

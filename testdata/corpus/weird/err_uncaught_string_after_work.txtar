@@ -1,0 +1,17 @@
+Uncaught string throw after several tool calls and console lines.
+-- script.js --
+const a = mcp.s.one({});
+console.log("a", a.v);
+const b = mcp.s.two({prev: a.v});
+console.log("b", b.v);
+if (b.v !== "expected") throw `unexpected value: ${b.v} (from ${a.v})`;
+return b;
+-- tools.json --
+{
+  "s.one": {
+    "v": 1
+  },
+  "s.two": {
+    "v": "other"
+  }
+}

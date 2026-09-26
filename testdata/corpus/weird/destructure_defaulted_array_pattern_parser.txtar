@@ -1,0 +1,38 @@
+Array pattern with a defaulted element followed by more elements, nested in an object pattern (the Goja parser rejects it). Destructuring defaults apply for undefined but not null; renames and nested defaults from sparse tool JSON.
+-- script.js --
+const r = mcp.user.get({});
+const {name: displayName = "anon", limit = 10, tags: [first = "none", ...rest] = [], prefs: {theme = "light", lang: language = "en"} = {}, nested: {deep: {value = "dv"} = {}} = {}} = r;
+const [a = 1, b = a * 2, c = b + 1] = r.triple;
+const [x, , z = "zdef", ...others] = r.list;
+const [p1, p2] = "😀a";
+const {length} = r.list;
+const {0: zeroth, [r.list.length - 1]: lastItem} = r.list;
+return {displayName, limit, first, rest, theme, language, value, a, b, c, x, z, others, p1, p2, length, zeroth, lastItem};
+-- tools.json --
+{
+  "user.get": {
+    "name": null,
+    "limit": null,
+    "tags": [
+      null,
+      "t2",
+      "t3"
+    ],
+    "prefs": {
+      "theme": null
+    },
+    "nested": {
+      "deep": null
+    },
+    "triple": [
+      null
+    ],
+    "list": [
+      "l0",
+      "l1",
+      null,
+      "l3",
+      "l4"
+    ]
+  }
+}

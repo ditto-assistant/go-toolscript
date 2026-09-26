@@ -1,0 +1,45 @@
+Every iterable consumer a model uses fed Sets, Maps and iterators: constructors, fromEntries, destructuring, spread args.
+-- script.js --
+const r = mcp.kv.pairs({});
+const m = new Map(r.pairs);
+const s = new Set(r.pairs.map(p => p[1]));
+const out = {};
+const t = (k, f) => { try { out[k] = f(); } catch (e) { out[k] = e.name + ": " + e.message; } };
+t("setFromMapKeys", () => [...new Set(m.keys())]);
+t("setFromSet", () => [...new Set(s)]);
+t("mapFromMap", () => [...new Map(m)].length);
+t("mapFromEntriesIter", () => new Map(m.entries()).get("b"));
+t("fromEntriesMap", () => Object.fromEntries(m));
+t("fromEntriesIter", () => Object.fromEntries(m.entries()));
+t("fromEntriesArrIter", () => Object.fromEntries(r.pairs.values()));
+t("destructSet", () => { const [x, y] = s; return [x, y]; });
+t("destructMap", () => { const [[k1], [k2, v2]] = m; return [k1, k2, v2]; });
+t("destructIter", () => { const [a, , c] = m.values(); return [a, c]; });
+t("spreadArgs", () => Math.max(...s, ...m.values()));
+t("concatSet", () => [].concat(s).length);
+t("forOfIter", () => { const acc = []; for (const [k, v] of m.entries()) acc.push(k + v); return acc; });
+t("setOfString", () => new Set("aabbc").size);
+t("mapFromBad", () => new Map([1, 2]).size);
+t("setFromNumber", () => new Set(5).size);
+t("fromEntriesBad", () => Object.fromEntries([1, 2]));
+t("fromEntriesStrings", () => Object.fromEntries(["ab", "cd"]));
+return out;
+-- tools.json --
+{
+  "kv.pairs": {
+    "pairs": [
+      [
+        "a",
+        1
+      ],
+      [
+        "b",
+        2
+      ],
+      [
+        "c",
+        3
+      ]
+    ]
+  }
+}

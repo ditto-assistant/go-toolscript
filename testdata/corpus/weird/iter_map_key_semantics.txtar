@@ -1,0 +1,24 @@
+Map/Set key equality for NaN, -0, numbers vs strings and object identity; Map from tool entries.
+-- script.js --
+const r = mcp.kv.dump({});
+const m = new Map();
+m.set(NaN, "nan1").set(NaN, "nan2").set(0, "zero").set(-0, "negzero").set("0", "str0").set(1, "one");
+const objKey = {id: 1};
+m.set(objKey, "obj").set({id: 1}, "obj2");
+const s = new Set([NaN, NaN, 0, -0, "0", null, undefined, null]);
+const fromTool = new Map(Object.entries(r.map));
+const back = Object.fromEntries(fromTool);
+return {size: m.size, nan: m.get(NaN), zero: m.get(-0), str: m.get("0"), obj: m.get(objKey), objLit: m.get({id: 1}) ?? "miss", setSize: s.size, setVals: [...s].map(String), keys: [...fromTool.keys()], back, json: JSON.stringify(m), jsonS: JSON.stringify([...s]), spread: JSON.stringify({...m})};
+-- tools.json --
+{
+  "kv.dump": {
+    "map": {
+      "b": 1,
+      "10": 2,
+      "a": 3,
+      "2": 4,
+      "-1": 5,
+      "01": 6
+    }
+  }
+}

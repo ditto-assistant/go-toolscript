@@ -63,8 +63,14 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 		}
 		return r.objectMethod(t, key, args)
 	case *regexpValue:
+		if f, ok := ownProp(t.props, key); ok {
+			return r.callThis(f, t, args)
+		}
 		return r.regexpMethod(t, key, args)
 	case *collection:
+		if f, ok := ownProp(t.props, key); ok {
+			return r.callThis(f, t, args)
+		}
 		return r.collectionMethod(t, key, args)
 	case *dateValue:
 		if t.props != nil {
@@ -78,6 +84,8 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 		return r.objectMethod(t, key, args)
 	case *iterator:
 		return r.iteratorMethod(t, key)
+	case *intlObject:
+		return r.intlMethodCall(t, key, args)
 	case *function:
 		if t.props != nil {
 			if f, ok := t.props.get(key); ok {
@@ -908,8 +916,14 @@ func init() {
 			return s, nil
 		},
 		"valueOf": func(r *rt, f float64, _ []any) (any, error) { return f, nil },
-		// Goja formats numbers for every locale like toString.
-		"toLocaleString": func(r *rt, f float64, _ []any) (any, error) { return numberToString(f), nil },
+		// Goja formats numbers for every locale like toString; with locales
+		// or options it is Intl.NumberFormat.
+		"toLocaleString": func(r *rt, f float64, args []any) (any, error) {
+			if isUndefined(arg(args, 0)) && isUndefined(arg(args, 1)) {
+				return numberToString(f), nil
+			}
+			return r.numberToLocaleString(f, arg(args, 0), arg(args, 1))
+		},
 		"toPrecision": func(r *rt, f float64, args []any) (any, error) {
 			if isUndefined(arg(args, 0)) {
 				return numberToString(f), nil
@@ -1044,8 +1058,38 @@ func init() {
 		},
 		"Array.from": func(r *rt, args []any) (any, error) {
 			src := arg(args, 0)
+			mapFn := arg(args, 1)
+			if !isUndefined(mapFn) {
+				if err := r.requireCallable(mapFn); err != nil {
+					return nil, err
+				}
+			}
 			var items []any
 			switch t := src.(type) {
+			case *collection, *iterator:
+				// Iterables are consumed lazily: mapFn runs as each item
+				// is produced, and a partially consumed iterator yields
+				// only what is left.
+				it, _ := defaultIterator(t)
+				items = []any{}
+				for {
+					v, ok := it.next()
+					if !ok {
+						break
+					}
+					if len(items) >= r.x.maxItems {
+						return nil, r.rangeError("Invalid array length")
+					}
+					if !isUndefined(mapFn) {
+						m, err := r.callback(mapFn, v, float64(len(items)))
+						if err != nil {
+							return nil, err
+						}
+						v = m
+					}
+					items = append(items, v)
+				}
+				return &array{items: items}, nil
 			case *array:
 				items = append([]any(nil), t.items...)
 			case string:
@@ -1074,10 +1118,7 @@ func init() {
 			default:
 				items = []any{}
 			}
-			if f := arg(args, 1); !isUndefined(f) {
-				if err := r.requireCallable(f); err != nil {
-					return nil, err
-				}
+			if f := mapFn; !isUndefined(f) {
 				for i, v := range items {
 					m, err := r.callback(f, v, float64(i))
 					if err != nil {
@@ -1134,7 +1175,12 @@ func init() {
 			}
 			return t
 		}),
-		"Math.random": func(r *rt, args []any) (any, error) { return rand.Float64(), nil },
+		"Math.random": func(r *rt, args []any) (any, error) {
+			if r.x.opts.Random != nil {
+				return r.x.opts.Random(), nil
+			}
+			return rand.Float64(), nil
+		},
 		"Math.pow": func(r *rt, args []any) (any, error) {
 			a, err := r.toNumber(arg(args, 0))
 			if err != nil {
@@ -1734,10 +1780,20 @@ func (r *rt) console(level string, args []any) error {
 		}
 		parts[i] = s
 	}
-	if r.x.opts.Console != nil {
-		r.x.opts.Console(level, strings.Join(parts, " "))
+	line := strings.Join(parts, " ")
+	if r.seq != nil {
+		// Parallel batch item: released in item order by the sequencer.
+		r.logs = append(r.logs, consoleLine{level, line})
+		return nil
 	}
+	r.emitConsole(level, line)
 	return nil
+}
+
+func (r *rt) emitConsole(level, line string) {
+	if r.x.opts.Console != nil {
+		r.x.opts.Console(level, line)
+	}
 }
 
 func (r *rt) consoleArg(v any) (string, error) {
@@ -1746,7 +1802,7 @@ func (r *rt) consoleArg(v any) (string, error) {
 		return "[object Map]", nil
 	}
 	switch v.(type) {
-	case *object, *array, *regexpValue, *collection, *iterator:
+	case *object, *array, *regexpValue, *collection, *iterator, *intlObject:
 		exported, err := exportConsole(v, r.location())
 		if err == nil {
 			if clean, err := MarshalExport(exported); err == nil {

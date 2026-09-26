@@ -1,0 +1,18 @@
+console.log with printf-style specifiers and mixed argument types (Node users expect substitution).
+-- script.js --
+const r = mcp.stats.get({});
+console.log("%s has %d items (%i%%) %o %j", r.name, r.count, r.pct, r, r);
+console.log("%c styled", "color: red");
+console.log(r.count, "items", r.nothing, r.missing, [r.nothing, r.missing], {a: r.missing, b: r.nothing});
+console.info(-0, [-0], 1e21, 1e-7, 0.1 + 0.2, [1.50, 2], NaN, -Infinity);
+console.warn([[], [[]], {}, [{}]], [1, 2].length);
+return "logged";
+-- tools.json --
+{
+  "stats.get": {
+    "name": "inbox",
+    "count": 42,
+    "pct": 12.5,
+    "nothing": null
+  }
+}

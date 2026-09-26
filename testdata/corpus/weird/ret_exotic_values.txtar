@@ -1,0 +1,10 @@
+Script returns an object holding Map, Set, Date, RegExp, Error, NaN, Infinity and -0.
+-- script.js --
+const r = mcp.dump.get({});
+return {m: new Map([["a", 1]]), s: new Set([1, 2]), d: new Date(0), re: /x/g, e: new Error("boom"), nan: NaN, inf: -Infinity, nz: -0, n: r.n, u: undefined, arr: [undefined, NaN, () => 1]};
+-- tools.json --
+{
+  "dump.get": {
+    "n": 1
+  }
+}

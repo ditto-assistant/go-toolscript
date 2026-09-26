@@ -1,0 +1,16 @@
+replace with a callback reporting UTF-16 offsets in a string containing emoji; split with capture groups.
+-- script.js --
+const s = mcp.chat.get({}).text;
+const hits = [];
+const out = s.replace(/(@)(\w+)/g, (m, at, name, off, whole) => { hits.push([name, off, whole.length]); return `<${name.toUpperCase()}>`; });
+const parts = s.split(/(\s*[,;]\s*)/);
+const words = s.match(/\w+/g);
+const none = s.match(/zzz/g);
+const pos = s.search(/@bob/);
+return {out, hits, parts, words, none, pos, lens: [s.length, [...s].length]};
+-- tools.json --
+{
+  "chat.get": {
+    "text": "😀 hi @alice, 🇺🇸 @bob ; 世界 @carol_2"
+  }
+}

@@ -1,0 +1,14 @@
+Model uses console.table / console.dir / console.group (not provided by the runner).
+-- script.js --
+const r = mcp.stats.get({});
+console.group("stats");
+console.table([{a: 1, b: 2}, {a: 3}]);
+console.dir(r, {depth: null});
+console.groupEnd();
+return r.count;
+-- tools.json --
+{
+  "stats.get": {
+    "count": 42
+  }
+}

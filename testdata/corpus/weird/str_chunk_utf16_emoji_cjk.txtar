@@ -1,0 +1,21 @@
+Chunk a message into UTF-16 length-limited pieces that may cut surrogate pairs; log and return chunk stats.
+-- script.js --
+const text = mcp.chat.get_message({id: "msg_1"}).text;
+const LIMIT = 7;
+const chunks = [];
+for (let i = 0; i < text.length; i += LIMIT) chunks.push(text.slice(i, i + LIMIT));
+chunks.forEach((c, i) => console.log(i, c.length, JSON.stringify(c)));
+const safe = [];
+let cur = "";
+for (const ch of text) {
+  if (cur.length + ch.length > LIMIT) { safe.push(cur); cur = ""; }
+  cur += ch;
+}
+if (cur) safe.push(cur);
+return {n: chunks.length, lens: chunks.map(c => c.length), safe, joinedOk: safe.join("") === text, codes: chunks.map(c => c.charCodeAt(c.length - 1).toString(16))};
+-- tools.json --
+{
+  "chat.get_message": {
+    "text": "Hi 👋🏽 世界! 😀😀 café ☕ 🇺🇸 end"
+  }
+}

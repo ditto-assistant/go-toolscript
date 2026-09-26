@@ -1,0 +1,14 @@
+split/join on separators and limits the model gets slightly wrong.
+-- script.js --
+const s = mcp.text.get({}).s;
+return [
+  s.split(","), s.split(",", 2), s.split(",", 0), s.split(",", -1).length, s.split(""), s.split(), s.split(undefined), s.split(",,"),
+  "".split(","), "".split(""), "a,b,".split(","), ",a".split(","),
+  [1, [2, [3, [4]]], null, undefined, {}].join(";"), [[], [[]], [[], []]].join("-"), Array(4).join("ab")
+];
+-- tools.json --
+{
+  "text.get": {
+    "s": "a,b,,c,"
+  }
+}

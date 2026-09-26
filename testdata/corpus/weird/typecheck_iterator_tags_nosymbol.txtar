@@ -1,0 +1,14 @@
+Object.prototype.toString tags and typeof of iterators without touching Symbol.
+-- script.js --
+const r = mcp.dump.get({});
+const tag = v => Object.prototype.toString.call(v);
+const its = [r.arr.entries(), r.arr.keys(), new Map([[1, 2]]).entries(), new Set([1]).values()];
+return its.map(it => [typeof it, tag(it), typeof it.next, String(it)]);
+-- tools.json --
+{
+  "dump.get": {
+    "arr": [
+      1
+    ]
+  }
+}

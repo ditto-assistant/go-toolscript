@@ -1,0 +1,29 @@
+Mutating a Map and a Set while iterating them (deletes, re-adds, appends).
+-- script.js --
+const ids = mcp.queue.ids({}).ids;
+const m = new Map(ids.map(id => [id, 0]));
+const visits = [];
+for (const [k] of m) {
+  visits.push(k);
+  if (k === "b") { m.delete("c"); m.set("a", 1); m.set("z", 1); }
+  if (k === "z") { m.delete("b"); m.set("b", 2); }
+  if (visits.length > 20) break;
+}
+const s = new Set([1, 2, 3]);
+const sv = [];
+for (const v of s) { sv.push(v); if (v < 6) s.add(v + 3); s.delete(v); }
+const fe = [];
+const m2 = new Map([["x", 1], ["y", 2]]);
+m2.forEach((v, k, map) => { fe.push(k + v); if (k === "x") { map.delete("y"); map.set("w", 3); } });
+return {visits, final: [...m], sv, s: [...s], fe};
+-- tools.json --
+{
+  "queue.ids": {
+    "ids": [
+      "a",
+      "b",
+      "c",
+      "d"
+    ]
+  }
+}

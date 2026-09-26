@@ -1,0 +1,19 @@
+Pipeline where a middle tool fails; partial results and console output before the uncaught failure.
+-- script.js --
+const a = await mcp.step.one({});
+console.log("one", JSON.stringify(a));
+const [b, c] = await Promise.all([mcp.step.two({from: a.id}), mcp.step.three({from: a.id})]);
+console.log("unreachable", b, c);
+return {a, b, c};
+-- tools.json --
+{
+  "step.one": {
+    "id": "s1"
+  },
+  "step.two": {
+    "ok": true
+  },
+  "step.three": {
+    "$error": "upstream exploded"
+  }
+}

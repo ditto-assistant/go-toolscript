@@ -1,0 +1,18 @@
+instanceof Object / Function over tool values (model's isPlainObject helper).
+-- script.js --
+const r = mcp.dump.get({});
+const isPlain = v => v !== null && typeof v === "object" && !Array.isArray(v) && v instanceof Object;
+return [r.obj, r.arr, r.nil, r.n, () => 1].map(v => [isPlain(v), v instanceof Function]);
+-- tools.json --
+{
+  "dump.get": {
+    "n": 1,
+    "nil": null,
+    "arr": [
+      1
+    ],
+    "obj": {
+      "a": 1
+    }
+  }
+}

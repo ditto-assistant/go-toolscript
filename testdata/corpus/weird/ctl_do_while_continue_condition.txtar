@@ -1,0 +1,25 @@
+continue inside do...while jumps to the condition; for with two counters; switch with lexical declarations.
+-- script.js --
+const r = mcp.cfg.get({});
+let i = 0, evens = 0, iters = 0;
+do { i++; iters++; if (i % 2) continue; evens++; } while (i < r.n);
+const pairs = [];
+for (let a = 0, b = r.n; a < b; a++, b--) pairs.push(a + "-" + b);
+const res = [];
+for (const k of [1, 2, 3]) {
+  switch (k) {
+    case 1: { const msg = "one"; res.push(msg); break; }
+    case 2: { let msg = "two"; msg += "!"; res.push(msg); break; }
+    default: res.push("other");
+  }
+}
+let tdz;
+try { switch (r.n) { case 0: let z = 1; break; default: z = 2; } } catch (e) { tdz = e.name + ": " + e.message; }
+for (;;) { if (++iters > 100) break; }
+return {i, evens, iters, pairs, res, tdz};
+-- tools.json --
+{
+  "cfg.get": {
+    "n": 7
+  }
+}

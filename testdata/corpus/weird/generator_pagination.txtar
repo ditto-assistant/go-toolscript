@@ -1,0 +1,29 @@
+Generator-based paginator over a cursor tool (engine may decline generators).
+-- script.js --
+function* pages() {
+  let cursor = null;
+  do { const r = mcp.list.page({cursor}); yield r.items; cursor = r.next_cursor; } while (cursor);
+}
+const all = [];
+for (const items of pages()) all.push(...items);
+return all;
+-- tools.json --
+{
+  "list.page": {
+    "$sequence": [
+      {
+        "items": [
+          1,
+          2
+        ],
+        "next_cursor": "c2"
+      },
+      {
+        "items": [
+          3
+        ],
+        "next_cursor": null
+      }
+    ]
+  }
+}

@@ -236,11 +236,23 @@ func canonicalJSON(v any) string {
 // corpusNow pins Date.now()/new Date() in both engines.
 var corpusNow = time.Date(2026, time.September, 26, 14, 30, 15, 123e6, time.UTC)
 
+// corpusRandom returns the same deterministic Math.random sequence per run.
+func corpusRandom() func() float64 {
+	state := uint64(0x9E3779B97F4A7C15)
+	return func() float64 {
+		state ^= state << 13
+		state ^= state >> 7
+		state ^= state << 17
+		return float64(state>>11) / (1 << 53)
+	}
+}
+
 func runNative(c *corpusCase, p *Program) outcome {
 	var out outcome
 	fx := &fixture{c: c, calls: map[string]int{}}
 	res, err := p.Execute(context.Background(), ExecuteOptions{
 		Now:          func() time.Time { return corpusNow },
+		Random:       corpusRandom(),
 		MaxCallDepth: 2000, // Ditto's runner and the oracle both allow 2000
 		Console:      func(_, line string) { out.console = append(out.console, line) },
 		Dispatch: func(_ context.Context, name string, arg any) (any, error) {
@@ -306,6 +318,7 @@ func runGoja(c *corpusCase) outcome {
 	vm := goja.New()
 	vm.SetMaxCallStackSize(2000)
 	vm.SetTimeSource(func() time.Time { return corpusNow })
+	vm.SetRandSource(corpusRandom())
 	parse, _ := goja.AssertFunction(vm.Get("JSON").ToObject(vm).Get("parse"))
 	toJS := func(v any) goja.Value {
 		b, _ := json.Marshal(v) // sorted keys, like native fromGo
@@ -457,12 +470,16 @@ func runGoja(c *corpusCase) outcome {
 	return out
 }
 
-func gojaErrorText(v goja.Value) string {
-	if o, ok := v.(*goja.Object); ok {
-		if name := o.Get("name"); name != nil && !goja.IsUndefined(name) {
-			return name.String() + ": " + o.Get("message").String()
+// gojaErrorText renders an uncaught exception the way Ditto's runner does:
+// classifyError reports goja.Exception.Error(), which is ToString(value)
+// followed by the stack position (stripped here, as native has none). So
+// `new Error()` reads "Error" and a thrown {name, message} "[object Object]".
+func gojaErrorText(v goja.Value) (text string) {
+	defer func() {
+		if recover() != nil {
+			text = "exception"
 		}
-	}
+	}()
 	return v.String()
 }
 

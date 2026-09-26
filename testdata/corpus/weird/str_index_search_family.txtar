@@ -1,0 +1,14 @@
+indexOf/lastIndexOf/includes/startsWith/endsWith with odd positions and needle types.
+-- script.js --
+const s = mcp.text.get({}).s;
+return [
+  s.indexOf(""), s.indexOf("", 99), s.lastIndexOf(""), s.lastIndexOf("", 3), s.indexOf("a", -5), s.lastIndexOf("a", -5),
+  s.includes(""), s.includes("na", 3), s.startsWith("ban", 0), s.startsWith("ana", 1), s.endsWith("ban", 3), s.endsWith("a", 100),
+  s.indexOf(undefined), "undefined-x".indexOf(undefined), "null".includes(null), "1,2".includes([1, 2]), s.indexOf("n", 2.9), s.at(), s.at(-0), s.at("1"), s.charAt(-1), s.charAt(99), s[99], s.codePointAt(99)
+];
+-- tools.json --
+{
+  "text.get": {
+    "s": "banana"
+  }
+}

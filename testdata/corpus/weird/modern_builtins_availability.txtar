@@ -1,0 +1,36 @@
+ES2023+ helpers a model assumes exist: toSorted/with/findLast, structuredClone-free checks.
+-- script.js --
+const rows = mcp.crm.rows({}).rows;
+const out = {};
+const t = (k, f) => { try { out[k] = f(); } catch (e) { out[k] = e.name + ": " + e.message; } };
+t("toSorted", () => rows.map(r => r.n).toSorted((a, b) => a - b));
+t("toReversed", () => rows.map(r => r.n).toReversed());
+t("with", () => rows.map(r => r.n).with(-1, 0));
+t("findLast", () => rows.findLast(r => r.region === "EU")?.n);
+t("findLastIndex", () => rows.findLastIndex(r => r.region === "US"));
+t("hasOwn", () => Object.hasOwn(rows[0], "n"));
+t("at", () => [rows.at(-1).n, "abc".at(-1)]);
+t("isWellFormed", () => "ab\uD800".isWellFormed());
+t("toWellFormed", () => "ab\uD800".toWellFormed().length);
+t("flatMapDeep", () => rows.flatMap(r => [[r.n]]).length);
+t("fromEntriesMap", () => Object.fromEntries(new Map([["a", 1]])));
+return out;
+-- tools.json --
+{
+  "crm.rows": {
+    "rows": [
+      {
+        "region": "EU",
+        "n": 3
+      },
+      {
+        "region": "US",
+        "n": 1
+      },
+      {
+        "region": "EU",
+        "n": 2
+      }
+    ]
+  }
+}

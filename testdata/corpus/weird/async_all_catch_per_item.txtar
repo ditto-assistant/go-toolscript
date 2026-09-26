@@ -1,0 +1,12 @@
+Promise.all over tool promises each with .catch attached to convert failures into values.
+-- script.js --
+const ids = ["u1", "u2", "u3"];
+const rows = await Promise.all(ids.map(id => mcp.users.get({id}).then(u => ({id, name: u.name})).catch(e => ({id, error: e.message}))));
+const names = await Promise.all(rows.map(async r => r.error ? null : r.name.toUpperCase()));
+return {rows, names};
+-- tools.json --
+{
+  "users.get": {
+    "$error": "rate limited"
+  }
+}

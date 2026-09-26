@@ -1,0 +1,31 @@
+Mutually recursive hoisted helpers over a nested tool result (isEven/isOdd style and walk/visit pair).
+-- script.js --
+const r = mcp.tree.get({});
+function visit(node, acc) { acc.push(node.name); return walk(node.children ?? [], acc); }
+function walk(list, acc) { for (const c of list) visit(c, acc); return acc; }
+function isEven(n) { return n === 0 ? true : isOdd(n - 1); }
+function isOdd(n) { return n === 0 ? false : isEven(n - 1); }
+return {names: visit(r, []), parity: [0, 1, 7, 100, 999].map(isEven)};
+-- tools.json --
+{
+  "tree.get": {
+    "name": "root",
+    "children": [
+      {
+        "name": "a",
+        "children": [
+          {
+            "name": "a1"
+          },
+          {
+            "name": "a2",
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "b"
+      }
+    ]
+  }
+}

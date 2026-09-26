@@ -1,0 +1,25 @@
+Passing JSON.stringify / String / Number directly as callbacks (extra index/array args).
+-- script.js --
+const r = mcp.tags.list({});
+r.tags.forEach((t, i, all) => console.log(t, i, all));
+const js = r.tags.map((t, i, all) => JSON.stringify(t, i, all));
+const st = r.tags.map(String);
+const nums = ["1", "2", "3"].map(Number);
+const trims = [" a ", "b "].map(s => s.trim);
+return {js, st, nums, trimsType: typeof trims[0], mathMax: [[1, 5], [7, 2]].map(p => Math.max(...p))};
+-- tools.json --
+{
+  "tags.list": {
+    "tags": [
+      "alpha",
+      {
+        "k": 1
+      },
+      [
+        1,
+        2
+      ],
+      null
+    ]
+  }
+}

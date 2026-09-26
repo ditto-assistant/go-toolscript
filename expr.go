@@ -286,7 +286,7 @@ func isGlobalNamespace(name string) bool {
 		return false
 	}
 	switch name {
-	case "JSON", "Math", "Object", "Array", "Number", "String", "console", "Promise", "Date":
+	case "JSON", "Math", "Object", "Array", "Number", "String", "console", "Promise", "Date", "Intl":
 		return true
 	}
 	return false
@@ -409,6 +409,7 @@ func (c *compiler) objectLiteral(n *ast.ObjectLiteral) (evalFn, error) {
 		value  evalFn
 		name   string
 		spread bool
+		named  bool // an anonymous function under a computed key takes its name
 	}
 	props := make([]prop, 0, len(n.Value))
 	for _, v := range n.Value {
@@ -446,6 +447,7 @@ func (c *compiler) objectLiteral(n *ast.ObjectLiteral) (evalFn, error) {
 			if err != nil {
 				return nil, err
 			}
+			p.named = isFunctionLiteral(v.Value) && p.key != nil
 			if isFunctionLiteral(v.Value) && p.key == nil {
 				name := p.name
 				inner := f
@@ -492,6 +494,9 @@ func (c *compiler) objectLiteral(n *ast.ObjectLiteral) (evalFn, error) {
 				}
 				continue
 			}
+			if fn, ok := v.(*function); ok && p.named && fn.name == "" {
+				fn.name = name
+			}
 			o.set(name, v)
 		}
 		return o, nil
@@ -531,10 +536,22 @@ func (r *rt) copyProps(dst *object, src any) error {
 				dst.set(k, v)
 			}
 		}
-	case *dateValue:
-		if t.props != nil {
-			for _, k := range t.props.ownKeys() {
-				v, _ := t.props.own(k)
+	case *dateValue, *collection, *regexpValue, *function:
+		// Only script-assigned own properties are enumerable.
+		var props *object
+		switch t := t.(type) {
+		case *dateValue:
+			props = t.props
+		case *collection:
+			props = t.props
+		case *regexpValue:
+			props = t.props
+		case *function:
+			props = t.props
+		}
+		if props != nil {
+			for _, k := range props.ownKeys() {
+				v, _ := props.own(k)
 				dst.set(k, v)
 			}
 		}
@@ -647,6 +664,23 @@ func (c *compiler) member(node ast.Expression) (evalFn, error) {
 }
 
 func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
+	if path, ok := staticPath(n.Callee); ok && len(path) == 2 && path[0] == "Intl" {
+		if v, _ := c.lookup("Intl"); v != nil || intlKinds[path[1]] == nil {
+			return nil, unsupported(n)
+		}
+		args, err := c.arguments(n.ArgumentList)
+		if err != nil {
+			return nil, err
+		}
+		name := path[1]
+		return func(r *rt, s *scope) (any, error) {
+			a, err := args(r, s)
+			if err != nil {
+				return nil, err
+			}
+			return r.newIntl(name, a)
+		}, nil
+	}
 	id, ok := n.Callee.(*ast.Identifier)
 	if !ok {
 		return nil, unsupported(n)
@@ -695,7 +729,7 @@ func (r *rt) makeError(name string, args []any) (any, error) {
 	if len(args) > 1 {
 		if o, ok := args[1].(*object); ok {
 			if cause, ok := o.own("cause"); ok {
-				e.errCause = cause
+				e.errCause, e.hasCause = cause, true
 			}
 		}
 	}

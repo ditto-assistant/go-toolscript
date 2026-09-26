@@ -1,0 +1,12 @@
+Error created without a message then assigned message/cause/stack-ish fields; keys and JSON reveal enumerability.
+-- script.js --
+const e1 = new Error();
+e1.message = "assigned later";
+const e2 = new Error("ctor message");
+e2.message = "overwritten";
+const e3 = new Error("with cause", {cause: "root"});
+const e4 = new Error("plain");
+e4.cause = "assigned cause";
+return [e1, e2, e3, e4].map(e => ({keys: Object.keys(e), json: JSON.stringify(e), str: String(e), cause: e.cause ?? null, own: e.hasOwnProperty("message")}));
+-- tools.json --
+{}

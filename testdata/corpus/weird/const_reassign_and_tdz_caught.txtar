@@ -1,0 +1,19 @@
+Assignment to const and use-before-declaration inside try; messages surfaced to the user.
+-- script.js --
+const r = mcp.stats.list({});
+const out = [];
+const limit = 5;
+try { limit = r.values.length; } catch (e) { out.push(e.name + ": " + e.message); }
+try { for (const i = 0; i < 2; i++) out.push(i); } catch (e) { out.push(e.name + ": " + e.message); }
+try { out.push(later); let later = 1; } catch (e) { out.push(e.name + ": " + e.message); }
+return out;
+-- tools.json --
+{
+  "stats.list": {
+    "values": [
+      1,
+      2,
+      3
+    ]
+  }
+}

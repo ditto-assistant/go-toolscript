@@ -1,0 +1,23 @@
+for...in over an array yields string indices; model sums them and concatenates by accident.
+-- script.js --
+const r = mcp.stats.list({});
+let sumIdx = 0, sumVal = 0, keys = [];
+for (const i in r.values) { sumIdx += i; sumVal += r.values[i]; keys.push(typeof i); }
+const arr = r.values.slice();
+arr.extra = "x";
+arr[10] = 99;
+const seen = [];
+for (const k in arr) seen.push(k);
+const strKeys = [];
+for (const k in "héy") strKeys.push(k);
+return {sumIdx, sumVal, keys, seen, strKeys};
+-- tools.json --
+{
+  "stats.list": {
+    "values": [
+      5,
+      6,
+      7
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+Model counts comparator invocations and logs each comparison while sorting.
+-- script.js --
+const xs = mcp.nums.get({}).xs;
+let calls = 0;
+const log = [];
+const sorted = xs.slice().sort((a, b) => { calls++; if (log.length < 6) log.push(`${a}?${b}`); return a - b; });
+console.log("comparisons", calls);
+return {sorted, calls, log};
+-- tools.json --
+{
+  "nums.get": {
+    "xs": [
+      5,
+      3,
+      9,
+      1,
+      7,
+      2,
+      8,
+      6,
+      4,
+      0,
+      11,
+      10,
+      15,
+      13,
+      12,
+      14
+    ]
+  }
+}

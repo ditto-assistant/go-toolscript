@@ -1,0 +1,18 @@
+Tools called with strings, numbers, arrays, null, nothing, and extra positional args.
+-- script.js --
+const out = [];
+out.push(mcp.echo.run("just a string").ok);
+out.push(mcp.echo.run(42).ok);
+out.push(mcp.echo.run([1, {a: 2}]).ok);
+out.push(mcp.echo.run(null).ok);
+out.push(mcp.echo.run().ok);
+out.push(mcp.echo.run({a: 1}, {ignored: true}).ok);
+out.push(mcp.echo.run(undefined).ok);
+out.push(mcp.echo.run(true).ok);
+return out;
+-- tools.json --
+{
+  "echo.run": {
+    "ok": 1
+  }
+}

@@ -1,0 +1,28 @@
+A model writes loose equality on purpose against tool values of mixed types.
+-- script.js --
+const r = mcp.flags.get({});
+const rows = r.rows;
+const out = rows.map(v => [v == 0, v == "", v == null, v == false, v == "0", !v, v === undefined].map(b => b ? 1 : 0).join(""));
+out.push([[] == false, [0] == false, [1] == true, [1, 2] == "1,2", null >= 0, null > 0, null == 0, undefined >= 0, "10" > "9", 10 > "9", "abc" < "abd", [2] > 1].map(Number).join(""));
+return out;
+-- tools.json --
+{
+  "flags.get": {
+    "rows": [
+      0,
+      "",
+      "0",
+      null,
+      false,
+      " ",
+      "false",
+      [],
+      [
+        0
+      ],
+      {},
+      0.0,
+      "  0  "
+    ]
+  }
+}

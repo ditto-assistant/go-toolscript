@@ -1,0 +1,17 @@
+Math helpers with empty spreads, negative zero and huge arguments.
+-- script.js --
+const xs = mcp.stats.values({}).xs;
+const empty = xs.filter(x => x > 1000);
+const z = [Math.max(...empty), Math.min(...empty), Math.max(...xs), Math.min(), Math.round(-0.5), Math.round(-1.5), Math.round(2.5), Math.sign(-0), Math.trunc(-0.9), Math.ceil(-0.1), Math.floor(-0), Math.abs(-0), Math.hypot(3, 4), Math.cbrt(-27), Math.log10(1000), Math.log2(8), Math.pow(2, -1074), Math.atan2(0, -0), Math.sqrt(-1)];
+return z.map(v => v === 0 && 1 / v < 0 ? "-0" : v);
+-- tools.json --
+{
+  "stats.values": {
+    "xs": [
+      3,
+      -7,
+      12.5,
+      0
+    ]
+  }
+}

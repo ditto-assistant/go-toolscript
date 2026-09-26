@@ -1,0 +1,14 @@
+await applied to non-promises: numbers, objects with then-like fields, arrays of promises.
+-- script.js --
+const a = await 5;
+const b = await {then: "not a function", v: 1};
+const c = await [mcp.x.get({}), mcp.x.get({})];
+const d = await null;
+const e = await (async () => undefined)();
+return {a, b, cLen: c.length, cType: typeof c[0], d, e: e === undefined};
+-- tools.json --
+{
+  "x.get": {
+    "ok": 1
+  }
+}

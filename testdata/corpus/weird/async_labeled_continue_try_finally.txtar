@@ -1,0 +1,23 @@
+Labeled continue out of an awaited try/finally inside nested loops; finally counters must run.
+-- script.js --
+let fin = 0;
+const out = [];
+outer: for (const g of ["a", "b", "c"]) {
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await mcp.items.get({g, i});
+      if (g === "b" && i === 1) continue outer;
+      if (g === "c") break outer;
+      out.push(g + i + r.v);
+    } finally {
+      fin++;
+    }
+  }
+}
+return {out, fin};
+-- tools.json --
+{
+  "items.get": {
+    "v": "!"
+  }
+}

@@ -1,0 +1,65 @@
+Long multi-tool digest: dedupe across sources, diff vs previous snapshot, score, bucket by day, render markdown.
+-- script.js --
+const [a, b] = [mcp.src.alpha({}), mcp.src.beta({})];
+const prev = mcp.snap.previous({});
+const norm = x => ({id: String(x.id ?? x.uid).toLowerCase(), title: (x.title ?? x.name ?? "").trim(), at: x.at ?? x.created ?? null, score: +(x.score ?? x.rank ?? 0) || 0, src: x.__src});
+const rows = [...a.items.map(x => ({...x, __src: "alpha"})), ...(b.results ?? []).map(x => ({...x, __src: "beta"}))].map(norm);
+const byId = new Map();
+for (const r of rows) {
+  const cur = byId.get(r.id);
+  if (!cur || r.score > cur.score || (r.score === cur.score && r.src < cur.src)) byId.set(r.id, {...cur, ...r, srcs: [...new Set([...(cur?.srcs ?? []), r.src])]});
+  else cur.srcs = [...new Set([...cur.srcs, r.src])];
+}
+const merged = [...byId.values()];
+const prevIds = new Set(prev.ids);
+const added = merged.filter(m => !prevIds.has(m.id)).map(m => m.id);
+const removed = prev.ids.filter(id => !byId.has(id));
+const day = s => s ? new Date(s).toISOString().slice(0, 10) : "undated";
+const buckets = merged.reduce((acc, m) => ((acc[day(m.at)] ||= []).push(m), acc), {});
+const md = Object.keys(buckets).sort().map(d => `### ${d}\n` + buckets[d].sort((x, y) => y.score - x.score || x.id.localeCompare(y.id)).map(m => `- ${m.title || "(untitled)"} \`${m.id}\` ${m.score.toFixed(1)} [${m.srcs.join("+")}]${added.includes(m.id) ? " 🆕" : ""}`).join("\n")).join("\n\n");
+return {count: merged.length, added, removed, md};
+-- tools.json --
+{
+  "src.alpha": {
+    "items": [
+      {
+        "id": "A1",
+        "title": " Alpha one ",
+        "at": "2026-09-25T10:00:00Z",
+        "score": 3
+      },
+      {
+        "id": "b2",
+        "title": "Beta two",
+        "at": "2026-09-26T01:00:00Z",
+        "score": "2.5"
+      },
+      {
+        "id": "c3",
+        "name": "Gamma",
+        "score": null
+      }
+    ]
+  },
+  "src.beta": {
+    "results": [
+      {
+        "uid": "a1",
+        "title": "Alpha one (beta)",
+        "created": 1790000000000,
+        "rank": 3
+      },
+      {
+        "uid": "D4",
+        "title": "",
+        "rank": "x"
+      }
+    ]
+  },
+  "snap.previous": {
+    "ids": [
+      "a1",
+      "zz9"
+    ]
+  }
+}

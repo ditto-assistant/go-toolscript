@@ -1,0 +1,23 @@
+toPrecision/toExponential/toString(radix) edge values from a metrics tool.
+-- script.js --
+const m = mcp.metrics.get({}).values;
+return m.map(v => [v.toPrecision(1), v.toPrecision(3), v.toPrecision(21), v.toString(2).slice(0, 24), v.toString(36), String(v)]);
+-- tools.json --
+{
+  "metrics.get": {
+    "values": [
+      0,
+      1,
+      0.1,
+      123.456,
+      1e+21,
+      1.5e-07,
+      999.9999,
+      1e-06,
+      123456789.125,
+      -42.5,
+      5e-324,
+      1.7976931348623157e+308
+    ]
+  }
+}

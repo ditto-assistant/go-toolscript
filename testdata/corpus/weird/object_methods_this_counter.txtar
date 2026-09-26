@@ -1,0 +1,20 @@
+Object literal with methods using this (engine may decline `this`).
+-- script.js --
+const stats = {
+  n: 0, sum: 0,
+  add(x) { this.n++; this.sum += x; return this; },
+  get avg() { return this.n ? this.sum / this.n : 0; },
+};
+for (const v of mcp.nums.get({}).xs) stats.add(v);
+return {n: stats.n, avg: stats.avg};
+-- tools.json --
+{
+  "nums.get": {
+    "xs": [
+      1,
+      2,
+      3,
+      4
+    ]
+  }
+}

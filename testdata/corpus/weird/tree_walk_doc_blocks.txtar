@@ -1,0 +1,101 @@
+Recursive walker over a doc tree with null children, collecting paths, depths and text stats.
+-- script.js --
+const doc = mcp.docs.get({id: "doc_abc"});
+const out = [];
+function walk(node, path, depth) {
+  if (!node) { out.push({path, depth, type: "null"}); return 0; }
+  let words = (node.text || "").split(/\s+/).filter(Boolean).length;
+  out.push({path, depth, type: node.type, words});
+  for (const [i, ch] of (node.children || []).entries()) words += walk(ch, `${path}.children[${i}]`, depth + 1);
+  for (const [i, r] of (node.replies || []).entries()) words += walk(r, `${path}.replies[${i}]`, depth + 1);
+  return words;
+}
+const total = doc.blocks.reduce((sum, b, i) => sum + walk(b, `blocks[${i}]`, 0), 0);
+const maxDepth = Math.max(...out.map(o => o.depth));
+const byType = out.reduce((m, o) => ({...m, [o.type]: (m[o.type] || 0) + 1}), {});
+return {total, maxDepth, byType, deepest: out.filter(o => o.depth === maxDepth).map(o => o.path)};
+-- tools.json --
+{
+  "docs.get": {
+    "id": "doc_abc",
+    "title": "Plan",
+    "blocks": [
+      {
+        "type": "heading",
+        "text": "Intro",
+        "children": [
+          {
+            "type": "para",
+            "text": "Hello **world**",
+            "children": []
+          },
+          {
+            "type": "list",
+            "items": [
+              "a",
+              "b",
+              null
+            ],
+            "children": [
+              {
+                "type": "para",
+                "text": "nested",
+                "children": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "rows": [
+          [
+            "x",
+            1
+          ],
+          [
+            "y",
+            null
+          ]
+        ],
+        "children": [
+          {
+            "type": "comment",
+            "author": "alice@example.com",
+            "text": "LGTM",
+            "replies": [
+              {
+                "author": "bob@example.com",
+                "text": "+1",
+                "replies": []
+              }
+            ]
+          }
+        ]
+      },
+      null,
+      {
+        "type": "para",
+        "text": "",
+        "children": [
+          {
+            "type": "heading",
+            "text": "Deep",
+            "children": [
+              {
+                "type": "para",
+                "text": "deeper",
+                "children": [
+                  {
+                    "type": "para",
+                    "text": "deepest"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

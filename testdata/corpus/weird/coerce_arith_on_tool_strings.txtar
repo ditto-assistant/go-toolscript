@@ -1,0 +1,49 @@
+Arithmetic over numeric-looking strings from a CSV-ish tool, including the + concatenation trap.
+-- script.js --
+const r = mcp.sheet.read({range: "A1:C4"});
+let totalWrong = 0, totalRight = 0;
+for (const row of r.values.slice(1)) {
+  totalWrong += row[1];
+  totalRight += Number(row[1]);
+}
+const weird = r.values.slice(1).map(row => [row[1] * 1, row[1] - 0, +row[1], row[1] / 1, ~~row[1], row[1] | 0, parseFloat(row[1]), parseInt(row[1])]);
+return {totalWrong, totalRight, weird, typeWrong: typeof totalWrong};
+-- tools.json --
+{
+  "sheet.read": {
+    "values": [
+      [
+        "name",
+        "amount"
+      ],
+      [
+        "a",
+        "12.50"
+      ],
+      [
+        "b",
+        " 7 "
+      ],
+      [
+        "c",
+        "1e3"
+      ],
+      [
+        "d",
+        "0x1F"
+      ],
+      [
+        "e",
+        "1,200"
+      ],
+      [
+        "f",
+        ""
+      ],
+      [
+        "g",
+        "3.9"
+      ]
+    ]
+  }
+}

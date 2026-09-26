@@ -1,0 +1,28 @@
+URL and query-string parsing with regex and decodeURIComponent, including malformed escapes.
+-- script.js --
+const urls = mcp.web.links({}).urls;
+const parse = u => {
+  const m = /^(\w+):\/\/([^/?#:]+)(?::(\d+))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?$/.exec(u);
+  if (!m) return {bad: u};
+  const q = {};
+  for (const pair of (m[5] || "").split("&").filter(Boolean)) {
+    const [k, v = ""] = pair.split("=");
+    let dv;
+    try { dv = decodeURIComponent(v.replace(/\+/g, " ")); } catch (e) { dv = "!" + e.name; }
+    (q[k] = q[k] === undefined ? dv : [].concat(q[k], dv));
+  }
+  return {scheme: m[1], host: m[2].toLowerCase(), port: m[3] ? +m[3] : null, path: m[4] || "/", q, frag: m[6] ?? null};
+};
+return urls.map(parse);
+-- tools.json --
+{
+  "web.links": {
+    "urls": [
+      "https://Example.com:8443/a/b?x=1&y=a+b&x=2&z=%E2%9C%93#top",
+      "http://example.com?bad=%E0%A4%A&ok=%20",
+      "ftp://files.example.com/",
+      "not a url",
+      "https://example.com/p?empty=&=nokey&flag"
+    ]
+  }
+}

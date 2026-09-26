@@ -1,0 +1,71 @@
+Top-k per group with stable sort and multi-level tie-breakers including missing values.
+-- script.js --
+const rows = mcp.sales.list({}).rows;
+const groups = {};
+for (const r of rows) (groups[r.region ?? "?"] ??= []).push(r);
+const top = {};
+for (const [g, list] of Object.entries(groups)) {
+  top[g] = list
+    .map((r, i) => ({...r, i}))
+    .sort((a, b) => (b.amount ?? -Infinity) - (a.amount ?? -Infinity) || String(a.rep).localeCompare(String(b.rep)) || a.i - b.i)
+    .slice(0, 2)
+    .map(r => `${r.rep}:${r.amount ?? "n/a"}`);
+}
+const defaultSorted = rows.map(r => r.amount).sort();
+const withUndef = [3, undefined, 1, null, undefined, "2", NaN].sort();
+return {top, defaultSorted, withUndef: withUndef.map(String), toSorted: rows.map(r => r.rep).toSorted().slice(0, 4)};
+-- tools.json --
+{
+  "sales.list": {
+    "rows": [
+      {
+        "region": "EU",
+        "rep": "b",
+        "amount": 100
+      },
+      {
+        "region": "EU",
+        "rep": "a",
+        "amount": 100
+      },
+      {
+        "region": "US",
+        "rep": "z",
+        "amount": null
+      },
+      {
+        "region": "US",
+        "rep": "y",
+        "amount": 5
+      },
+      {
+        "region": null,
+        "rep": "q",
+        "amount": 1000
+      },
+      {
+        "region": "EU",
+        "rep": "c",
+        "amount": 250
+      },
+      {
+        "region": "US",
+        "rep": "x",
+        "amount": 5
+      },
+      {
+        "region": "US",
+        "rep": "w"
+      },
+      {
+        "region": "EU",
+        "rep": "a",
+        "amount": 100
+      },
+      {
+        "rep": "p",
+        "amount": 9
+      }
+    ]
+  }
+}

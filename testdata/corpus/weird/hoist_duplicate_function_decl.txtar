@@ -1,0 +1,13 @@
+Two declarations of the same helper (model pasted a revised version below the old one).
+-- script.js --
+const r = mcp.flags.get({});
+function fmt(x) { return "old:" + x; }
+const early = fmt(r.enabled);
+function fmt(x) { return "new:" + x; }
+return [early, fmt(1)];
+-- tools.json --
+{
+  "flags.get": {
+    "enabled": true
+  }
+}

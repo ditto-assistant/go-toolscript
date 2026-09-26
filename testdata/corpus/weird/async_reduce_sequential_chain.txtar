@@ -1,0 +1,30 @@
+Sequential awaits threaded through reduce with an awaited accumulator.
+-- script.js --
+const pages = [1, 2, 3];
+const total = await pages.reduce(async (accP, p) => {
+  const acc = await accP;
+  const r = await mcp.search.page({page: p});
+  return acc + r.items.length;
+}, Promise.resolve(0));
+return total;
+-- tools.json --
+{
+  "search.page": {
+    "$sequence": [
+      {
+        "items": [
+          1,
+          2
+        ]
+      },
+      {
+        "items": [
+          3
+        ]
+      },
+      {
+        "items": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+Uncaught `new Error()` with no message.
+-- script.js --
+const r = mcp.jobs.status({});
+if (!r.ready) throw new Error();
+return r;
+-- tools.json --
+{
+  "jobs.status": {
+    "ready": false
+  }
+}

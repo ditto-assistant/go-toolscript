@@ -1,0 +1,22 @@
+Model builds parent back-links in a tree and returns it (cycle), after trying JSON.stringify.
+-- script.js --
+const t = mcp.docs.tree({});
+for (const c of t.children) c.parent = t;
+let msg;
+try { JSON.stringify(t); } catch (e) { msg = e.name + ": " + e.message; }
+console.log(msg);
+return {count: t.children.length, msg};
+-- tools.json --
+{
+  "docs.tree": {
+    "id": "root",
+    "children": [
+      {
+        "id": "a"
+      },
+      {
+        "id": "b"
+      }
+    ]
+  }
+}

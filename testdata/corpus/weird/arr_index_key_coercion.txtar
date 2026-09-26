@@ -1,0 +1,25 @@
+Array/object index coercion: negative, string, float and exponent keys; length writes.
+-- script.js --
+const r = mcp.list.get({});
+const a = r.items.slice();
+a[-1] = "neg";
+a["2"] = "two";
+a[1.5] = "float";
+a["01"] = "zero-one";
+a[5] = "five";
+const o = {};
+o[1.0] = "a"; o[-0] = "b"; o[1e21] = "c"; o[0.1 + 0.2] = "d"; o[null] = "e"; o[undefined] = "f"; o[[1, 2]] = "g"; o[{}] = "h";
+const lenBefore = a.length;
+const t = a.slice(); t.length = 2;
+let bad;
+try { t.length = -1; } catch (e) { bad = e.name + ": " + e.message; }
+return {a: JSON.stringify(a), keys: Object.keys(a), lenBefore, o, t, bad, lookups: [a[-1], a["1"], a[" 1"], a["1.0"], r.items["0"]]};
+-- tools.json --
+{
+  "list.get": {
+    "items": [
+      "x",
+      "y"
+    ]
+  }
+}

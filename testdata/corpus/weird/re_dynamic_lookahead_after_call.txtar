@@ -1,0 +1,19 @@
+Valid JS lookahead pattern built at run time after a tool call (outside RE2).
+-- script.js --
+const q = mcp.search.query({});
+const re = new RegExp("\\b" + q.term + "(?!-draft)\\b", "gi");
+return q.docs.filter(d => re.test(d));
+-- tools.json --
+{
+  "search.query": {
+    "term": "plan",
+    "docs": [
+      "plan-draft",
+      "the plan",
+      "Plan B",
+      "planet"
+    ]
+  }
+}
+-- divergence --
+Runtime-built regex outside RE2 after a tool call: native reports ErrRuntimeUnsupported and cannot fall back once effects happened (compile.go ErrRuntimeUnsupported contract).

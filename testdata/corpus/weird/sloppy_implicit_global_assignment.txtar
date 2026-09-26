@@ -1,0 +1,18 @@
+Model forgets `let`: assigns to an undeclared variable in sloppy mode and reads it later.
+-- script.js --
+const r = mcp.stats.list({});
+total = 0;
+for (const v of r.values) total += v;
+function bump() { counter = (typeof counter === "undefined" ? 0 : counter) + 1; return counter; }
+bump(); bump();
+return {total, counter};
+-- tools.json --
+{
+  "stats.list": {
+    "values": [
+      1,
+      2,
+      3
+    ]
+  }
+}

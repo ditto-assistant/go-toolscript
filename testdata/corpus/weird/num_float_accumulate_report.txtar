@@ -1,0 +1,21 @@
+Summing float scores and comparing with === and EPSILON, then formatting averages.
+-- script.js --
+const scores = mcp.eval.scores({}).scores;
+const sum = scores.reduce((a, b) => a + b, 0);
+const avg = sum / scores.length;
+return {
+  sum, avg, eq: sum === 0.6, near: Math.abs(sum - 0.6) < Number.EPSILON,
+  str: String(0.1 + 0.2), mul: 0.1 * 3, big: 2 ** 53 + 1, safe: Number.isSafeInteger(2 ** 53),
+  mod: [5.5 % 2, -5.5 % 2, 0.3 % 0.1, 1e21 % 7], div: [1 / 3, 2 / 3, 100 / 7, -1 / 0, 0 / 0],
+  pct: (avg * 100).toFixed(4) + "%"
+};
+-- tools.json --
+{
+  "eval.scores": {
+    "scores": [
+      0.1,
+      0.2,
+      0.3
+    ]
+  }
+}

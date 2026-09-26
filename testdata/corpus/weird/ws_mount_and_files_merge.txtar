@@ -1,0 +1,40 @@
+Merge mounted tool results with workspace_files listing; dedupe by path and sort by size then name.
+-- script.js --
+const files = workspace_files();
+const a = mount_result("res_1");
+const b = mount_result("res_missing");
+const all = [...files, a, b];
+const seen = new Set();
+const uniq = all.filter(f => f && !seen.has(f.path) && seen.add(f.path));
+uniq.sort((x, y) => (y.size ?? -1) - (x.size ?? -1) || String(x.path).localeCompare(String(y.path)));
+return uniq.map(f => `${f.path}:${f.size ?? "?"}`);
+-- tools.json --
+{}
+-- workspace.json --
+{
+  "mount_result": {
+    "res_1": {
+      "path": "/results/001.json",
+      "ref": "res_1",
+      "size": 120
+    }
+  },
+  "workspace_files": [
+    {
+      "path": "/results/001.json",
+      "size": 120
+    },
+    {
+      "path": "/results/002.json",
+      "size": 120
+    },
+    {
+      "path": "/results/000.txt",
+      "size": 5
+    },
+    {
+      "path": "/results/zzz",
+      "size": null
+    }
+  ]
+}

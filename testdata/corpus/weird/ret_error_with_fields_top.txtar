@@ -1,0 +1,14 @@
+Script returns an Error enriched with enumerable fields.
+-- script.js --
+const e = new Error("validation failed");
+e.fields = ["email", "name"];
+e.status = 422;
+const r = mcp.users.validate({});
+e.detail = r.detail;
+return e;
+-- tools.json --
+{
+  "users.validate": {
+    "detail": "bad email"
+  }
+}

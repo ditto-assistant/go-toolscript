@@ -1,0 +1,54 @@
+Bucket events by ISO week, month and weekday using UTC getters; month-end and leap-day arithmetic.
+-- script.js --
+const evs = mcp.cal.events({}).events;
+const isoWeek = d => { const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return t.getUTCFullYear() + "-W" + String(Math.ceil(((t - y0) / 864e5 + 1) / 7)).padStart(2, "0"); };
+const byWeek = {}, byMonth = {}, byDow = [0, 0, 0, 0, 0, 0, 0];
+for (const e of evs) {
+  const d = new Date(e.at);
+  if (isNaN(d)) { (byWeek.invalid ||= []).push(e.id); continue; }
+  (byWeek[isoWeek(d)] ||= []).push(e.id);
+  const mk = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  byMonth[mk] = (byMonth[mk] || 0) + 1;
+  byDow[d.getUTCDay()]++;
+}
+const addMonth = s => { const d = new Date(s); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 10); };
+return {byWeek, byMonth, byDow, adds: ["2026-01-31", "2024-02-29", "2026-12-31", "2026-03-31"].map(addMonth), leap: [2024, 2025, 2100, 2000].map(y => new Date(Date.UTC(y, 1, 29)).getUTCDate() === 29)};
+-- tools.json --
+{
+  "cal.events": {
+    "events": [
+      {
+        "id": "e1",
+        "at": "2026-01-01T00:00:00Z"
+      },
+      {
+        "id": "e2",
+        "at": "2025-12-29T23:59:59Z"
+      },
+      {
+        "id": "e3",
+        "at": "2026-09-26"
+      },
+      {
+        "id": "e4",
+        "at": "2026-02-30T10:00:00Z"
+      },
+      {
+        "id": "e5",
+        "at": "not a date"
+      },
+      {
+        "id": "e6",
+        "at": 1790000000000
+      },
+      {
+        "id": "e7",
+        "at": "2024-12-30T12:00:00.000+05:30"
+      },
+      {
+        "id": "e8",
+        "at": "2026-12-31T23:00:00-02:00"
+      }
+    ]
+  }
+}

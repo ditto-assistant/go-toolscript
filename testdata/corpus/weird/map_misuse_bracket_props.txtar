@@ -1,0 +1,36 @@
+Model treats a Map like an object: bracket writes, .length, array methods on a Set, forEach args swapped.
+-- script.js --
+const r = mcp.crm.rows({}).rows;
+const m = new Map();
+for (const row of r) m[row.region] = (m[row.region] || 0) + row.n;
+const s = new Set(r.map(x => x.region));
+const out = {size: m.size, keys: Object.keys(m), json: JSON.stringify(m), eu: m.EU, get: m.get("EU") ?? "undef", sLen: s.length ?? "undef", s0: s[0] ?? "undef"};
+try { out.map = s.map(x => x); } catch (e) { out.map = e.name + ": " + e.message; }
+try { out.filter = m.filter(x => x); } catch (e) { out.filter = e.name + ": " + e.message; }
+const m2 = new Map(r.map(x => [x.region, x.n]));
+const swapped = [];
+m2.forEach((k, v) => swapped.push(`${k}->${v}`));
+const setArgs = [];
+s.forEach((a, b, set) => setArgs.push([a, b, set === s]));
+const chain = new Map().set("a", 1).set("b", 2).set("a", 3);
+const sizeAfterClear = (() => { const x = new Map([["k", 1]]); x.clear(); return x.size; })();
+return {...out, swapped, setArgs, chain: [...chain], del: [chain.delete("a"), chain.delete("zz")], add: new Set().add(1).add(1).add(2).size, sizeAfterClear};
+-- tools.json --
+{
+  "crm.rows": {
+    "rows": [
+      {
+        "region": "EU",
+        "n": 3
+      },
+      {
+        "region": "US",
+        "n": 1
+      },
+      {
+        "region": "EU",
+        "n": 2
+      }
+    ]
+  }
+}

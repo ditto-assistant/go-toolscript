@@ -1,0 +1,23 @@
+Array(n).fill([]) shares one array; Array.from with a factory does not. Holes from Array(n).map.
+-- script.js --
+const rows = mcp.sheet.rows({}).rows;
+const shared = Array(3).fill([]);
+const fresh = Array.from({length: 3}, () => []);
+rows.forEach((r, i) => { shared[i % 3].push(r); fresh[i % 3].push(r); });
+const holes = Array(3).map((_, i) => i);
+const keysOfHoles = [...Array(3).keys()];
+const sparse = [1, 2, 3];
+delete sparse[1];
+return {shared: shared.map(x => x.length), same: shared[0] === shared[2], fresh: fresh.map(x => x.length), holes, holesLen: holes.length, keysOfHoles, sparseMap: sparse.map(x => x * 2), sparseJoin: sparse.join("-"), inHole: 1 in sparse, sparseEntries: [...sparse.entries()], sparseFilter: sparse.filter(() => true)};
+-- tools.json --
+{
+  "sheet.rows": {
+    "rows": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+    ]
+  }
+}

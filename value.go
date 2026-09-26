@@ -19,7 +19,8 @@ type object struct {
 	vals     []any
 	errName  string // non-empty for Error objects
 	errMsg   any    // own non-enumerable message (Undefined when absent)
-	errCause any    // own non-enumerable cause (nil Go value when absent)
+	errCause any    // own non-enumerable cause, when hasCause
+	hasCause bool   // errCause is present (it may be null or undefined)
 	indexKey bool   // at least one key is a canonical array index
 }
 
@@ -137,7 +138,7 @@ func (o *object) get(key string) (any, bool) {
 		case "stack":
 			return errorToString(o), true
 		case "cause":
-			if o.errCause != nil {
+			if o.hasCause {
 				return o.errCause, true
 			}
 		}
@@ -156,19 +157,22 @@ func (o *object) hasOwnHidden(key string) bool {
 	case "message":
 		return !isUndefined(o.errMsg)
 	case "cause":
-		return o.errCause != nil
+		return o.hasCause
 	}
 	return false
 }
 
 func (o *object) set(key string, v any) {
-	if o.errName != "" && (key == "message" || key == "cause") {
-		if o.find(key) < 0 {
-			if key == "message" {
-				o.errMsg = v
-			} else {
-				o.errCause = v
-			}
+	if o.errName != "" && o.hasOwnHidden(key) && o.find(key) < 0 {
+		// Writing an existing non-enumerable own message/cause keeps it
+		// hidden; assigning one the Error lacks creates an enumerable
+		// property, as in Goja.
+		switch key {
+		case "message":
+			o.errMsg = v
+			return
+		case "cause":
+			o.errCause = v
 			return
 		}
 	}
@@ -194,6 +198,14 @@ func (o *object) set(key string, v any) {
 func (o *object) delete(key string) {
 	i := o.find(key)
 	if i < 0 {
+		if o.errName != "" {
+			switch key {
+			case "message":
+				o.errMsg = Undefined
+			case "cause":
+				o.errCause, o.hasCause = nil, false
+			}
+		}
 		return
 	}
 	o.keys = append(o.keys[:i:i], o.keys[i+1:]...)
@@ -305,13 +317,16 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 				order = [2]string{"toString", "valueOf"}
 			}
 			for _, m := range order {
-				fv, _ := t.own(m)
-				f, own := fv.(*function)
+				fv, own := t.own(m)
 				if !own {
 					if m == "toString" {
 						return r.defaultObjectString(t), nil
 					}
 					continue // Object.prototype.valueOf returns the object
+				}
+				f, callable := fv.(*function)
+				if !callable {
+					continue // a non-callable own member shadows the default
 				}
 				res, err := r.call(f, nil)
 				if err != nil {
@@ -333,18 +348,18 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 			return float64(t.msec), nil
 		}
 		return r.dateString(t, dateTimeLayout, false), nil
-	case *array, *function, *hostObject, *regexpValue, *collection, *iterator:
+	case *array, *function, *hostObject, *regexpValue, *collection, *iterator, *intlObject:
 		s, err := r.toString(v)
 		return s, err
 	}
 	return v, nil
 }
 
+// userConversion reports own toString/valueOf members, callable or not: a
+// non-callable one (tool JSON {"toString": "text"}) shadows the default.
 func userConversion(o *object) bool {
-	ts, _ := o.own("toString")
-	vo, _ := o.own("valueOf")
-	_, s := ts.(*function)
-	_, v := vo.(*function)
+	_, s := o.own("toString")
+	_, v := o.own("valueOf")
 	return s || v
 }
 
@@ -392,6 +407,8 @@ func (r *rt) toString(v any) (string, error) {
 		return "[object Set]", nil
 	case *iterator:
 		return "[object " + v.name + " Iterator]", nil
+	case *intlObject:
+		return "[object Intl." + v.kind.name + "]", nil
 	case *dateValue:
 		return r.dateString(v, dateTimeLayout, false), nil
 	case *function:
@@ -537,7 +554,7 @@ func sameValueZero(a, b any) bool {
 
 func isObjectValue(v any) bool {
 	switch v.(type) {
-	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator, *dateValue:
+	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator, *dateValue, *intlObject:
 		return true
 	}
 	return false
@@ -665,6 +682,9 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		}
 		return Undefined, nil
 	case *collection:
+		if p, ok := ownProp(v.props, key); ok {
+			return p, nil
+		}
 		if p, ok := collectionMember(v, key); ok {
 			return p, nil
 		}
@@ -685,6 +705,14 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			return p, err
 		}
 		return Undefined, nil
+	case *intlObject:
+		if p, ok := r.intlMember(v, key); ok {
+			return p, nil
+		}
+		if p, ok, err := inherited(key, "Object"); ok {
+			return p, err
+		}
+		return Undefined, nil
 	case *iterator:
 		if f := protoFn("Iterator", key); f != nil {
 			return f, nil
@@ -695,6 +723,9 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		return Undefined, nil
 	case *regexpValue:
 		if p, ok := v.get(key); ok {
+			return p, nil
+		}
+		if p, ok := ownProp(v.props, key); ok {
 			return p, nil
 		}
 		if f := protoFn("RegExp", key); f != nil {
@@ -796,9 +827,24 @@ func (r *rt) setProp(target any, key string, v any) error {
 	case *regexpValue:
 		if key == "lastIndex" {
 			t.lastIndex = v
+			return nil
 		}
-		return nil
+		if _, accessor := t.get(key); accessor {
+			return nil // prototype accessors without a setter ignore writes
+		}
+		return setOwnProp(&t.props, key, v)
+	case *collection:
+		if key == "size" {
+			return nil // prototype accessor without a setter
+		}
+		return setOwnProp(&t.props, key, v)
 	case *dateValue:
+		if t.props == nil {
+			t.props = newObject(1)
+		}
+		t.props.set(key, v)
+		return nil
+	case *intlObject:
 		if t.props == nil {
 			t.props = newObject(1)
 		}
@@ -861,6 +907,14 @@ func (r *rt) deleteProp(target any, key string) (bool, error) {
 			t.props.delete(key)
 		}
 		return key != "length", nil
+	case *collection:
+		if t.props != nil {
+			t.props.delete(key)
+		}
+	case *regexpValue:
+		if t.props != nil {
+			t.props.delete(key)
+		}
 	case nil, undefined:
 		return false, r.typeError("Cannot convert undefined or null to object")
 	}
@@ -889,12 +943,17 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 		return i >= 0 && i < len(t.items) && !isHole(t.items[i]), nil
 	case *regexpValue:
 		_, ok := t.get(key)
-		return ok, nil
+		_, own := ownProp(t.props, key)
+		return ok || own, nil
 	case *collection:
 		_, ok := collectionMember(t, key)
-		return ok || objectProtoMember(key), nil
+		_, own := ownProp(t.props, key)
+		return ok || own || objectProtoMember(key), nil
 	case *iterator:
 		return key == "next" || objectProtoMember(key), nil
+	case *intlObject:
+		_, ok := r.intlMember(t, key)
+		return ok || objectProtoMember(key), nil
 	case *dateValue:
 		if t.props != nil {
 			if _, ok := t.props.own(key); ok {
@@ -930,6 +989,21 @@ func ownEnumerableKeys(v any) []string {
 		}
 		return nil
 	case *dateValue:
+		if v.props != nil {
+			return v.props.ownKeys()
+		}
+		return nil
+	case *collection:
+		if v.props != nil {
+			return v.props.ownKeys()
+		}
+		return nil
+	case *regexpValue:
+		if v.props != nil {
+			return v.props.ownKeys()
+		}
+		return nil
+	case *intlObject:
 		if v.props != nil {
 			return v.props.ownKeys()
 		}
@@ -1017,3 +1091,23 @@ var (
 	declinedStringMembers = map[string]bool{"matchAll": true, "normalize": true}
 	declinedNumberMembers = map[string]bool{"toExponential": true}
 )
+
+// ownProp reads a script-assigned own property from an optional bag.
+func ownProp(props *object, key string) (any, bool) {
+	if props == nil {
+		return nil, false
+	}
+	return props.own(key)
+}
+
+// setOwnProp writes a script-assigned own property, creating the bag.
+func setOwnProp(props **object, key string, v any) error {
+	if key == "__proto__" {
+		return errRuntimeUnsupported("__proto__ assignment")
+	}
+	if *props == nil {
+		*props = newObject(1)
+	}
+	(*props).set(key, v)
+	return nil
+}

@@ -1,0 +1,38 @@
+Retry loop with attempts counter, try/catch/finally, and a result sequence that fails twice.
+-- script.js --
+let attempts = 0, finallies = 0;
+const log = [];
+async function withRetry(fn, max) {
+  for (let i = 1; i <= max; i++) {
+    try {
+      attempts++;
+      const r = await fn();
+      if (r.status === "retry") throw new Error("soft retry #" + i);
+      return r;
+    } catch (e) {
+      log.push(e.message);
+      if (i === max) throw e;
+    } finally {
+      finallies++;
+    }
+  }
+}
+const r = await withRetry(() => mcp.jobs.poll({id: "job_9"}), 5);
+return {r, attempts, finallies, log};
+-- tools.json --
+{
+  "jobs.poll": {
+    "$sequence": [
+      {
+        "status": "retry"
+      },
+      {
+        "status": "retry"
+      },
+      {
+        "status": "done",
+        "rows": 3
+      }
+    ]
+  }
+}

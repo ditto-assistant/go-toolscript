@@ -1,0 +1,26 @@
+Chunked Promise.all inside a sequential loop; one chunk fails and the model records the chunk and continues.
+-- script.js --
+const ids = Array.from({length: 7}, (_, i) => "id" + i);
+const chunks = [];
+for (let i = 0; i < ids.length; i += 3) chunks.push(ids.slice(i, i + 3));
+const done = [], failed = [];
+for (const [ci, chunk] of chunks.entries()) {
+  try {
+    const rs = await Promise.all(chunk.map(async id => {
+      const r = await mcp.items.get({id});
+      if (r.bad && id === "id4") throw new Error("bad item " + id);
+      return id + ":" + r.v;
+    }));
+    done.push(...rs);
+  } catch (e) {
+    failed.push({chunk: ci, msg: e.message});
+  }
+}
+return {done, failed};
+-- tools.json --
+{
+  "items.get": {
+    "v": 1,
+    "bad": true
+  }
+}

@@ -38,8 +38,8 @@ output, err := toolscript.MarshalExport(result.Value)
 ## What runs natively
 
 Measured on real Ditto traffic, 974 of 981 production `run_code` scripts
-(99.3%) run natively. The rest use `Intl` or fail in Goja too (syntax
-errors, typos).
+(99.3%) ran natively before `Intl` support; the rest used `Intl` (which Goja
+lacks entirely) or fail in Goja too (syntax errors, typos).
 
 - **Statements:** `var`/`let`/`const` (block scoping, TDZ, per-iteration loop
   bindings), destructuring with defaults and rest, `if`, `for`, `for…of`,
@@ -59,6 +59,26 @@ errors, typos).
   to `time.Now` and `time.Local` like Goja). Regular expressions (`test`, `exec`,
   `lastIndex`, `match`, `replace` and `replaceAll`, `split`, `search`) run on
   Go's RE2 through Goja's own JS-to-RE2 transform.
+- **Intl** (ECMA-402, which Goja does not have): `Intl.DateTimeFormat`
+  (a port of ICU's pattern generator with V8's option handling: components,
+  `dateStyle`/`timeStyle`, hour cycles, IANA and offset time zones with ICU's
+  English zone names, `format`, `formatToParts`, `resolvedOptions`) and
+  `toLocale{,Date,Time}String` when given locales or options (without
+  arguments they keep Goja's fixed layouts); `Intl.NumberFormat` (decimal,
+  percent, currency and unit styles including `-per-` compounds, compact,
+  scientific and engineering notation, every rounding and sign option, exact
+  decimal handling of numeric strings, `formatRange`) and
+  `Number.prototype.toLocaleString` with arguments; `Intl.PluralRules`,
+  `Intl.ListFormat` and `Intl.RelativeTimeFormat`; plus
+  `Intl.getCanonicalLocales`, `Intl.supportedValuesOf` and
+  `supportedLocalesOf`. The engine carries the
+  English (`en`, `en-US`) locale data only: other locales resolve through
+  ECMA-402's lookup matcher to `en` or the default `en-US`, and
+  `resolvedOptions().locale` says so. Non-Gregorian calendars, other
+  numbering systems and `DateTimeFormat.formatRange` raise
+  `ErrRuntimeUnsupported`. Time zone
+  data comes from Go's `time` package; import `time/tzdata` in hosts without a
+  system zoneinfo database.
 - **Tools and host functions:** `mcp.x(...)`, `tools.x(...)`,
   `mcp.server.x(...)`, `mcp["server-name"].x(...)` and
   `mcp.call("raw", args)`. Aliases such as `const gh = mcp.github` work too. With
@@ -70,9 +90,16 @@ errors, typos).
   return values, and `Promise.all`/`allSettled` run inline arrays and
   `.map(async …)` callbacks. `allSettled` reports a host failure as
   `{status:"rejected", reason:"error text"}`. With `Parallelism > 1`, items
-  that cannot observe each other run concurrently.
+  that cannot observe each other's state run concurrently. Within such a
+  batch, host functions, `SequentialTools` and console output keep script
+  order: an item's ordered effect waits until every earlier item has
+  finished, so a batch mixing searches with an artifact write fetches in
+  parallel and still writes in order. A failing item does not stop its
+  siblings; only a failure the host marks `Fatal` (revoked, cancelled) stops
+  further dispatch.
 
-Declined at compile time: `Intl`, `class`, generators, getters and setters,
+Declined at compile time: other `Intl` services (`Collator`, `Segmenter`,
+`DisplayNames`, `Locale`, …), `class`, generators, getters and setters,
 `this`, `with`, `eval`, `Symbol`, tagged templates, `arguments`, JSON.parse
 revivers, `u`-flag regexes, backreference and lookaround regexes, `WeakMap`, and
 unknown globals.
@@ -98,6 +125,12 @@ itself with a `-- divergence --` section:
   cannot encode them at all.
 - **Hosts can make these fall back:** very large sparse arrays and dynamic
   `__proto__` writes raise `ErrRuntimeUnsupported`.
+
+**Intl** cannot be compared with Goja, which has none. `testdata/intl` holds
+golden files generated with Node (V8 + ICU) by the scripts in
+`internal/intlgen`: thousands of seeded option combinations, time zones,
+instants and error cases, replayed by `TestIntl*`. Every case must match V8
+exactly or be declined (ambiguous historical zone names are).
 
 Objects decoded from host maps enumerate in sorted key order. Goja's
 enumeration of Go maps is random.

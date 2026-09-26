@@ -1,0 +1,36 @@
+Markdown table padded by .length with CJK and emoji (visually misaligned but deterministic).
+-- script.js --
+const items = mcp.tasks.list({}).items;
+const cols = ["title", "owner", "points"];
+const w = cols.map(c => Math.max(c.length, ...items.map(i => String(i[c] ?? "—").length)));
+const row = vals => "| " + vals.map((v, i) => String(v ?? "—")[i === 2 ? "padStart" : "padEnd"](w[i])).join(" | ") + " |";
+const out = [row(cols), "|" + w.map((n, i) => (i === 2 ? "-".repeat(n + 1) + ":" : "-".repeat(n + 2))).join("|") + "|", ...items.map(i => row(cols.map(c => i[c])))];
+console.log(out.join("\n"));
+return w;
+-- tools.json --
+{
+  "tasks.list": {
+    "items": [
+      {
+        "title": "Fix 登录 bug",
+        "owner": "alice",
+        "points": 3
+      },
+      {
+        "title": "🚀 launch",
+        "owner": null,
+        "points": 13
+      },
+      {
+        "title": "tidy",
+        "owner": "bob",
+        "points": null
+      },
+      {
+        "title": "naïve café",
+        "owner": "carol",
+        "points": 0.5
+      }
+    ]
+  }
+}

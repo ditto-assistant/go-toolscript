@@ -1,0 +1,28 @@
+Pretty report via JSON.stringify with replacer arrays including numeric keys, and slicing the result.
+-- script.js --
+const r = mcp.crm.get({});
+const pick = JSON.stringify(r, ["id", "name", "10", "nested", "x"], 2);
+const repl = JSON.stringify(r, (k, v) => k === "" ? v : typeof v === "number" ? Math.round(v * 10) / 10 : Array.isArray(v) ? v.slice(0, 2) : v === null ? undefined : v);
+const cut = JSON.stringify(r, null, 1).slice(0, 60);
+return {pick, repl, cut, cutLen: cut.length};
+-- tools.json --
+{
+  "crm.get": {
+    "id": "c_1",
+    "name": "Acme",
+    "10": "ten",
+    "2": "two",
+    "nested": {
+      "x": 1.26,
+      "y": 2,
+      "10": 3
+    },
+    "list": [
+      1.04,
+      2.55,
+      3.99
+    ],
+    "nil": null,
+    "score": 3.14159
+  }
+}

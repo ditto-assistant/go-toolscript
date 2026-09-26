@@ -1,179 +1,142 @@
 # go-toolscript
 
-Compile simple JavaScript-shaped tool pipelines to a bounded Go execution plan.
-No JavaScript VM, bytecode, `eval`, regex matching, ambient network, filesystem,
-or package imports. MIT licensed.
+Run model-written JavaScript tool orchestration ("code mode") without a
+JavaScript VM. Programs compile to a tree of Go closures over a JSON-shaped
+value model, with no bytecode, `eval`, ambient network, filesystem or imports.
+MIT licensed.
 
-The lexer/parser and AST come from [Goja](https://github.com/dop251/goja).
-The production package imports only its parsing packages; the VM is used in
-**tests only** as a differential oracle. This is a small tool orchestration
-language, not a replacement JavaScript implementation.
+The lexer, parser and AST come from [Goja](https://github.com/dop251/goja).
+Production code imports only Goja's parsing and number-formatting packages. The
+VM is used **in tests only**, as a differential oracle. Anything outside the
+supported subset is rejected before any tool runs, so a host can fall back to a
+real JavaScript runtime.
 
 ```go
-plan, err := toolscript.Compile(`
-  const r = mcp.search_memories({queries:["conversation"], limit:30});
-  return r;
-`, toolscript.CompileOptions{
-  Resolve: func(path []string) (string, bool) {
-    if len(path) == 2 && path[0] == "mcp" && path[1] == "search_memories" {
-      return "search_memories", true
-    }
-    return "", false
-  },
+plan, err := toolscript.Compile(source, toolscript.CompileOptions{
+	Resolve: func(path []string) (string, bool) { /* mcp.x / mcp.server.x -> tool name */ },
+	ResolveCall: func(raw string) (string, bool) { /* mcp.call("raw", args) */ },
+	Bindings: catalogPaths, // optional: expose mcp/tools as values
+	HostFunctions: map[string]toolscript.HostFunction{
+		"bash": {MinArgs: 1, MaxArgs: 3, StringArgs: []int{0}, JSONArgs: []int{1, 2}},
+	},
+	Batches: true, // await, async functions, Promise.all/allSettled
 })
 if errors.Is(err, toolscript.ErrUnsupported) {
-  // Safe to fall back to your normal runtime: no tool has executed.
+	// Safe to fall back: nothing has run.
 }
-// Handle other errors before using plan.
 result, err := plan.Execute(ctx, toolscript.ExecuteOptions{
-  Dispatch: dispatch, // func(context.Context, string, any) (any, error)
+	Dispatch:     dispatch,     // func(ctx, tool string, arg any) (any, error)
+	HostDispatch: hostDispatch, // func(ctx, name string, args []any) (any, error)
+	Console:      func(level, line string) { ... },
 })
-// NEVER fall back after Execute, even on failure: effects may already exist.
-output, err := toolscript.Marshal(result.Value)
+if errors.Is(err, toolscript.ErrRuntimeUnsupported) && result.Calls == 0 && result.HostCalls == 0 {
+	// Also safe to fall back: the unsupported operation came before any effect.
+}
+output, err := toolscript.MarshalExport(result.Value)
 ```
 
-`Resolve` sees static paths: `mcp.foo`, `tools.foo`, `mcp.server.foo`, and
-string-bracket equivalents. `mcp.call("raw-name", args)` uses the separate `ResolveCall(rawName)` callback,
-so it cannot collide with a server literally named `call`. The host decides
-the mapping and permissions.
-Calls accept zero or one data argument. Null/undefined normalization, access
-control, approvals, accounting, credentials, result storage and audit remain
-host responsibilities. `Compile` never dispatches.
+## What runs natively
 
-## Supported patterns
+Measured on real Ditto traffic, 973 of 981 production `run_code` scripts
+(99.2%) run natively. The remaining 8 use `Date` or fail in Goja too
+(syntax errors, typos).
 
-- Direct calls, assignment then return, multiple declarations, `const`/`let`/`var`.
-- JSON-style object/array literals, unquoted keys, shorthand fields, trailing
-  commas, JS string escapes, numeric literals and unary numeric signs.
-- Earlier bindings as arguments; property and literal-index result projection.
-- Nested object/array destructuring without defaults or rest.
-- Array `.map(x => ...)`, `.map((x, i) => ...)`, and arrow block bodies with
-  local declarations and `return`. A normal map runs in input order.
-- Comments, whitespace, semicolon insertion, redundant parentheses and bare
-  return follow the parser, rather than source-text heuristics.
-- With `CompileOptions.Batches`, `await`, `Promise.all` and `Promise.allSettled`
-  over **inline arrays or inline maps**. Async callbacks are allowed inside
-  those batches. Nested batches are rejected.
+- **Statements:** `var`/`let`/`const` (block scoping, TDZ, per-iteration loop
+  bindings), destructuring with defaults and rest, `if`, `for`, `for…of`,
+  `for…in`, `while`, `do…while`, `switch`, labeled `break`/`continue`,
+  `try`/`catch`/`finally`, `throw`, function declarations (hoisted), closures,
+  default and rest parameters, recursion.
+- **Expressions:** every operator with JavaScript coercion (`==`, `+`, `<` on
+  strings, bitwise ops, `??`, `?.`, logical assignment), template literals,
+  spread, computed keys, `typeof`/`in`/`delete`/`instanceof`, arrow and
+  function expressions, `fn.call/apply/bind`.
+- **Built-ins:** Array, String, Number, Object, Math, JSON, `Set`/`Map`,
+  iterators, `Array.from/of/isArray`, `parseInt`/`parseFloat`,
+  `encodeURIComponent` and related functions, `localeCompare`, `toFixed`,
+  `toPrecision`, and `Error` types. Regular expressions (`test`, `exec`,
+  `lastIndex`, `match`, `replace` and `replaceAll`, `split`, `search`) run on
+  Go's RE2 through Goja's own JS-to-RE2 transform.
+- **Tools and host functions:** `mcp.x(...)`, `tools.x(...)`,
+  `mcp.server.x(...)`, `mcp["server-name"].x(...)` and
+  `mcp.call("raw", args)`. Aliases such as `const gh = mcp.github` work too. With
+  `Bindings`, `Object.keys(mcp)` and `typeof mcp.x` also work. Host functions
+  can coerce arguments with `StringArgs`, or receive `JSONText` built by the
+  engine's `JSON.stringify` with `JSONArgs`. Returning `*TypeError` from a
+  dispatcher raises a JavaScript `TypeError`.
+- **Async dialect** (`Batches`): `await` unwraps values, async functions
+  return values, and `Promise.all`/`allSettled` run inline arrays and
+  `.map(async …)` callbacks. `allSettled` reports a host failure as
+  `{status:"rejected", reason:"error text"}`. With `Parallelism > 1`, items
+  that cannot observe each other run concurrently.
 
-```js
-const {items} = mcp.list({limit:10});
-return items.map(item => mcp.get({id:item.id}));
-```
+Declined at compile time: `Date`, `class`, generators, getters and setters,
+`this`, `with`, `eval`, `Symbol`, tagged templates, `arguments`, JSON.parse
+revivers, `u`-flag regexes, backreference and lookaround regexes, `WeakMap`, and
+unknown globals.
 
-```js
-const [profile, messages] = await Promise.all([
-  mcp.profile({id:"example"}),
-  mcp.messages({id:"example"})
-]);
-return {profile, messages};
-```
+## Fidelity
 
-```js
-const inputs = [{id:"a"}, {id:"b"}];
-return await Promise.allSettled(inputs.map(async input => {
-  const result = await mcp.get(input);
-  return {id:input.id, result};
-}));
-```
+`testdata/corpus` holds 480+ scripts in the shapes models actually write. They
+include 140 adversarial cases (coercion, UTF-16 strings, sort, holes, key order,
+error text, limits). `TestCorpusDifferential` runs each script natively and in
+a Goja VM set up like Ditto's runner. It compares the return JSON, console
+lines, the tool and host call trace, and the error text. Every natively
+accepted script must match exactly. The exceptions are annotated in the case
+itself with a `-- divergence --` section:
 
-Batch mode is an explicit **async-tool dialect**. Tool calls return values to
-Go, not JS Promise objects. Only the batch schedules work concurrently;
-`await` otherwise unwraps a value. `Parallelism` defaults to 1; a thread-safe
-host may choose 2–64 workers. Output order always follows input order. Ordinary
-`all` failures join already-started workers and return the first error in input
-order. `allSettled` uses `{status:"fulfilled",value:...}` or
-`{status:"rejected",reason:"error text"}`. This intentionally defines error
-serialization and cleanup rather than emulating the JS microtask queue.
+- **Goja bugs, where the native engine follows the spec:**
+  `[-0].includes(0)`, and `ToInt32` beyond int64.
+- **Async dialect:** batch items run sequentially and tool calls return
+  values, so there is no microtask interleaving.
+- **Lone surrogates:** strings are UTF-8 internally, so a lone UTF-16
+  surrogate becomes U+FFFD. Goja makes the same conversion when it exports a
+  value.
+- **Functions in a returned value:** they are encoded as `null`, where Goja
+  cannot encode them at all.
+- **Hosts can make these fall back:** very large sparse arrays and dynamic
+  `__proto__` writes raise `ErrRuntimeUnsupported`.
 
-Fatal host errors cannot be swallowed by `allSettled`. Already-running tools
-may finish; queued work checks the fatal flag before dispatch. No execution
-error causes a retry. Programs and input data are immutable; each execution
-gets its own bindings, counters and budget.
+Objects decoded from host maps enumerate in sorted key order. Goja's
+enumeration of Go maps is random.
 
-## Explicit host functions
+Set `TOOLSCRIPT_CORPUS_JSONL=/path/to/private.jsonl` (one `{"code": …}` per
+line) to run your own private scripts through the same differential. Their
+tools are answered with a generic fixture.
 
-Hosts can opt in to bare global calls without exposing JavaScript or ambient
-capabilities. Positional arguments use the same bounded expression evaluator:
+## Performance
 
-```go
-plan, err := toolscript.Compile(`return bash("printf hello");`, toolscript.CompileOptions{
-    HostFunctions: map[string]toolscript.HostFunction{
-        "bash": {MinArgs: 1, MaxArgs: 1, LiteralStringArgs: []int{0}},
-    },
-})
-// Handle err before Execute, including safe whole-program fallback.
-result, err := plan.Execute(ctx, toolscript.ExecuteOptions{
-    HostDispatch: func(ctx context.Context, name string, args []any) (any, error) {
-        return yourVirtualShell(ctx, args[0].(string))
-    },
-})
-```
+`TOOLSCRIPT_PERF=1 go test -run 'TestCorpusPerf|TestScalingPerf'` measures
+process CPU time for native compile+execute against a Goja VM set up per run
+like Ditto's runner (40 tool bindings). Results from an idle linux/amd64 host:
 
-The library does not implement a shell. The host owns that capability and its
-permissions, serialization, timeouts and output limits. `LiteralStringArgs` lets
-an adapter decline dynamic/coercing arguments before any effects occur.
-Functions cannot be aliased, shadowed, spread-called, or reached via properties.
-They compose with bindings, projections, maps and opted-in batches.
-
-`MaxHostCalls` defaults to 64 and is independent of `MaxCalls`; `Result.HostCalls`
-records it separately. Host calls share cancellation, panic containment, fatal
-error handling and bounded batch workers with tool calls. Host implementations
-must be thread-safe before opting into parallelism. No execution failure permits
-fallback or replay. Omitted functions remain unsupported.
-
-## Deliberate fallback boundary
-
-The **entire program**, including unreachable code, must compile before any
-execution begins. Unknown identifiers, shadowed/redeclared names, dynamic tool
-names, assignments/mutation, spreads, getters, classes, loops, general function
-calls, arbitrary promises, regexes, imports, templates, operators, directives,
-optional chains and prototype access all decline optimization. A host can then
-run the original source in its existing runtime.
-
-This subset operates on JSON data, not JS prototypes/coercion. Invalid data
-shapes (such as mapping a non-array) fail at execution time, not via fallback.
-Numeric property keys are limited to nonnegative safe integers; other numeric
-keys decline compilation rather than approximate JS string coercion.
-Property reads use own JSON properties, array indexes/length and string UTF-16
-indexes/length. Destructuring arrays requires an array or string.
-
-`Dispatch` receives and returns JSON-compatible Go data: `map[string]any`,
-`[]any`, `float64`, strings, booleans, nil and the `Undefined` sentinel.
-`Marshal` omits undefined object fields and emits null for undefined array
-entries. `MarshalExport` instead matches Goja's `Value.Export` followed by
-`encoding/json`, including null object fields. `Object` supports host values
-whose property view differs from their JSON export (such as Go structs with
-optional JSON fields). The host must not mutate shared input/result data.
+- **Corpus (1,447 scripts):** native is faster on every script. It uses 3.7×
+  less CPU and allocates 5.6× fewer bytes overall. The median speedup is 4.6×;
+  p5 is 2.3× and p95 is 7.8×.
+- **Scaling (one tool call plus N loop iterations):** native stays faster at
+  every size from 1 to 100,000 iterations. At 100,000 iterations it is 1.37×
+  faster on arithmetic, 1.38× on closure calls, 1.34× on grouping, 1.25× on
+  array pipelines and 2.1× on `JSON.stringify` of built rows.
 
 ## Limits and cancellation
 
-- Source: 32 KiB; expression nesting: 64; destructuring nesting: 32.
-- Defaults: 64 calls, 100,000 evaluation steps, 1,024 items per map/batch.
-- Maximum 64 batch workers; no goroutine per input item and no nested batches.
-- JSON traversal: 100,000 nodes, depth 64; repeated-reference expansion is bounded.
-- Context is checked before evaluation and dispatch; every worker is joined.
-- Host dispatch panics become errors, including inside batch workers.
+- **Source and nesting:** source is capped at 32 KiB and expression nesting
+  at 90.
+- **Execute defaults:** 64 tool calls, 64 host calls, 1,000,000 steps
+  (statements, calls and loop iterations), 1,024 items per batch, call depth
+  1,000, arrays of 2²⁴ elements and strings of 16 MiB.
+- **Cancellation:** the context is checked every 64 steps and before every
+  dispatch. Workers are always joined, and host panics become errors.
+- **Uncatchable errors:** step limits, cancellation, fatal host errors (see
+  `Fatal`) and stack overflow cannot be caught by `try`/`catch`. Tool
+  failures, and exhausted tool budgets, surface as catchable Goja-style
+  `GoError`s.
+- **No retries:** execution never retries a call. Fall back only on
+  `ErrUnsupported`, or on `ErrRuntimeUnsupported` before any effect.
 
-A Go host function cannot be forcibly killed. It must honor cancellation.
-For hard caller deadlines, run the plan in a worker and **retain the admission
-slot until that worker and all its children exit**. Never release admission just
-because a caller timed out. Hosts must separately cap external response sizes
-and encoded output bytes. The library does not cache user programs or data.
-
-## Validation and performance
+## Validation
 
 ```sh
 go test -race ./...
-go test -run '^$' -fuzz FuzzCompile -fuzztime=30s -parallel=4
-go test -run '^$' -bench . -benchmem
+go test -run '^$' -fuzz FuzzCompile -fuzztime=30s
 go vet ./...
 ```
-
-Tests cover parsing permutations, full-program fallback, dispatch traces versus
-Goja, ordered parallel results, concurrency and call caps, cancellation, fatal
-errors, host panics, JSON expansion and fuzzed input.
-
-On an Apple M4 Pro, the included no-op-tool microbenchmark measured approximately
-2.1 µs / 3.8 KB / 64 allocations for compile+execute versus 4.3 µs / 13.2 KB /
-150 allocations for a fresh minimal Goja VM. This measures orchestration overhead,
-not network latency or end-to-end application speed. Re-run on your host.

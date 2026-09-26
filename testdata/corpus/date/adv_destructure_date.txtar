@@ -1,0 +1,10 @@
+Destructuring properties and methods out of a Date.
+-- script.js --
+const d = new Date(Date.UTC(2020, 5, 15));
+const { x = "dflt", length } = d;
+const { getUTCMonth } = d;
+const out = [x, String(length), typeof getUTCMonth];
+try { out.push(getUTCMonth()); } catch (e) { out.push(e.name); }
+return out;
+-- tools.json --
+{}

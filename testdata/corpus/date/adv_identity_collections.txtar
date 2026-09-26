@@ -1,0 +1,11 @@
+Dates as Set/Map members, includes/indexOf identity and property keys.
+-- script.js --
+const a = new Date(0);
+const b = new Date(0);
+const s = new Set([a, a, b]);
+const m = new Map([[a, "a"]]);
+const obj = {};
+obj[a] = 1;
+return [s.size, m.get(a), m.get(b), m.has(b), [a].includes(a), [a].includes(b), [a, b].indexOf(b), Object.keys(obj), [a, new Date(NaN)].join(" | ")];
+-- tools.json --
+{}

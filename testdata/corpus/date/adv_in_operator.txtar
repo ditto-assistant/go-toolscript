@@ -1,0 +1,6 @@
+The in operator against Date instances.
+-- script.js --
+const d = new Date(0);
+return ["getTime" in d, "setUTCHours" in d, "toJSON" in d, "getYear" in d, "constructor" in d, "x" in d, "length" in d];
+-- tools.json --
+{}

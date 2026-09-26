@@ -391,14 +391,19 @@ func (r *rt) runBody(f *function, s *scope) (any, error) {
 	return Undefined, nil
 }
 
-// call applies a callable value.
-func (r *rt) call(f any, args []any) (any, error) {
+// call applies a callable value with an undefined receiver.
+func (r *rt) call(f any, args []any) (any, error) { return r.callThis(f, Undefined, args) }
+
+// callThis applies a callable with an explicit receiver. Script functions
+// cannot observe `this` (it declines compilation); built-in prototype
+// methods operate on it.
+func (r *rt) callThis(f any, this any, args []any) (any, error) {
 	fn, ok := f.(*function)
 	if !ok {
 		return nil, r.notCallable(f)
 	}
 	if fn.native != nil {
-		return fn.native(r, Undefined, args)
+		return fn.native(r, this, args)
 	}
 	return r.invoke(fn, args)
 }
@@ -686,7 +691,12 @@ func (x *exporter) export(v any, depth int) (any, error) {
 		if loc == nil {
 			loc = time.Local
 		}
-		return timeFromMsec(t.msec).In(loc), nil
+		tm := timeFromMsec(t.msec).In(loc)
+		if x.strict && (tm.Year() < 0 || tm.Year() > 9999) {
+			// What json.Marshal reports for the exported time.Time.
+			return nil, errors.New("json: error calling MarshalJSON for type *time.Time: year outside of range [0,9999]")
+		}
+		return tm, nil
 	case *collection:
 		// Goja exports a Set as its values and a Map as [key, value] pairs.
 		out := make([]any, 0, t.live)

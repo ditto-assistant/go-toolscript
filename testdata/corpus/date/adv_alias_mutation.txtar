@@ -1,0 +1,13 @@
+Aliases share one Date; new Date(d) copies it.
+-- script.js --
+const a = new Date(Date.UTC(2020, 0, 1));
+const alias = a;
+const copy = new Date(a);
+alias.setUTCFullYear(1999);
+copy.setUTCDate(15);
+const bad = new Date(NaN);
+const badCopy = new Date(bad);
+badCopy.setTime(5);
+return [a.toISOString(), alias === a, copy.toISOString(), String(bad), badCopy.getTime()];
+-- tools.json --
+{}

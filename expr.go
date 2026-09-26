@@ -531,6 +531,13 @@ func (r *rt) copyProps(dst *object, src any) error {
 				dst.set(k, v)
 			}
 		}
+	case *dateValue:
+		if t.props != nil {
+			for _, k := range t.props.ownKeys() {
+				v, _ := t.props.own(k)
+				dst.set(k, v)
+			}
+		}
 	case string:
 		i := 0
 		for _, u := range toUnits(t) {

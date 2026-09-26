@@ -1,0 +1,12 @@
+Sets and Maps of dates logged and returned.
+-- script.js --
+const a = new Date(Date.UTC(2026, 0, 1));
+const b = new Date(Date.UTC(2026, 5, 1, 12, 0, 0, 500));
+const s = new Set([a, b, a]);
+const m = new Map([["a", a], ["b", b]]);
+console.log(s);
+console.log(m);
+console.log([...s], [...m.values()]);
+return { set: [...s], values: [...m.values()], entries: [...m.entries()], keys: [...new Map([[a, 1]]).keys()] };
+-- tools.json --
+{}

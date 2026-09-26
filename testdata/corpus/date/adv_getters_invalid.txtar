@@ -1,0 +1,7 @@
+Every getter on an invalid date returns NaN.
+-- script.js --
+const d = new Date("x");
+const names = ["getTime", "valueOf", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset"];
+return names.map(n => n + "=" + String(d[n]()));
+-- tools.json --
+{}

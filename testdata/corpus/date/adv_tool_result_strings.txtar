@@ -1,0 +1,9 @@
+Timestamps from a tool result parsed with new Date and Date.parse.
+-- script.js --
+const r = mcp.events.list({});
+return r.items.map(it => {
+  const d = new Date(it.at);
+  return [String(Date.parse(it.at)), isNaN(d) ? "invalid" : d.toISOString()];
+});
+-- tools.json --
+{"events.list": {"items": [{"at": "2026-09-26T14:30:15.123456Z"}, {"at": "2026-09-26 14:30:15"}, {"at": "2026-09-26T14:30:15+0000"}, {"at": "Sat, 26 Sep 2026 14:30:15 +0000"}, {"at": "1727359815"}, {"at": 1727359815000}, {"at": null}, {"at": "2026-09-26T14:30"}, {"at": "Sept 26, 2026"}, {"at": "26.09.2026"}]}}

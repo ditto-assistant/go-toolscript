@@ -1,0 +1,7 @@
+instanceof, typeof and Object.prototype.toString tag checks on dates.
+-- script.js --
+const d = new Date(0);
+const tag = Object.prototype.toString.call(d);
+return [d instanceof Date, d instanceof Object, typeof d, typeof Date, typeof Date(), tag, Array.isArray(d), ({}) instanceof Date, "x" instanceof Date];
+-- tools.json --
+{}

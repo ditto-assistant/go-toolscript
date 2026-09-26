@@ -1,0 +1,12 @@
+Setter overflow/underflow at huge magnitudes and the time value limits.
+-- script.js --
+const f = (fn) => { const d = new Date(Date.UTC(2000, 0, 1)); const r = fn(d); return [String(r), isNaN(d) ? "Invalid" : d.toISOString()]; };
+return [
+  f(d => d.setUTCMilliseconds(8.64e15)), f(d => d.setUTCMilliseconds(-8.64e15)), f(d => d.setUTCMilliseconds(1e20)), f(d => d.setUTCMilliseconds(-Infinity)), f(d => d.setUTCMilliseconds(Infinity)),
+  f(d => d.setUTCSeconds(1e15)), f(d => d.setUTCMinutes(-1e12)), f(d => d.setUTCHours(1e9)), f(d => d.setUTCDate(1e8)), f(d => d.setUTCDate(-1e8)), f(d => d.setUTCMonth(3e6)), f(d => d.setUTCMonth(-3.3e6)),
+  f(d => d.setUTCFullYear(275760, 8, 13)), f(d => d.setUTCFullYear(275760, 8, 14)), f(d => d.setUTCFullYear(-271821, 3, 20)), f(d => d.setUTCFullYear(-271821, 3, 19)), f(d => d.setUTCFullYear(2 ** 31)),
+  f(d => d.setUTCFullYear(-(2 ** 31) - 1)), f(d => d.setUTCMonth(2 ** 31)), f(d => d.setUTCHours(0, 0, 0, 2 ** 63)), f(d => d.setUTCHours(0, 0, 0, -(2 ** 63))), f(d => d.setUTCFullYear(0.9, -0.9, -0.9)),
+  f(d => d.setTime(-8.64e15)), f(d => d.setTime(-8.64e15 - 1)), f(d => d.setTime(8.64e15 + 0.9)), f(d => d.setTime(-0.5))
+];
+-- tools.json --
+{}

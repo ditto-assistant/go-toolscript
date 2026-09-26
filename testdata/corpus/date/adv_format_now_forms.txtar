@@ -1,0 +1,6 @@
+String forms of the pinned now in each zone (String(d), template, concatenation, Date()).
+-- script.js --
+const d = new Date();
+return [String(d), `${d}`, d + "", "" + d, Date(), d.toString() === Date(), d.getTimezoneOffset(), [d.getFullYear(), d.getMonth(), d.getDate(), d.getDay(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds()], [d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCDay(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()]];
+-- tools.json --
+{}

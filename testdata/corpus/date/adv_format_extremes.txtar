@@ -1,0 +1,9 @@
+Every string form at the time value limits, year 0, negative years and years > 9999.
+-- script.js --
+const ts = [8.64e15, -8.64e15, Date.UTC(0, 0, 1) - 1, Date.UTC(-1, 11, 31, 23, 59, 59, 999), Date.UTC(10000, 0, 1), Date.UTC(9999, 11, 31, 23, 59, 59, 999), Date.UTC(-9999, 0, 1), Date.UTC(-10000, 0, 1), -62198755200000, Date.UTC(100, 0, 1), Date.UTC(1, 0, 1)];
+return ts.map(t => {
+  const d = new Date(t);
+  return [d.toISOString(), d.toJSON(), d.toString(), d.toUTCString(), d.toDateString(), d.toTimeString(), d.toLocaleString(), d.toLocaleDateString(), d.toLocaleTimeString(), d.getFullYear(), d.getUTCFullYear(), d.getDay(), d.getTimezoneOffset()];
+});
+-- tools.json --
+{}

@@ -1,0 +1,7 @@
+Overriding toISOString on an instance changes JSON.stringify (Goja's toJSON looks the method up).
+-- script.js --
+const d = new Date(0);
+d.toISOString = function () { return "custom"; };
+return [JSON.stringify(d), JSON.stringify({ d })];
+-- tools.json --
+{}

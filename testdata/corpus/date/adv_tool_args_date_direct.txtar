@@ -1,0 +1,6 @@
+A bare Date as the whole tool argument.
+-- script.js --
+const r = mcp.calendar.get_day(new Date(Date.UTC(2026, 8, 26)));
+return r;
+-- tools.json --
+{"calendar.get_day": null}

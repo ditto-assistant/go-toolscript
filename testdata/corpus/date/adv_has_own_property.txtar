@@ -1,0 +1,6 @@
+hasOwnProperty on a Date for a method name and a missing key.
+-- script.js --
+const d = new Date(0);
+return [d.hasOwnProperty("getTime"), d.hasOwnProperty("x"), Object.prototype.hasOwnProperty.call(d, "getTime")];
+-- tools.json --
+{}

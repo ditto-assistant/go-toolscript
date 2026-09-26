@@ -26,7 +26,8 @@ const (
 )
 
 type dateValue struct {
-	msec int64 // timeUnset for an invalid date
+	props *object // expando properties assigned by the script
+	msec  int64   // timeUnset for an invalid date
 }
 
 func (d *dateValue) isSet() bool { return d.msec != timeUnset }
@@ -316,10 +317,16 @@ func (r *rt) dateString(d *dateValue, layout string, utc bool) string {
 	return r.dateTime(d).Format(layout)
 }
 
-// dateToJSON implements Date.prototype.toJSON.
+// dateToJSON implements Date.prototype.toJSON: null for an invalid date,
+// otherwise this.toISOString() (an own override wins, as in Goja).
 func (r *rt) dateToJSON(d *dateValue) (any, error) {
 	if !d.isSet() {
 		return nil, nil
+	}
+	if d.props != nil {
+		if f, ok := d.props.get("toISOString"); ok {
+			return r.callThis(f, d, nil)
+		}
 	}
 	return r.dateToISO(d)
 }

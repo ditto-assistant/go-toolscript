@@ -1,0 +1,6 @@
+Calling a Date method on a missing (undefined/null) date field, caught.
+-- script.js --
+const rows = [{ at: new Date(0) }, {}, { at: null }];
+return rows.map(r => { try { return r.at.toISOString(); } catch (e) { return e.name + ": " + e.message; } });
+-- tools.json --
+{}

@@ -1,0 +1,17 @@
+JSON.stringify of dates nested in objects/arrays, invalid and extreme dates, indent and replacers.
+-- script.js --
+const good = new Date(Date.UTC(2020, 1, 29, 23, 59, 59, 999));
+const bad = new Date(NaN);
+const far = new Date(8.64e15);
+const neg = new Date(-8.64e15);
+const out = [];
+out.push(JSON.stringify({ good, bad, far, neg }));
+out.push(JSON.stringify([good, bad, [far]], null, 2));
+out.push(JSON.stringify({ good }, (k, v) => (k === "good" ? typeof v + ":" + v : v)));
+out.push(JSON.stringify({ good, x: 1 }, ["good"]));
+out.push(JSON.stringify(bad));
+out.push(JSON.stringify(good.toJSON()));
+out.push(String(bad.toJSON()));
+return out;
+-- tools.json --
+{}

@@ -1,0 +1,11 @@
+Storing dates on a tool result object, then returning it and sending it to another tool.
+-- script.js --
+const t = mcp.tickets.get({ id: "T-1" });
+t.openedAt = new Date(t.opened);
+t.due = new Date(t.openedAt.getTime() + 7 * 864e5);
+t.bad = new Date("nope");
+console.log(t);
+const sent = mcp.tickets.update(t);
+return { t, sent, json: JSON.stringify(t) };
+-- tools.json --
+{"tickets.get": {"id": "T-1", "opened": "2026-09-01T08:00:00Z"}, "tickets.update": null}

@@ -1,0 +1,10 @@
+Dates used as numeric arguments to Date APIs themselves.
+-- script.js --
+const five = new Date(5);
+const d = new Date(Date.UTC(2020, 0, 1));
+const out = [d.setTime(five), d.getTime()];
+out.push(new Date(five, 1).getFullYear(), Date.UTC(new Date(2020), 0), new Date(2020, 0, 1, 0, 0, 0, five).getMilliseconds());
+out.push(String(new Date(NaN).setTime(new Date(NaN))), new Date(new Date(new Date(7))).getTime());
+return out;
+-- tools.json --
+{}

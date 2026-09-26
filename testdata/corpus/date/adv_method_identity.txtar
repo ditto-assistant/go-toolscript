@@ -1,0 +1,7 @@
+Reading the same method twice yields the same function in Goja.
+-- script.js --
+const d = new Date(0);
+const e = new Date(1);
+return [d.getTime === d.getTime, d.getTime === e.getTime, d.valueOf === d.getTime];
+-- tools.json --
+{}

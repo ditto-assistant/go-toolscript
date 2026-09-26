@@ -1,0 +1,16 @@
+NaN in each setter argument position invalidates the date; later arguments are not converted.
+-- script.js --
+const log = [];
+const spy = (n, v) => ({ valueOf() { log.push(n); return v; } });
+const out = [];
+const cases = [["setHours", [NaN, 1]], ["setHours", [1, NaN]], ["setHours", [1, 2, 3, NaN]], ["setMinutes", [spy("a", 1), spy("b", NaN), spy("c", 1)]], ["setUTCMonth", [spy("m", NaN), spy("d", 3)]],
+  ["setFullYear", [2020, spy("mm", NaN), spy("dd", 1)]], ["setDate", [undefined]], ["setMonth", ["x"]], ["setSeconds", [null]], ["setMilliseconds", [NaN]], ["setTime", ["12"]], ["setTime", [Infinity]], ["setUTCFullYear", [2020, 1, null]]];
+for (const [n, a] of cases) {
+  log.length = 0;
+  const d = new Date(Date.UTC(2024, 5, 15, 12));
+  const r = d[n](...a);
+  out.push([n, String(r), isNaN(d) ? "Invalid" : d.toISOString(), log.join(",")]);
+}
+return out;
+-- tools.json --
+{}

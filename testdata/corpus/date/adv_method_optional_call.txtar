@@ -1,0 +1,10 @@
+Optional-call and bind forms of Date methods.
+-- script.js --
+const d = new Date(Date.UTC(2020, 1, 29, 12));
+const out = [];
+try { out.push(d.getTime?.()); } catch (e) { out.push("E1 " + e.message); }
+try { out.push(d?.toISOString()); } catch (e) { out.push("E2 " + e.message); }
+try { out.push(d.getUTCDate.bind(d)()); } catch (e) { out.push("E3 " + e.message); }
+return out;
+-- tools.json --
+{}

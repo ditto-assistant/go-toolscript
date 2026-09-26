@@ -1,0 +1,6 @@
+toLocale*String ignore locale and options arguments.
+-- script.js --
+const d = new Date(Date.UTC(2026, 8, 26, 14, 30, 15, 123));
+return [d.toLocaleString("en-US"), d.toLocaleString("de-DE", { timeZone: "Asia/Tokyo" }), d.toLocaleDateString(undefined, { weekday: "long" }), d.toLocaleTimeString([], { hour: "2-digit" }), d.toString(123), d.toISOString("x"), d.toUTCString(undefined)];
+-- tools.json --
+{}

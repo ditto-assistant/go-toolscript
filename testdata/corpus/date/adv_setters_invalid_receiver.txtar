@@ -1,0 +1,13 @@
+Setters on an invalid date: which ones revive it and which evaluate their arguments.
+-- script.js --
+const log = [];
+const spy = (n, v) => ({ valueOf() { log.push(n); return v; } });
+const names = ["setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setTime"];
+return names.map(n => {
+  log.length = 0;
+  const d = new Date(NaN);
+  const r = d[n](spy(n, 3), spy(n + "2", 4));
+  return [n, String(r), isNaN(d) ? "Invalid" : d.toISOString(), log.join(",")];
+});
+-- tools.json --
+{}

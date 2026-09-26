@@ -1,0 +1,7 @@
+name and length of Date prototype methods read through an instance.
+-- script.js --
+const d = new Date(0);
+const names = ["getTime", "setMilliseconds", "setSeconds", "setMinutes", "setHours", "setDate", "setMonth", "setFullYear", "setUTCHours", "toJSON", "toISOString", "toLocaleString", "setTime"];
+return names.map(n => [d[n].name, d[n].length]);
+-- tools.json --
+{}

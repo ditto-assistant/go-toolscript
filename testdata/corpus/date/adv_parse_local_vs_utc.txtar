@@ -1,0 +1,6 @@
+Which parse forms are local time vs UTC, across zones.
+-- script.js --
+const inputs = ["2026-03-08", "2026-03-08T02:30", "2026-03-08T02:30Z", "Mar 8 2026 2:30", "2026/03/08 02:30", "2026-11-01T01:30", "Nov 1 2026 1:30", "2026-10-04T02:15", "Oct 4 2026 2:15", "2026-04-05T01:45", "Apr 5 2026 1:45", "1850-06-01T12:00", "Jun 1 1850 12:00"];
+return inputs.map(s => { const d = new Date(s); return [s, d.getTime(), d.getTimezoneOffset(), d.getHours(), d.getMinutes()]; });
+-- tools.json --
+{}

@@ -1,0 +1,14 @@
+A throwing valueOf in a constructor argument propagates; later args are not converted after NaN.
+-- script.js --
+const log = [];
+const spy = (name, v) => ({ valueOf() { log.push(name); return v; } });
+const out = [];
+try { new Date({ valueOf() { throw new Error("boom"); } }); } catch (e) { out.push(e.message); }
+const d = new Date(spy("y", 2020), spy("m", NaN), spy("d", 1), spy("h", 1));
+out.push(String(d.getTime()), log.join(","));
+log.length = 0;
+const e = new Date(spy("y", 2020), spy("m", 1), spy("d", 2), spy("h", 3), spy("mi", 4), spy("s", 5), spy("ms", 6), spy("extra", 7));
+out.push(e.getMonth(), log.join(","));
+return out;
+-- tools.json --
+{}

@@ -1,0 +1,6 @@
+Single numeric argument at and beyond the time value limits.
+-- script.js --
+const show = d => (isNaN(d) ? "Invalid" : d.toISOString());
+return [8.64e15, 8.64e15 + 1, -8.64e15, -8.64e15 - 1, 8.64e15 + 0.5, 1e300, -1e300, Infinity, -Infinity, NaN, 2 ** 53, -(2 ** 63), 9007199254740993, 0.999, -0.999].map(n => show(new Date(n)));
+-- tools.json --
+{}

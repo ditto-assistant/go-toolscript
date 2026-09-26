@@ -1,0 +1,10 @@
+Sorting dates with a boolean comparator and with invalid dates producing NaN comparisons.
+-- script.js --
+const mk = ts => ts.map(t => new Date(t));
+const ts = [50, 10, 40, 20, 30, 60, 0, 70, 5, 45, 15, 35, 25, 55, 65, 12, 48];
+const boolSorted = mk(ts).sort((a, b) => a > b).map(Number);
+const withNaN = mk([50, NaN, 10, 40, NaN, 20, 30, NaN, 60, 0, 70, 5, NaN, 45, 15]).sort((a, b) => a - b).map(d => String(d.getTime()));
+const byIso = mk(ts).sort((a, b) => (a.toISOString() < b.toISOString() ? -1 : 1)).map(Number);
+return { boolSorted, withNaN, byIso };
+-- tools.json --
+{}

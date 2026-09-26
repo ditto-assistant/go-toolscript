@@ -1,0 +1,7 @@
+Object.assign with a Date as the target.
+-- script.js --
+const d = new Date(0);
+const r = Object.assign(d, { tag: "x", n: 2 });
+return [r === d, r.tag, d.n, JSON.stringify(r), Object.keys(d)];
+-- tools.json --
+{}

@@ -1,0 +1,11 @@
+toISOString on an invalid date throws RangeError; caught and inspected.
+-- script.js --
+const bad = new Date("garbage");
+try {
+  bad.toISOString();
+  return "no throw";
+} catch (e) {
+  return [e.name, e.message, e instanceof RangeError, e instanceof Error, String(e), JSON.stringify(bad), String(bad.toJSON()), bad.toUTCString(), bad.toDateString(), bad.toTimeString(), bad.toLocaleString(), bad.toLocaleDateString(), bad.toLocaleTimeString()];
+}
+-- tools.json --
+{}

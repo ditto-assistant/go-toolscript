@@ -1,0 +1,8 @@
+Dates inside tool arguments are exported as time.Time.
+-- script.js --
+const start = new Date(Date.UTC(2026, 9, 1, 9, 30));
+const end = new Date(start.getTime() + 3600e3);
+const r = mcp.calendar.create_event({ title: "Sync", start, end, invalid: new Date(NaN), list: [start] });
+return [r, start.toISOString()];
+-- tools.json --
+{"calendar.create_event": {"ok": true}}

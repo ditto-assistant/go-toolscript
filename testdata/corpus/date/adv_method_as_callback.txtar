@@ -1,0 +1,11 @@
+Passing a Date method as a callback value.
+-- script.js --
+const d = new Date(Date.UTC(2021, 5, 15));
+const fns = [d.getUTCFullYear, d.getUTCMonth, d.getUTCDate];
+try {
+  return fns.map(f => f());
+} catch (e) {
+  return [e.name, e.message];
+}
+-- tools.json --
+{}

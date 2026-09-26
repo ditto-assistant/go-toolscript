@@ -1,0 +1,17 @@
+Compound assignment and update operators on a variable holding a Date.
+-- script.js --
+let a = new Date(0);
+a += 1000;
+let b = new Date(0);
+b -= 1000;
+let c = new Date(5);
+c++;
+let e = new Date(7);
+const pre = --e;
+let f = new Date(3);
+f *= 2;
+let g = new Date(NaN);
+g++;
+return [typeof a, a, b, c, e, pre, f, String(g), new Date(1) ** 2, new Date(2 ** 33) >>> 0, new Date(-1) << 0, new Date(12) ^ 5];
+-- tools.json --
+{}

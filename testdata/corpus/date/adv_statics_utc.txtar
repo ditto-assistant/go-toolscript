@@ -1,0 +1,11 @@
+Date.UTC with 0..8 arguments and edge values.
+-- script.js --
+const s = v => String(v);
+return [
+  s(Date.UTC()), s(Date.UTC(2020)), s(Date.UTC(2020, 1)), s(Date.UTC(2020, 1, 29)), s(Date.UTC(2020, 1, 29, 25)), s(Date.UTC(2020, 1, 29, 1, 61)),
+  s(Date.UTC(2020, 1, 29, 1, 1, 61)), s(Date.UTC(2020, 1, 29, 1, 1, 1, 1001)), s(Date.UTC(2020, 1, 29, 1, 1, 1, 1, 99)), s(Date.UTC(99)), s(Date.UTC(-1)),
+  s(Date.UTC(NaN)), s(Date.UTC(2020, NaN)), s(Date.UTC("2020", "1")), s(Date.UTC(null)), s(Date.UTC(undefined, 0)), s(Date.UTC(275760, 8, 13)), s(Date.UTC(275760, 8, 13, 0, 0, 0, 1)),
+  s(Date.UTC(1970, 0, 1, 0, 0, 0, -1)), s(Date.UTC(2020.7, 0.7, 1.7)), s(Date.UTC(Infinity)), s(Date.UTC(0, 0, 1)), s(Date.UTC(-0.5))
+];
+-- tools.json --
+{}

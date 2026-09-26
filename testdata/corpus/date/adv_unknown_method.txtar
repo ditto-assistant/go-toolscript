@@ -1,0 +1,9 @@
+Calling a method Goja's Date does not implement.
+-- script.js --
+const d = new Date(0);
+const out = [typeof d.getYear, typeof d.toGMTString, d.nope];
+try { d.getYear(); } catch (e) { out.push(e.name + ": " + e.message); }
+try { d.nope(); } catch (e) { out.push(e.name + ": " + e.message); }
+return out;
+-- tools.json --
+{}

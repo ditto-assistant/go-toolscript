@@ -1,0 +1,11 @@
+Calling a detached Date method without a receiver throws in Goja.
+-- script.js --
+const d = new Date(0);
+const g = d.getTime;
+try {
+  return ["ok", g()];
+} catch (e) {
+  return ["threw", e.name, e.message];
+}
+-- tools.json --
+{}

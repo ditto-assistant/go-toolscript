@@ -657,11 +657,8 @@ func (r *rt) getProp(v any, key string) (any, error) {
 				return p, nil
 			}
 		}
-		if arrayMethods[key] != nil {
-			return boundMethod(v, key), nil
-		}
-		if declinedArrayMembers[key] {
-			return declinedMethod(key), nil
+		if f := protoFn("Array", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Array"); ok {
 			return p, err
@@ -676,16 +673,21 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		}
 		return Undefined, nil
 	case *dateValue:
-		if dateMethods[key] != nil {
-			return boundMethod(v, key), nil
+		if v.props != nil {
+			if p, ok := v.props.get(key); ok {
+				return p, nil
+			}
+		}
+		if f := protoFn("Date", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Date"); ok {
 			return p, err
 		}
 		return Undefined, nil
 	case *iterator:
-		if key == "next" || key == "toString" {
-			return boundMethod(v, key), nil
+		if f := protoFn("Iterator", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Object"); ok {
 			return p, err
@@ -695,9 +697,8 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		if p, ok := v.get(key); ok {
 			return p, nil
 		}
-		switch key {
-		case "test", "exec", "toString":
-			return boundMethod(v, key), nil
+		if f := protoFn("RegExp", key); f != nil {
+			return f, nil
 		}
 		return Undefined, nil
 	case string:
@@ -710,11 +711,8 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			}
 			return Undefined, nil
 		}
-		if stringMethods[key] != nil {
-			return boundMethod(v, key), nil
-		}
-		if declinedStringMembers[key] {
-			return declinedMethod(key), nil
+		if f := protoFn("String", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "String"); ok {
 			return p, err
@@ -723,19 +721,16 @@ func (r *rt) getProp(v any, key string) (any, error) {
 	case *hostObject:
 		return r.getProp(v.view, key)
 	case float64:
-		if numberMethods[key] != nil {
-			return boundMethod(v, key), nil
-		}
-		if declinedNumberMembers[key] {
-			return declinedMethod(key), nil
+		if f := protoFn("Number", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Number"); ok {
 			return p, err
 		}
 		return Undefined, nil
 	case bool:
-		if key == "toString" || key == "valueOf" {
-			return boundMethod(v, key), nil
+		if f := protoFn("Boolean", key); f != nil {
+			return f, nil
 		}
 		if p, ok, err := inherited(key, "Boolean"); ok {
 			return p, err
@@ -763,14 +758,6 @@ func (r *rt) getProp(v any, key string) (any, error) {
 		return nil, r.referenceError("Cannot access a variable before initialization")
 	}
 	return Undefined, nil
-}
-
-// boundMethod lets scripts read built-in methods as values (e.g. to test
-// typeof). Calling the value applies the method to its original receiver.
-func boundMethod(recv any, key string) *function {
-	return &function{name: key, native: func(r *rt, _ any, args []any) (any, error) {
-		return r.callBuiltinMethod(recv, key, args)
-	}}
 }
 
 func (r *rt) setProp(target any, key string, v any) error {
@@ -810,6 +797,12 @@ func (r *rt) setProp(target any, key string, v any) error {
 		if key == "lastIndex" {
 			t.lastIndex = v
 		}
+		return nil
+	case *dateValue:
+		if t.props == nil {
+			t.props = newObject(1)
+		}
+		t.props.set(key, v)
 		return nil
 	case *hostObject:
 		t.dirty = true
@@ -903,6 +896,11 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 	case *iterator:
 		return key == "next" || objectProtoMember(key), nil
 	case *dateValue:
+		if t.props != nil {
+			if _, ok := t.props.own(key); ok {
+				return true, nil
+			}
+		}
 		return dateMethods[key] != nil || objectProtoMember(key), nil
 	case *function:
 		if t.props != nil {
@@ -927,6 +925,11 @@ func ownEnumerableKeys(v any) []string {
 	case *hostObject:
 		return v.view.ownKeys()
 	case *function:
+		if v.props != nil {
+			return v.props.ownKeys()
+		}
+		return nil
+	case *dateValue:
 		if v.props != nil {
 			return v.props.ownKeys()
 		}
@@ -1014,9 +1017,3 @@ var (
 	declinedStringMembers = map[string]bool{"matchAll": true, "normalize": true}
 	declinedNumberMembers = map[string]bool{"toExponential": true}
 )
-
-func declinedMethod(key string) *function {
-	return &function{name: key, native: func(*rt, any, []any) (any, error) {
-		return nil, errRuntimeUnsupported("method " + key)
-	}}
-}

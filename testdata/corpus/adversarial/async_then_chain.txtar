@@ -15,5 +15,3 @@ return names;
     ]
   }
 }
--- divergence --
-Async dialect: results are plain values; .then is not available.

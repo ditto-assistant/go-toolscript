@@ -213,6 +213,11 @@ func Compile(source string, opts CompileOptions) (prog *Program, err error) {
 	if !ok {
 		return nil, ErrUnsupported
 	}
+	if opts.Batches {
+		if err := checkAsyncShapes(fn); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrUnsupported, err)
+		}
+	}
 	c := &compiler{opts: opts}
 	main, err := c.function(fn.ParameterList, fn.Body, nil, opts.Batches, "")
 	if err != nil {

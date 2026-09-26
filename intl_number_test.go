@@ -127,7 +127,12 @@ func jsonDiff(got, want string) string {
 }
 
 func TestIntlNumberGolden(t *testing.T) {
-	files := loadIntlGolden(t, "testdata/intl/number/*.json.gz")
+	dir := "testdata/intl/number"
+	if soak := os.Getenv("TOOLSCRIPT_INTL_GOLDEN"); soak != "" {
+		dir = soak // a larger corpus from golden.mjs <dir> <seed> <scale>
+	}
+	files := loadIntlGolden(t, filepath.Join(dir, "*.json.gz"))
+	reasons := map[string]int{}
 	names := make([]string, 0, len(files))
 	for n := range files {
 		names = append(names, n)
@@ -143,6 +148,7 @@ func TestIntlNumberGolden(t *testing.T) {
 				switch {
 				case errors.Is(err, ErrRuntimeUnsupported) && intlAllowedDecline.MatchString(err.Error()):
 					declined++
+					reasons[err.Error()]++
 					continue
 				case err != nil:
 					failures++
@@ -164,5 +170,5 @@ func TestIntlNumberGolden(t *testing.T) {
 			}
 		})
 	}
-	t.Logf("intl golden: %d cases, %d match Node, %d declined", total, passed, declined)
+	t.Logf("intl golden: %d cases, %d match Node, %d declined %v", total, passed, declined, reasons)
 }

@@ -3,6 +3,12 @@
 //
 //   node internal/intlgen/number/golden.mjs
 //
+// With arguments it writes a larger, differently seeded corpus elsewhere
+// for local soak runs (not committed):
+//
+//   node internal/intlgen/number/golden.mjs /tmp/intl-soak 17 10
+//   TOOLSCRIPT_INTL_GOLDEN=/tmp/intl-soak go test -run TestIntlNumberGolden
+//
 // Every case is a small script body; Node runs it here and records what
 // it returns (always a string: JSON.stringify of the results, with errors
 // rendered as "Name: message"). TestIntlNumberGolden runs the same bodies
@@ -14,7 +20,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const outDir = join(root, "testdata/intl/number");
+const outDir = process.argv[2] || join(root, "testdata/intl/number");
+const seedOffset = Number(process.argv[3] || 0);
+const scale = Number(process.argv[4] || 1);
 mkdirSync(outDir, { recursive: true });
 
 function mulberry32(a) {
@@ -26,7 +34,7 @@ function mulberry32(a) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-let rand = mulberry32(1);
+let rand = mulberry32(1 + seedOffset);
 const pick = (xs) => xs[Math.floor(rand() * xs.length)];
 const chance = (p) => rand() < p;
 const int = (lo, hi) => lo + Math.floor(rand() * (hi - lo + 1));
@@ -166,8 +174,8 @@ function nfCase(i, loc, opts, values) {
   add("numberformat", `nf-${i}`, body);
 }
 
-rand = mulberry32(20260926);
-for (let i = 0; i < 3000; i++) {
+rand = mulberry32(20260926 + seedOffset);
+for (let i = 0; i < 3000 * scale; i++) {
   const loc = pick(locales);
   const opts = randomOptions("nf");
   const values = [];
@@ -176,7 +184,7 @@ for (let i = 0; i < 3000; i++) {
 }
 
 // Exhaustive-ish sweeps over the dimensions that are data-driven.
-rand = mulberry32(7);
+rand = mulberry32(7 + seedOffset);
 let n = 0;
 for (const c of currencies.concat(["XXX", "ABC", "DEM", "usd", "BYR", "ITL"])) {
   for (const cd of ["symbol", "narrowSymbol", "code", "name"]) {
@@ -205,8 +213,8 @@ for (let e = -12; e <= 24; e++) {
 }
 
 // ---------------------------------------------------------------- toLocaleString
-rand = mulberry32(99);
-for (let i = 0; i < 400; i++) {
+rand = mulberry32(99 + seedOffset);
+for (let i = 0; i < 400 * scale; i++) {
   const v = randomNumber();
   // Without locales and options the engine keeps Goja's Number#toString
   // behavior, so every case passes at least one of them.
@@ -373,13 +381,13 @@ const errorExprs = [
 errorExprs.forEach((expr, i) => add("errors", `errors-${i}`, `return JSON.stringify(${tryAll(expr)});`));
 
 // ---------------------------------------------------------------- PluralRules
-rand = mulberry32(4242);
+rand = mulberry32(4242 + seedOffset);
 const prValues = () => {
   const vs = [];
   for (let k = 0; k < 16; k++) vs.push(chance(0.5) ? int(0, 125) : randomNumber());
   return vs.concat([1, 2, 3, 11, 12, 13, 21, 22, 23, 101, 111, 1.0, 1.5, 0, -1, -0, NaN, 1000, 1e6, "1", "2.00"]);
 };
-for (let i = 0; i < 700; i++) {
+for (let i = 0; i < 700 * scale; i++) {
   const loc = pick(locales);
   const opts = randomOptions("pr");
   const V = prValues().map(src).join(", ");
@@ -398,7 +406,7 @@ for (let i = 0; i < 700; i++) {
 }
 
 // ---------------------------------------------------------------- ListFormat
-rand = mulberry32(555);
+rand = mulberry32(555 + seedOffset);
 const words = ["a", "b", "c", "apple", "", " ", "x y", "日本", "🙂", "Alice", "Bob", "Carol", "d, e"];
 for (const type of [undefined, "conjunction", "disjunction", "unit"]) {
   for (const style of [undefined, "long", "short", "narrow"]) {
@@ -423,9 +431,9 @@ for (const type of [undefined, "conjunction", "disjunction", "unit"]) {
 }
 
 // ---------------------------------------------------------------- RelativeTimeFormat
-rand = mulberry32(777);
+rand = mulberry32(777 + seedOffset);
 const rtUnits = ["second", "seconds", "minute", "minutes", "hour", "hours", "day", "days", "week", "weeks", "month", "months", "quarter", "quarters", "year", "years"];
-for (let i = 0; i < 400; i++) {
+for (let i = 0; i < 400 * scale; i++) {
   const opts = {};
   if (chance(0.6)) opts.style = pick(["long", "short", "narrow"]);
   if (chance(0.6)) opts.numeric = pick(["always", "auto"]);

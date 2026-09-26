@@ -1,0 +1,22 @@
+Nested try where the fallback also fails and the outer catch reports it.
+-- script.js --
+let doc;
+try {
+  try {
+    doc = mcp.googledocs.get_document_by_id({id: "doc_old"});
+  } catch (inner) {
+    doc = mcp.googledrive.export_document({fileId: "doc_old", mimeType: "application/json"});
+  }
+  return doc.title;
+} catch (outer) {
+  return "both failed: " + outer.message;
+}
+-- tools.json --
+{
+  "googledocs.get_document_by_id": {
+    "$error": "document doc_old was deleted"
+  },
+  "googledrive.export_document": {
+    "$error": "file not found"
+  }
+}

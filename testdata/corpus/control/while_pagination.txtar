@@ -1,0 +1,48 @@
+while loop paginating with a cursor via $sequence.
+-- script.js --
+let page = mcp.googledrive.find_file({q:"trashed = false", pageSize:2});
+const names = page.files.map(f => f.name);
+let guard = 0;
+while (page.nextPageToken && guard < 10) {
+  page = mcp.googledrive.find_file({q:"trashed = false", pageSize:2, pageToken: page.nextPageToken});
+  names.push(...page.files.map(f => f.name));
+  guard++;
+}
+return {names, pages: guard + 1};
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "$sequence": [
+      {
+        "files": [
+          {
+            "name": "a.txt"
+          },
+          {
+            "name": "b.txt"
+          }
+        ],
+        "nextPageToken": "p2"
+      },
+      {
+        "files": [
+          {
+            "name": "c.txt"
+          },
+          {
+            "name": "d.txt"
+          }
+        ],
+        "nextPageToken": "p3"
+      },
+      {
+        "files": [
+          {
+            "name": "e.txt"
+          }
+        ],
+        "nextPageToken": ""
+      }
+    ]
+  }
+}

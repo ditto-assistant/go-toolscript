@@ -1,0 +1,159 @@
+For each upcoming meeting, gather attendee context from CRM, mail and memories with per-lookup error tolerance, then render a brief.
+-- script.js --
+const events = mcp.googlecalendar.events_list({calendarId: "primary", timeMin: "2026-09-25T00:00:00Z", maxResults: 10}).items
+  .filter(e => e.start.dateTime && (e.attendees || []).length);
+const me = "me@example.com";
+const cache = {};
+function person(email) {
+  if (cache[email]) return cache[email];
+  const info = {email, name: email.split("@")[0], notes: [], lastMail: null, account: null};
+  try { const c = mcp.crm.find_contact({email}); if (c && c.name) { info.name = c.name; info.account = c.account || null; } } catch (e) { info.notes.push("crm: " + e.message); }
+  try {
+    const m = mcp.gmail.fetch_emails({query: `from:${email}`, max_results: 1}).messages;
+    if (m.length) info.lastMail = m[0].subject;
+  } catch (e) { info.notes.push("mail: " + e.message); }
+  const mem = mcp.search_memories({queries: [info.name], limit: 2});
+  info.memories = mem.queries[0].results.map(r => r.summary);
+  return (cache[email] = info);
+}
+const sections = events.map(e => {
+  const people = e.attendees.map(a => a.email).filter(x => x !== me).map(person);
+  const lines = people.map(p => {
+    const bits = [];
+    if (p.account) bits.push(`account ${p.account}`);
+    if (p.lastMail) bits.push(`last mail "${p.lastMail}"`);
+    if (p.memories.length) bits.push(`remembers: ${p.memories.join("; ")}`);
+    if (p.notes.length) bits.push(`(${p.notes.join(", ")})`);
+    return `  - ${p.name}: ${bits.join(" | ") || "no context"}`;
+  });
+  return `* ${e.start.dateTime.slice(11, 16)} ${e.summary}\n${lines.join("\n")}`;
+});
+return {meetings: events.length, lookups: Object.keys(cache).length, brief: sections.join("\n\n")};
+-- tools.json --
+{
+  "googlecalendar.events_list": {
+    "items": [
+      {
+        "id": "ev_1",
+        "summary": "Team sync",
+        "start": {
+          "dateTime": "2026-09-25T15:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T15:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "alice@example.com"
+          },
+          {
+            "email": "bob@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_2",
+        "summary": "1:1 with Carol",
+        "start": {
+          "dateTime": "2026-09-25T17:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T17:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "carol@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_3",
+        "summary": "Focus block",
+        "start": {
+          "date": "2026-09-26"
+        },
+        "end": {
+          "date": "2026-09-27"
+        }
+      }
+    ]
+  },
+  "crm.find_contact": {
+    "$sequence": [
+      {
+        "name": "Alice Example",
+        "account": "Acme"
+      },
+      {
+        "name": "Bob Example"
+      },
+      {
+        "name": "Carol Example",
+        "account": "Globex"
+      }
+    ]
+  },
+  "gmail.fetch_emails": {
+    "$sequence": [
+      {
+        "messages": [
+          {
+            "subject": "Re: launch checklist"
+          }
+        ]
+      },
+      {
+        "messages": []
+      },
+      {
+        "messages": [
+          {
+            "subject": "Contract questions"
+          }
+        ]
+      }
+    ]
+  },
+  "search_memories": {
+    "$sequence": [
+      {
+        "queries": [
+          {
+            "query_index": 0,
+            "results": [
+              {
+                "id": "m1",
+                "summary": "Prefers written agendas."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "queries": [
+          {
+            "query_index": 0,
+            "results": []
+          }
+        ]
+      },
+      {
+        "queries": [
+          {
+            "query_index": 0,
+            "results": [
+              {
+                "id": "m3",
+                "summary": "Renewal due in Q1."
+              },
+              {
+                "id": "m4",
+                "summary": "Asked for SSO."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

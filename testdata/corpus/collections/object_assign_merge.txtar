@@ -1,0 +1,19 @@
+Object.assign merging defaults, response and overrides.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+const merged = Object.assign({}, {region: "us", tier: "free"}, a, {contacts: 0});
+return [merged.region, merged.tier, merged.contacts, merged.name];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

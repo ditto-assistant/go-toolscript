@@ -1,0 +1,24 @@
+Log Object.keys of an unknown response to explore its shape.
+-- script.js --
+const r = mcp.notion.fetch_data({id:"page_1"});
+console.log("KEYS:", JSON.stringify(Object.keys(r)));
+console.log("type of blocks:", typeof r.blocks, Array.isArray(r.blocks));
+return Object.keys(r).length;
+-- tools.json --
+{
+  "notion.fetch_data": {
+    "id": "page_1",
+    "title": "Roadmap",
+    "blocks": [
+      {
+        "type": "heading",
+        "text": "Now"
+      },
+      {
+        "type": "bullet",
+        "text": "Ship v2"
+      }
+    ],
+    "last_edited": "2026-09-20T00:00:00Z"
+  }
+}

@@ -1,0 +1,21 @@
+Tagged template literal used as a formatter.
+-- script.js --
+function money(strings, ...vals) {
+  return strings.reduce((out, s, i) => out + s + (i < vals.length ? "$" + Number(vals[i]).toFixed(2) : ""), "");
+}
+const a = mcp.crm.get_account({id: "acct_9"});
+return money`ARR is ${a.arr} and per seat ${a.arr / a.contacts}`;
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

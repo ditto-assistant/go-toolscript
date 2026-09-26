@@ -1,0 +1,33 @@
+Label string plus JSON as two console.log arguments.
+-- script.js --
+const sub = mcp.call("mcp__team-backroom__get_submission", {submissionId: "sub_77"});
+console.log("SUBMISSION:", JSON.stringify(sub).slice(0, 4000));
+let rev;
+try { rev = mcp.call("mcp__team-backroom__get_review", {submissionId: "sub_77"}); }
+catch (e) { rev = {error: String(e)}; }
+console.log("REVIEW:", JSON.stringify(rev).slice(0, 3000));
+return "ok";
+-- tools.json --
+{
+  "mcp__team-backroom__get_submission": {
+    "submission_id": "sub_77",
+    "status": "open"
+  },
+  "mcp__team-backroom__get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

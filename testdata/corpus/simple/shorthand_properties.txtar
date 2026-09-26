@@ -1,0 +1,55 @@
+Shorthand property names in the returned object.
+-- script.js --
+const events = mcp.googlecalendar.events_list({calendarId:"primary"}).items;
+const count = events.length;
+return {count, events};
+-- tools.json --
+{
+  "googlecalendar.events_list": {
+    "items": [
+      {
+        "id": "ev_1",
+        "summary": "Team sync",
+        "start": {
+          "dateTime": "2026-09-25T15:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T15:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "alice@example.com"
+          },
+          {
+            "email": "bob@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_2",
+        "summary": "1:1 with Carol",
+        "start": {
+          "dateTime": "2026-09-25T17:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T17:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "carol@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_3",
+        "summary": "Focus block",
+        "start": {
+          "date": "2026-09-26"
+        },
+        "end": {
+          "date": "2026-09-27"
+        }
+      }
+    ]
+  }
+}

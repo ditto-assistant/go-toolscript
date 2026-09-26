@@ -1,0 +1,27 @@
+Return in try with finally side effect captured through a closure.
+-- script.js --
+const events = [];
+function run() {
+  try {
+    events.push("try");
+    return mcp.crm.get_account({id:"acct_9"}).name;
+  } finally {
+    events.push("finally");
+  }
+}
+const name = run();
+return {name, events};
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

@@ -1,0 +1,11 @@
+A failing tool call with no try/catch propagates as the script error.
+-- script.js --
+const sub = mcp.call("mcp__team-backroom__get_submission", {submissionId: "sub_404"});
+console.log(JSON.stringify(sub).slice(0, 4000));
+return "ok";
+-- tools.json --
+{
+  "mcp__team-backroom__get_submission": {
+    "$error": "submission sub_404 not found"
+  }
+}

@@ -1,0 +1,33 @@
+Array.isArray to handle list-or-object responses.
+-- script.js --
+const r = mcp.call("mcp__acme-tracker__get", {path:"/tickets"});
+const list = Array.isArray(r) ? r : (r.tickets || r.items || []);
+return list.length;
+-- tools.json --
+{
+  "mcp__acme-tracker__get": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  }
+}

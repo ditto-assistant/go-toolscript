@@ -1,0 +1,10 @@
+A tool that reports an error in its payload rather than failing.
+-- script.js --
+const r = mcp.file_feedback_for_team({category:"praise", title:"Nice flow", summary:"Worked end to end"});
+return r.error || r;
+-- tools.json --
+{
+  "file_feedback_for_team": {
+    "error": "invalid category \"praise\": must be bug, feature, improvement, or other"
+  }
+}

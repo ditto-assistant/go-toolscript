@@ -1,0 +1,28 @@
+Batch of calls through a circuit breaker: consecutive failures open the circuit and short-circuit remaining items.
+-- script.js --
+function breaker(fn, threshold) {
+  let fails = 0, open = false, calls = 0;
+  const wrapped = (arg) => {
+    if (open) return {skipped: true};
+    calls++;
+    try { const v = fn(arg); fails = 0; return {ok: true, v}; }
+    catch (e) { fails++; if (fails >= threshold) open = true; return {ok: false, err: e.message}; }
+  };
+  wrapped.state = () => ({open, fails, calls});
+  return wrapped;
+}
+const sync = breaker(id => mcp.call("mcp__acme-tracker__sync_ticket", {id}).revision, 2);
+const ids = ["T-1", "T-2", "T-3", "T-4", "T-5", "T-6"];
+const results = ids.map(id => ({id, ...sync(id)}));
+return {
+  state: sync.state(),
+  synced: results.filter(r => r.ok).map(r => r.id + "@" + r.v),
+  failed: results.filter(r => r.ok === false).map(r => r.id),
+  skipped: results.filter(r => r.skipped).map(r => r.id)
+};
+-- tools.json --
+{
+  "mcp__acme-tracker__sync_ticket": {
+    "$error": "tracker returned 503"
+  }
+}

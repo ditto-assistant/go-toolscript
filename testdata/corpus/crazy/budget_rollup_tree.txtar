@@ -1,0 +1,103 @@
+Roll up nested cost centers recursively, convert currencies from a rate table, and render an indented tree.
+-- script.js --
+const tree = mcp.crm.get_cost_centers({year: 2026});
+const rates = mcp.crm.get_fx_rates({base: "USD"}).rates;
+const toUsd = (amt, cur) => cur === "USD" ? amt : (cur in rates ? amt / rates[cur] : 0);
+function roll(node) {
+  const own = (node.lines || []).reduce((s, l) => s + toUsd(l.amount, l.currency), 0);
+  const kids = (node.children || []).map(roll);
+  const total = own + kids.reduce((s, k) => s + k.total, 0);
+  return {name: node.name, own, total, kids, bad: (node.lines || []).filter(l => !(l.currency in rates) && l.currency !== "USD").length + kids.reduce((s, k) => s + k.bad, 0)};
+}
+const r = roll(tree);
+const lines = [];
+(function render(n, depth) {
+  const pct = r.total ? (n.total / r.total * 100).toFixed(1) : "0.0";
+  lines.push(`${"  ".repeat(depth)}${n.name}: $${Math.round(n.total)} (${pct}%)`);
+  n.kids.slice().sort((a, b) => b.total - a.total || (a.name < b.name ? -1 : 1)).forEach(k => render(k, depth + 1));
+})(r, 0);
+return {total: Math.round(r.total), unconvertible: r.bad, tree: lines.join("\n")};
+-- tools.json --
+{
+  "crm.get_cost_centers": {
+    "name": "Company",
+    "lines": [],
+    "children": [
+      {
+        "name": "Engineering",
+        "lines": [
+          {
+            "amount": 12000,
+            "currency": "USD"
+          },
+          {
+            "amount": 5000,
+            "currency": "EUR"
+          }
+        ],
+        "children": [
+          {
+            "name": "Infra",
+            "lines": [
+              {
+                "amount": 8000,
+                "currency": "USD"
+              }
+            ],
+            "children": []
+          },
+          {
+            "name": "Tools",
+            "lines": [
+              {
+                "amount": 900,
+                "currency": "GBP"
+              },
+              {
+                "amount": 300,
+                "currency": "XYZ"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Sales",
+        "lines": [
+          {
+            "amount": 7000,
+            "currency": "USD"
+          }
+        ],
+        "children": [
+          {
+            "name": "Events",
+            "lines": [
+              {
+                "amount": 2000,
+                "currency": "EUR"
+              }
+            ],
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Ops",
+        "lines": [
+          {
+            "amount": 1500,
+            "currency": "USD"
+          }
+        ]
+      }
+    ]
+  },
+  "crm.get_fx_rates": {
+    "base": "USD",
+    "rates": {
+      "EUR": 0.8,
+      "GBP": 0.75
+    }
+  }
+}

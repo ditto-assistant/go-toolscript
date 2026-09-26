@@ -1,0 +1,15 @@
+Count keyword occurrences with split.
+-- script.js --
+const d = mcp.googledocs.get_document_plaintext({document_id:"doc_abc"});
+const words = ["risk", "launch", "hiring"];
+const lower = d.plain_text.toLowerCase();
+const out = {};
+for (const w of words) out[w] = lower.split(w).length - 1;
+return out;
+-- tools.json --
+{
+  "googledocs.get_document_plaintext": {
+    "document_id": "doc_abc",
+    "plain_text": "Launch plan. Risk: hiring may slip. Risk: vendor delay. Launch in October. RISK REVIEW weekly."
+  }
+}

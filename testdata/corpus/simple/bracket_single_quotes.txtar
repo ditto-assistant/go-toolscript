@@ -1,0 +1,20 @@
+Bracket notation with single-quoted server name.
+-- script.js --
+return mcp['team-backroom'].search_precedents({query: "late submission", limit: 5});
+-- tools.json --
+{
+  "team-backroom.search_precedents": {
+    "precedents": [
+      {
+        "id": "prec_1",
+        "title": "Late by one day",
+        "outcome": "accepted"
+      },
+      {
+        "id": "prec_2",
+        "title": "Late by a week",
+        "outcome": "rejected"
+      }
+    ]
+  }
+}

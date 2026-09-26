@@ -1,0 +1,62 @@
+Two independent calls combined into one returned object.
+-- script.js --
+const mem=mcp.search_memories({queries:["launch plan", "owner of billing"],limit:10}); const docs=mcp.googledocs.search_documents({query:"fullText contains 'launch'",max_results:50}); return {mem,docs};
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "query": "billing migration",
+        "results": [
+          {
+            "id": "mem_010",
+            "summary": "Billing migration phase one finished in staging.",
+            "score": 0.88,
+            "created_at": "2026-08-20T10:00:00Z"
+          },
+          {
+            "id": "mem_011",
+            "summary": "Invoices need a currency column before cutover.",
+            "score": 0.71,
+            "created_at": "2026-08-21T11:00:00Z"
+          }
+        ]
+      },
+      {
+        "query_index": 1,
+        "query": "launch date",
+        "results": [
+          {
+            "id": "mem_002",
+            "summary": "Widget-service launch moved to the second week of October.",
+            "score": 0.93,
+            "created_at": "2026-08-11T09:30:00Z"
+          }
+        ]
+      },
+      {
+        "query_index": 2,
+        "query": "design review",
+        "results": []
+      }
+    ]
+  },
+  "googledocs.search_documents": {
+    "documents": [
+      {
+        "id": "doc_abc",
+        "name": "Q3 Planning",
+        "modifiedTime": "2026-09-01T10:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_abc"
+      },
+      {
+        "id": "doc_def",
+        "name": "Onboarding Checklist",
+        "modifiedTime": "2026-08-15T09:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_def"
+      }
+    ],
+    "nextPageToken": null
+  }
+}

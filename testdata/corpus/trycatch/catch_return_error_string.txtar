@@ -1,0 +1,14 @@
+Failed call caught and returned as {error: String(e)}.
+-- script.js --
+try {
+  const r = mcp.call("mcp__acme-tracker__list_tickets", {status: "open"});
+  return r;
+} catch (e) {
+  return {error: String(e)};
+}
+-- tools.json --
+{
+  "mcp__acme-tracker__list_tickets": {
+    "$error": "upstream timeout"
+  }
+}

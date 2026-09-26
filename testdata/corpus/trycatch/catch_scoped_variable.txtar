@@ -1,0 +1,12 @@
+Catch parameter shadows an outer variable of the same name.
+-- script.js --
+const e = "outer";
+let got;
+try { mcp.notes.get({id:"n"}); } catch (e) { got = e.message; }
+return [e, got];
+-- tools.json --
+{
+  "notes.get": {
+    "$error": "not found"
+  }
+}

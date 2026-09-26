@@ -1,0 +1,57 @@
+Function composition via reduce.
+-- script.js --
+const pipe = (...fns) => x => fns.reduce((v, f) => f(v), x);
+const onlyOpen = xs => xs.filter(p => p.state === "open");
+const titles = xs => xs.map(p => p.title);
+const upper = xs => xs.map(t => t.toUpperCase());
+const prs = mcp.github.list_pull_requests({owner:"acme", repo:"widget-service", state:"all"});
+return pipe(onlyOpen, titles, upper)(prs);
+-- tools.json --
+{
+  "github.list_pull_requests": [
+    {
+      "number": 101,
+      "title": "Add retry budget to fetcher",
+      "state": "open",
+      "user": {
+        "login": "alice"
+      },
+      "labels": [
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": false,
+      "updated_at": "2026-09-20T12:00:00Z"
+    },
+    {
+      "number": 102,
+      "title": "Fix flaky cache test",
+      "state": "open",
+      "user": {
+        "login": "bob"
+      },
+      "labels": [
+        {
+          "name": "tests"
+        },
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": true,
+      "updated_at": "2026-09-21T08:15:00Z"
+    },
+    {
+      "number": 99,
+      "title": "Bump lint config",
+      "state": "closed",
+      "user": {
+        "login": "carol"
+      },
+      "labels": [],
+      "draft": false,
+      "updated_at": "2026-09-18T17:40:00Z"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+&& guards before property access and as a value.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+const email = a.owner && a.owner.email;
+const region = a.region && a.region.name;
+return [email, region, a.contacts > 10 && "many"];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

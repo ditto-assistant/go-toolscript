@@ -1,0 +1,24 @@
+JSON.parse with a reviver converting numeric strings.
+-- script.js --
+const v = mcp.googlesheets.values_get({spreadsheetId:"sheet_1", range:"A1:B3"});
+const text = JSON.stringify(v.values);
+return JSON.parse(text, (k, val) => (typeof val === "string" && val !== "" && !isNaN(Number(val))) ? Number(val) : val);
+-- tools.json --
+{
+  "googlesheets.values_get": {
+    "values": [
+      [
+        "name",
+        "qty"
+      ],
+      [
+        "bolt",
+        "10"
+      ],
+      [
+        "nut",
+        "2.5"
+      ]
+    ]
+  }
+}

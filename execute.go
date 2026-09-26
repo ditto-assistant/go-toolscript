@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
+	"math"
+	"reflect"
+	"sort"
 	"sync"
 	"sync/atomic"
-	"unicode/utf16"
 )
 
 // Undefined represents an absent JS value. Marshal omits it in objects and
@@ -19,10 +20,12 @@ type undefined struct{}
 
 // Object preserves hosts whose property view differs from their JSON export
 // (for example, a Go struct with omitzero fields exposed through Goja).
-// Fields and Export must contain only immutable JSON data.
+// Fields and Export must contain only immutable JSON data. Order optionally
+// lists Fields keys in declaration order for enumeration and JSON.stringify.
 type Object struct {
 	Fields map[string]any
 	Export any
+	Order  []string
 }
 
 // Dispatch exposes named tool capabilities to a plan. Arguments/results must
@@ -35,14 +38,23 @@ type ExecuteOptions struct {
 	// HostDispatch handles only explicitly admitted global calls. It has the same
 	// cancellation, immutable-data and concurrency contract as Dispatch.
 	HostDispatch func(context.Context, string, []any) (any, error)
+	Dispatch     Dispatch
+	// Console receives console.log/info/warn/error/debug lines. Arguments are
+	// formatted like Goja's exported values: objects and arrays as compact JSON
+	// (encoding/json of the export), everything else with JavaScript ToString,
+	// joined by single spaces. Nil discards output.
+	Console      func(level, line string)
+	Fatal        func(error) bool
 	MaxHostCalls int // default 64, independent of the tool-call budget
-
-	Dispatch    Dispatch
-	Fatal       func(error) bool
-	MaxCalls    int // default 64
-	MaxSteps    int // default 100000
-	MaxItems    int // default 1024 per array map/batch
-	Parallelism int // default 1; maximum 64
+	MaxCalls     int // default 64
+	MaxSteps     int // default 1,000,000 statements, calls and loop iterations
+	MaxItems     int // default 1024 items per Promise.all/allSettled batch
+	Parallelism  int // default 1; maximum 64
+	// MaxArrayLength and MaxStringBytes bound values built by the script
+	// (defaults 1<<22 elements and 16 MiB). Exceeding them throws RangeError.
+	MaxArrayLength int
+	MaxStringBytes int
+	MaxCallDepth   int // default 1000 nested function calls
 }
 
 // Result retains the call count and fatal status even after execution fails.
@@ -50,23 +62,95 @@ type Result struct {
 	Value     any
 	Calls     int
 	HostCalls int
+	Steps     int // statements, calls and loop iterations executed
 	Aborted   bool
 }
+
 type execution struct {
 	opts      ExecuteOptions
+	fatal     error
+	panicked  error
 	calls     atomic.Int64
 	hostCalls atomic.Int64
 	steps     atomic.Int64
-	aborted   atomic.Bool
 	fatalMu   sync.Mutex
-	fatal     error
+	maxString int
+	maxItems  int
+	maxDepth  int
+	batch     int // steps per publication; 1 for tiny budgets
+	aborted   atomic.Bool
 }
-type environment map[string]any
 
-// Execute runs a validated program. It never returns ErrUnsupported and never
-// retries a call. Parallel batches join all workers before returning, including
-// on errors; callers needing a hard deadline must retain admission until exit.
-func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (Result, error) {
+// rt is the per-goroutine interpreter state for one execution.
+type rt struct {
+	ctx     context.Context
+	x       *execution
+	joining map[*array]bool
+	depth   int
+	pending int // steps not yet published to x.steps
+	frames  []*scope8
+}
+
+// Throw is an uncaught JavaScript exception. Tool and host failures surface
+// as Goja-style GoError objects and unwrap to the original error.
+type Throw struct {
+	Value any
+	cause error
+}
+
+func (t *Throw) Error() string {
+	if t.cause != nil {
+		return t.cause.Error()
+	}
+	switch v := t.Value.(type) {
+	case *object:
+		if v.errName != "" {
+			return errorToString(v)
+		}
+		return "[object Object]"
+	case string:
+		return v
+	}
+	r := &rt{x: &execution{maxString: 1 << 20}}
+	s, err := r.toString(t.Value)
+	if err != nil {
+		return "exception"
+	}
+	return s
+}
+
+func (t *Throw) Unwrap() error { return t.cause }
+
+// reason renders an allSettled rejection: host error text, or the thrown value.
+func (t *Throw) reason() any {
+	if t.cause != nil {
+		return t.cause.Error()
+	}
+	return t.Value
+}
+
+func (r *rt) throw(name, msg string) error    { return &Throw{Value: newError(name, msg)} }
+func (r *rt) typeError(msg string) error      { return r.throw("TypeError", msg) }
+func (r *rt) rangeError(msg string) error     { return r.throw("RangeError", msg) }
+func (r *rt) referenceError(msg string) error { return r.throw("ReferenceError", msg) }
+func (r *rt) syntaxError(msg string) error    { return r.throw("SyntaxError", msg) }
+
+func goError(err error) *Throw {
+	e := newError("GoError", err.Error())
+	e.set("value", newObject(0))
+	return &Throw{Value: e, cause: err}
+}
+
+var (
+	errStepLimit = errors.New("step limit exceeded")
+	errAborted   = errors.New("tool execution aborted")
+)
+
+// Execute runs a validated program. It never retries a call. Parallel batches
+// join all workers before returning, including on errors; callers needing a
+// hard deadline must retain admission until exit. Execution errors must never
+// trigger fallback, except ErrRuntimeUnsupported before any effect.
+func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (res Result, err error) {
 	if opts.MaxHostCalls <= 0 {
 		opts.MaxHostCalls = 64
 	}
@@ -74,7 +158,7 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (Result, err
 		opts.MaxCalls = 64
 	}
 	if opts.MaxSteps <= 0 {
-		opts.MaxSteps = 100000
+		opts.MaxSteps = 1_000_000
 	}
 	if opts.MaxItems <= 0 {
 		opts.MaxItems = 1024
@@ -85,311 +169,435 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (Result, err
 	if opts.Parallelism > 64 {
 		opts.Parallelism = 64
 	}
-	x := &execution{opts: opts}
-	v, err := p.run(ctx, x, environment{})
-	if x.steps.Load() > int64(opts.MaxSteps) {
-		err = errors.New("step limit exceeded")
+	if opts.MaxArrayLength <= 0 {
+		opts.MaxArrayLength = 1 << 22
+	}
+	if opts.MaxStringBytes <= 0 {
+		opts.MaxStringBytes = 16 << 20
+	}
+	if opts.MaxCallDepth <= 0 {
+		opts.MaxCallDepth = 1000
+	}
+	x := &execution{opts: opts, maxString: opts.MaxStringBytes, maxItems: opts.MaxArrayLength, maxDepth: opts.MaxCallDepth, batch: 64}
+	if opts.MaxSteps < 64*1024 {
+		x.batch = 1
+	}
+	r := &rt{ctx: ctx, x: x}
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("toolscript: internal error: %v", p)
+			res = Result{Value: Undefined, Calls: int(x.calls.Load()), HostCalls: int(x.hostCalls.Load()), Steps: int(x.steps.Load()), Aborted: x.aborted.Load()}
+		}
+	}()
+	var v any = Undefined
+	if err = ctx.Err(); err == nil {
+		v, err = r.invoke(&function{code: p.main}, nil)
+		x.steps.Add(int64(r.pending))
+	}
+	if err == nil {
+		v, err = exportValue(v)
 	}
 	if x.fatal != nil {
 		err = x.fatal
+	}
+	if err != nil {
 		v = Undefined
 	}
-	return Result{Value: v, Calls: int(x.calls.Load()), HostCalls: int(x.hostCalls.Load()), Aborted: x.aborted.Load()}, err
+	return Result{Value: v, Calls: int(x.calls.Load()), HostCalls: int(x.hostCalls.Load()), Steps: int(x.steps.Load()), Aborted: x.aborted.Load()}, err
 }
-func (x *execution) tick(ctx context.Context) error {
-	if err := ctx.Err(); err != nil {
-		return err
+
+// tick charges one step. Steps are accounted locally and published in small
+// batches, so the shared atomics stay off the per-statement path.
+func (r *rt) tick() error {
+	r.pending++
+	if r.pending < r.x.batch {
+		return nil
+	}
+	return r.flush()
+}
+
+func (r *rt) flush() error {
+	x := r.x
+	n := x.steps.Add(int64(r.pending))
+	r.pending = 0
+	if n > int64(x.opts.MaxSteps) {
+		return errStepLimit
 	}
 	if x.aborted.Load() {
-		return errors.New("tool execution aborted")
+		return errAborted
 	}
-	if x.steps.Add(1) > int64(x.opts.MaxSteps) {
-		return errors.New("step limit exceeded")
-	}
-	return nil
+	return r.ctx.Err()
 }
-func (p *Program) run(ctx context.Context, x *execution, env environment) (any, error) {
-	for _, s := range p.statements {
-		v, err := s.value.eval(ctx, x, env)
+
+func (x *execution) recordPanic(p any) {
+	x.fatalMu.Lock()
+	defer x.fatalMu.Unlock()
+	if x.panicked == nil {
+		x.panicked = fmt.Errorf("toolscript: internal error: %v", p)
+	}
+}
+
+func (x *execution) panicErr() error {
+	x.fatalMu.Lock()
+	defer x.fatalMu.Unlock()
+	return x.panicked
+}
+
+// invoke calls a user function or the program body.
+func (r *rt) invoke(f *function, args []any) (any, error) {
+	if err := r.tick(); err != nil {
+		return nil, err
+	}
+	if r.depth >= r.x.maxDepth {
+		return nil, r.rangeError("Maximum call stack size exceeded")
+	}
+	r.depth++
+	v, err := r.invokeBody(f, args)
+	r.depth--
+	return v, err
+}
+
+// invokeDirect calls a closure with simple parameters, evaluating argument
+// expressions straight into the callee's frame (no argument slice).
+func (r *rt) invokeDirect(f *function, argFns []evalFn, caller *scope) (any, error) {
+	if err := r.tick(); err != nil {
+		return nil, err
+	}
+	if r.depth >= r.x.maxDepth {
+		return nil, r.rangeError("Maximum call stack size exceeded")
+	}
+	code := f.code
+	var frame *scope
+	var pooled *scope8
+	if code.leaf && len(code.init) <= 8 && len(r.frames) > 0 {
+		pooled = r.frames[len(r.frames)-1]
+		r.frames = r.frames[:len(r.frames)-1]
+		pooled.parent, pooled.vars = f.scope, pooled.buf[:len(code.init)]
+		copy(pooled.vars, code.init)
+		frame = &pooled.scope
+	} else if code.leaf && len(code.init) <= 8 {
+		pooled = &scope8{}
+		pooled.parent, pooled.vars = f.scope, pooled.buf[:len(code.init)]
+		copy(pooled.vars, code.init)
+		frame = &pooled.scope
+	} else {
+		frame = newScope(f.scope, code.init)
+	}
+	for i, a := range argFns {
+		v, err := a(r, caller)
 		if err != nil {
 			return nil, err
 		}
-		if s.ret {
-			return v, nil
+		if i < len(code.simple) {
+			frame.vars[code.simple[i]] = v
 		}
-		for _, b := range s.bindings {
-			val := v
-			for _, key := range b.keys {
-				if text, ok := val.(string); ok && key.iterable {
-					runes := []rune(text)
-					index, _ := strconv.Atoi(key.key)
-					if index < len(runes) {
-						val = string(runes[index])
-					} else {
-						val = Undefined
-					}
-				} else {
-					val, err = member(val, key.key)
-				}
-				if err != nil {
+	}
+	r.depth++
+	v, err := r.runBody(f, frame)
+	r.depth--
+	if pooled != nil && len(r.frames) < 64 {
+		// A leaf frame is unreachable after return: nothing captured it.
+		pooled.buf = [8]any{}
+		pooled.parent = nil
+		r.frames = append(r.frames, pooled)
+	}
+	return v, err
+}
+
+func (r *rt) invokeBody(f *function, args []any) (any, error) {
+	code := f.code
+	s := newScope(f.scope, code.init)
+	for i, p := range code.params {
+		var v any = Undefined
+		if i < len(args) {
+			v = args[i]
+		}
+		if code.defaults[i] != nil {
+			if _, ok := v.(undefined); ok {
+				var err error
+				if v, err = code.defaults[i](r, s); err != nil {
 					return nil, err
 				}
 			}
-			if b.require != "" {
-				if val == nil {
-					return nil, errors.New("cannot destructure null")
-				}
-				if _, ok := val.(undefined); ok {
-					return nil, errors.New("cannot destructure undefined")
-				}
-				if b.require == "array" {
-					if _, ok := val.([]any); !ok {
-						if _, str := val.(string); str {
-							continue
-						}
-						return nil, errors.New("array binding requires an array")
-					}
-				}
-			} else {
-				env[b.name] = val
-			}
 		}
+		if slot := code.simple[i]; slot >= 0 {
+			s.vars[slot] = v
+			continue
+		}
+		if err := p(r, s, v); err != nil {
+			return nil, err
+		}
+	}
+	if code.rest != nil {
+		var tail []any
+		if len(args) > len(code.params) {
+			tail = append(tail, args[len(code.params):]...)
+		}
+		if err := code.rest(r, s, &array{items: nonNil(tail)}); err != nil {
+			return nil, err
+		}
+	}
+	return r.runBody(f, s)
+}
+
+func (r *rt) runBody(f *function, s *scope) (any, error) {
+	code := f.code
+	for _, h := range code.hoisted {
+		s.vars[h.slot] = &function{code: h.code, scope: s, name: h.name}
+	}
+	if code.exprBody != nil {
+		return code.exprBody(r, s)
+	}
+	k, v, err := runList(r, s, code.body)
+	if err != nil {
+		if err == errShortCircuit {
+			return nil, errInternal
+		}
+		return nil, err
+	}
+	if k == ctlReturn {
+		return v, nil
 	}
 	return Undefined, nil
 }
-func (e *expr) eval(ctx context.Context, x *execution, env environment) (any, error) {
-	if err := x.tick(ctx); err != nil {
-		return nil, err
+
+// call applies a callable value.
+func (r *rt) call(f any, args []any) (any, error) {
+	fn, ok := f.(*function)
+	if !ok {
+		return nil, r.notCallable(f)
 	}
-	switch e.kind {
-	case "literal":
-		return e.value, nil
-	case "ref":
-		return env[e.name], nil
-	case "member":
-		v, err := e.children[0].eval(ctx, x, env)
-		if err != nil {
-			return nil, err
-		}
-		return member(v, e.name)
-	case "array":
-		out := make([]any, len(e.children))
-		for i, v := range e.children {
-			a, err := v.eval(ctx, x, env)
-			if err != nil {
-				return nil, err
-			}
-			out[i] = a
-		}
-		return out, nil
-	case "object":
-		out := make(map[string]any, len(e.fields))
-		for _, f := range e.fields {
-			a, err := f.value.eval(ctx, x, env)
-			if err != nil {
-				return nil, err
-			}
-			out[f.name] = a
-		}
-		return out, nil
-	case "host":
-		args := make([]any, len(e.children))
-		for i, child := range e.children {
-			value, err := child.eval(ctx, x, env)
-			if err != nil {
-				return nil, err
-			}
-			args[i] = value
-		}
-		return x.invoke(ctx, &x.hostCalls, x.opts.MaxHostCalls, "host-call", func() (any, error) {
-			if x.opts.HostDispatch == nil {
-				return nil, errors.New("no host dispatcher configured")
-			}
-			return x.opts.HostDispatch(ctx, e.name, args)
-		})
-	case "call":
-		arg, err := e.children[0].eval(ctx, x, env)
-		if err != nil {
-			return nil, err
-		}
-		return x.call(ctx, e.name, arg)
-	case "map":
-		values, err := e.mapValues(ctx, x, env)
-		if err != nil {
-			return nil, err
-		}
-		out := make([]any, len(values))
-		for i, v := range values {
-			a, err := e.body.run(ctx, x, e.mapEnv(env, v, i))
-			if err != nil {
-				return nil, err
-			}
-			out[i] = a
-		}
-		return out, nil
-	case "all", "allSettled":
-		return e.batch(ctx, x, env)
+	if fn.native != nil {
+		return fn.native(r, Undefined, args)
 	}
-	return nil, errors.New("invalid execution plan")
+	return r.invoke(fn, args)
 }
-func (x *execution) call(ctx context.Context, name string, arg any) (any, error) {
-	return x.invoke(ctx, &x.calls, x.opts.MaxCalls, "tool-call", func() (any, error) {
-		if x.opts.Dispatch == nil {
+
+func (r *rt) notCallable(f any) error {
+	if isObjectValue(f) {
+		return r.typeError("Value is not callable")
+	}
+	s, _ := r.toString(f)
+	return r.typeError("Value is not an object: " + s)
+}
+
+func (r *rt) callTool(name string, arg any) (any, error) {
+	exported, err := exportValue(arg)
+	if err != nil {
+		return nil, r.typeError("invalid arguments for " + name + ": " + err.Error())
+	}
+	v, err := r.effect(&r.x.calls, r.x.opts.MaxCalls, "tool-call", func() (any, error) {
+		if r.x.opts.Dispatch == nil {
 			return nil, errors.New("no dispatcher configured")
 		}
-		return x.opts.Dispatch(ctx, name, arg)
+		return r.x.opts.Dispatch(r.ctx, name, exported)
 	})
+	if err != nil {
+		return nil, err
+	}
+	return fromGo(v)
 }
-func (x *execution) invoke(ctx context.Context, counter *atomic.Int64, limit int, label string, dispatch func() (any, error)) (value any, err error) {
-	// Also contains host panics inside batch goroutines.
-	defer func() {
-		if r := recover(); r != nil {
-			value = nil
-			err = fmt.Errorf("host panic: %v", r)
+
+func (r *rt) callHost(name string, args []any) (any, error) {
+	exported := make([]any, len(args))
+	for i, a := range args {
+		v, err := exportValue(a)
+		if err != nil {
+			return nil, r.typeError("invalid arguments for " + name + ": " + err.Error())
 		}
-	}()
-	if err = x.tick(ctx); err != nil {
+		exported[i] = v
+	}
+	v, err := r.effect(&r.x.hostCalls, r.x.opts.MaxHostCalls, "host-call", func() (any, error) {
+		if r.x.opts.HostDispatch == nil {
+			return nil, errors.New("no host dispatcher configured")
+		}
+		return r.x.opts.HostDispatch(r.ctx, name, exported)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return fromGo(v)
+}
+
+// effect charges and performs one tool/host call. Ordinary failures (and
+// exhausted budgets) become catchable GoError exceptions, as in the Goja
+// runner; cancellation, fatal errors and host panics are uncatchable.
+func (r *rt) effect(counter *atomic.Int64, limit int, label string, dispatch func() (any, error)) (value any, err error) {
+	if err = r.flush(); err != nil {
+		return nil, err
+	}
+	if err = r.ctx.Err(); err != nil {
 		return nil, err
 	}
 	for {
 		n := counter.Load()
 		if n >= int64(limit) {
-			return nil, fmt.Errorf("%s limit (%d) exceeded", label, limit)
+			return nil, goError(fmt.Errorf("%s limit (%d) exceeded", label, limit))
 		}
 		if counter.CompareAndSwap(n, n+1) {
 			break
 		}
 	}
-	value, err = dispatch()
-	if err != nil && x.opts.Fatal != nil && x.opts.Fatal(err) {
+	panicked := false
+	func() {
+		defer func() {
+			if p := recover(); p != nil {
+				panicked = true
+				err = fmt.Errorf("host panic: %v", p)
+			}
+		}()
+		value, err = dispatch()
+	}()
+	if panicked {
+		return nil, err
+	}
+	if err == nil {
+		return value, nil
+	}
+	x := r.x
+	if x.opts.Fatal != nil && x.opts.Fatal(err) {
 		x.fatalMu.Lock()
 		if x.fatal == nil {
 			x.fatal = err
 		}
 		x.aborted.Store(true)
 		x.fatalMu.Unlock()
-	}
-	return value, err
-}
-func (e *expr) mapValues(ctx context.Context, x *execution, env environment) ([]any, error) {
-	v, err := e.children[0].eval(ctx, x, env)
-	if err != nil {
 		return nil, err
 	}
-	values, ok := v.([]any)
-	if !ok {
-		return nil, errors.New("map receiver is not an array")
-	}
-	if len(values) > x.opts.MaxItems {
-		return nil, errors.New("map item limit exceeded")
-	}
-	return values, nil
-}
-func (e *expr) mapEnv(env environment, v any, i int) environment {
-	out := make(environment, len(env)+2)
-	for k, a := range env {
-		out[k] = a
-	}
-	if len(e.params) > 0 {
-		out[e.params[0]] = v
-	}
-	if len(e.params) > 1 {
-		out[e.params[1]] = float64(i)
-	}
-	return out
-}
-func (e *expr) batch(ctx context.Context, x *execution, env environment) (any, error) {
-	arg := e.children[0]
-	size := len(arg.children)
-	var values []any
-	if arg.kind == "map" {
-		var err error
-		values, err = arg.mapValues(ctx, x, env)
-		if err != nil {
-			return nil, err
-		}
-		size = len(values)
-	}
-	if size > x.opts.MaxItems {
-		return nil, errors.New("batch item limit exceeded")
-	}
-	out := make([]any, size)
-	errs := make([]error, size)
-	var next atomic.Int64
-	var wg sync.WaitGroup
-	work := func() {
-		defer wg.Done()
-		for {
-			i := int(next.Add(1) - 1)
-			if i >= size {
-				return
-			}
-			var v any
-			var err error
-			if arg.kind == "map" {
-				v, err = arg.body.run(ctx, x, arg.mapEnv(env, values[i], i))
-			} else {
-				v, err = arg.children[i].eval(ctx, x, env)
-			}
-			if e.kind == "allSettled" && err == nil {
-				out[i] = map[string]any{"status": "fulfilled", "value": v}
-			} else if e.kind == "allSettled" {
-				out[i] = map[string]any{"status": "rejected", "reason": err.Error()}
-			} else {
-				out[i] = v
-				errs[i] = err
-			}
-		}
-	}
-	for range min(size, x.opts.Parallelism) {
-		wg.Add(1)
-		go work()
-	}
-	wg.Wait()
-	if err := ctx.Err(); err != nil {
+	if cerr := r.ctx.Err(); cerr != nil && errors.Is(err, cerr) {
 		return nil, err
 	}
-	for _, err := range errs {
-		if err != nil {
-			return nil, err
-		}
-	}
-	return out, nil
+	return nil, goError(err)
 }
-func member(v any, key string) (any, error) {
+
+// fromGo converts host (Dispatch) data into runtime values. Object keys from
+// Go maps have no order, so they enumerate sorted (Goja's order is random).
+func fromGo(v any) (any, error) {
 	switch v := v.(type) {
-	case nil, undefined:
-		return nil, fmt.Errorf("cannot read property %q of null or undefined", key)
-	case *Object:
-		return member(v.Fields, key)
+	case nil, bool, float64, string, undefined:
+		return v, nil
+	case int:
+		return float64(v), nil
+	case int64:
+		return float64(v), nil
+	case int32:
+		return float64(v), nil
+	case float32:
+		return float64(v), nil
+	case uint64:
+		return float64(v), nil
+	case json.Number:
+		f, err := v.Float64()
+		return f, err
 	case map[string]any:
-		a, ok := v[key]
-		if !ok {
-			return Undefined, nil
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
 		}
-		return a, nil
+		sort.Strings(keys)
+		o := newObject(len(v))
+		for _, k := range keys {
+			c, err := fromGo(v[k])
+			if err != nil {
+				return nil, err
+			}
+			o.set(k, c)
+		}
+		return o, nil
 	case []any:
-		if key == "length" {
-			return float64(len(v)), nil
+		items := make([]any, len(v))
+		for i, e := range v {
+			c, err := fromGo(e)
+			if err != nil {
+				return nil, err
+			}
+			items[i] = c
 		}
-		i, err := strconv.Atoi(key)
-		if err == nil && i >= 0 && i < len(v) && strconv.Itoa(i) == key {
-			return v[i], nil
+		return &array{items: items}, nil
+	case *Object:
+		view := newObject(len(v.Fields))
+		keys := v.Order
+		if keys == nil {
+			for k := range v.Fields {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
 		}
-		return Undefined, nil
-	case string:
-		units := utf16.Encode([]rune(v))
-		if key == "length" {
-			return float64(len(units)), nil
+		for _, k := range keys {
+			f, ok := v.Fields[k]
+			if !ok {
+				continue
+			}
+			c, err := fromGo(f)
+			if err != nil {
+				return nil, err
+			}
+			view.set(k, c)
 		}
-		i, err := strconv.Atoi(key)
-		if err == nil && i >= 0 && i < len(units) && strconv.Itoa(i) == key {
-			return string(utf16.Decode([]uint16{units[i]})), nil
+		return &hostObject{view: view, export: v.Export}, nil
+	case *object, *array, *function, *hostObject:
+		return v, nil
+	}
+	return nil, fmt.Errorf("non-JSON host value %T", v)
+}
+
+// Export depth matches the Goja runner's clamp: deeper values (and cycles)
+// render as this marker instead of failing.
+const (
+	maxExportDepth   = 64
+	maxExportNodes   = 100000
+	maxDepthExceeded = "[max depth exceeded]"
+)
+
+// exportValue converts a runtime value to host data like Goja's Value.Export:
+// objects become map[string]any (undefined properties keep the Undefined
+// sentinel), arrays []any, functions Undefined.
+func exportValue(v any) (any, error) {
+	nodes := 0
+	return export(v, 0, &nodes)
+}
+
+func export(v any, depth int, nodes *int) (any, error) {
+	*nodes++
+	if *nodes > maxExportNodes {
+		return nil, errors.New("JSON value limit exceeded")
+	}
+	switch t := v.(type) {
+	case *object:
+		if depth >= maxExportDepth {
+			return maxDepthExceeded, nil
 		}
-		return Undefined, nil
-	default:
+		out := make(map[string]any, len(t.props))
+		for k, p := range t.props {
+			e, err := export(p, depth+1, nodes)
+			if err != nil {
+				return nil, err
+			}
+			out[k] = e
+		}
+		return out, nil
+	case *array:
+		if depth >= maxExportDepth {
+			return maxDepthExceeded, nil
+		}
+		out := make([]any, len(t.items))
+		for i, p := range t.items {
+			e, err := export(p, depth+1, nodes)
+			if err != nil {
+				return nil, err
+			}
+			out[i] = e
+		}
+		return out, nil
+	case *hostObject:
+		if !t.dirty {
+			return t.export, nil
+		}
+		return export(t.view, depth, nodes)
+	case *function, tdzMarker:
 		return Undefined, nil
 	}
+	return v, nil
 }
 
 // Marshal converts JSON data plus Undefined to JSON with bounded traversal.
@@ -402,9 +610,10 @@ func Marshal(v any) ([]byte, error) {
 	}
 	return json.Marshal(clean)
 }
+
 func jsonValue(v any, depth int, nodes *int, omitUndefined bool) (any, error) {
 	*nodes++
-	if *nodes > 100000 || depth > 64 {
+	if *nodes > maxExportNodes || depth > 64 {
 		return nil, errors.New("JSON value limit exceeded")
 	}
 	switch v := v.(type) {
@@ -435,9 +644,19 @@ func jsonValue(v any, depth int, nodes *int, omitUndefined bool) (any, error) {
 			out[i] = b
 		}
 		return out, nil
-	case nil, string, bool, float64:
+	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return nil, fmt.Errorf("json: unsupported value: %v", v)
+		}
 		return v, nil
+	case nil, string, bool:
+		return v, nil
+	case JSONText:
+		return string(v), nil
 	default:
+		if rv := reflect.ValueOf(v); rv.Kind() == reflect.Struct || rv.Kind() == reflect.Pointer {
+			return v, nil // host export (e.g. a Go struct) marshals as itself
+		}
 		return nil, fmt.Errorf("non-JSON host value %T", v)
 	}
 }

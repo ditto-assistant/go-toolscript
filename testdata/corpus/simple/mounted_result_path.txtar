@@ -1,0 +1,15 @@
+Reads .path off a mounted large-result descriptor.
+-- script.js --
+const r = mcp.googledrive.find_file({q:"trashed = false", pageSize:100});
+return r.path;
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "path": "/results/007-googledrive-find-file.json",
+    "ref": "cmr_test_007google",
+    "content_type": "application/json",
+    "hint": "Re-process it with bash, for example jq or rg, instead of printing it.",
+    "bytes": 81233,
+    "large_result": true
+  }
+}

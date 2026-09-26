@@ -1,0 +1,19 @@
+Stable output by stringifying with a sorted key list.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+const keys = Object.keys(a).sort();
+return JSON.stringify(a, keys.concat(["name", "email"]));
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

@@ -1,0 +1,9 @@
+Promise.all over map returning the call directly (no inner await).
+-- script.js --
+const queries = ["billing", "launch", "hiring"];
+const results = await Promise.all(queries.map(q => mcp.search_memories({queries: [q], limit: 3})));
+return results.map((r, i) => queries[i] + ":" + r.args.queries[0]);
+-- tools.json --
+{
+  "search_memories": null
+}

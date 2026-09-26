@@ -1,0 +1,11 @@
+split lines, trim, drop empties, join.
+-- script.js --
+const n = mcp.notes.get({id:"note_5"});
+return n.body.split("\n").map(l => l.trim()).filter(l => l.length > 0).join(" | ");
+-- tools.json --
+{
+  "notes.get": {
+    "id": "note_5",
+    "body": "  first line  \n\n second line\n   \nthird\n"
+  }
+}

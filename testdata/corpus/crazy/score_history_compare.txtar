@@ -1,0 +1,92 @@
+Per-agent score history lookups with ?? fallbacks across schema variants, version deltas and ranking.
+-- script.js --
+const agents = mcp["team-backroom"].list_agents({status: "scored", limit: 10}).agents;
+const rows = [];
+for (const a of agents) {
+  let hist = null;
+  try { hist = mcp["team-backroom"].get_score_history({agentId: a.agent_id}); } catch (e) { hist = {error: String(e).slice(0, 120)}; }
+  if (!hist || hist.error) { rows.push({id: a.agent_id, name: a.agent_name, error: hist && hist.error}); continue; }
+  const pick = v => v ? (v.composite ?? v.aggregate?.composite ?? null) : null;
+  const byVer = {};
+  for (const v of hist.versions || []) byVer[v.bench_version] = pick(v);
+  const vers = Object.keys(byVer).map(Number).sort((x, y) => x - y);
+  const latest = vers.length ? byVer[vers[vers.length - 1]] : null;
+  const prev = vers.length > 1 ? byVer[vers[vers.length - 2]] : null;
+  rows.push({id: a.agent_id, name: a.agent_name, latest, delta: latest !== null && prev !== null ? Number((latest - prev).toFixed(4)) : null, versions: vers});
+}
+const ok = rows.filter(r => r.latest !== null && r.latest !== undefined);
+ok.sort((x, y) => y.latest - x.latest || (x.id < y.id ? -1 : 1));
+return {
+  leaderboard: ok.map((r, i) => `${i + 1}. ${r.name} ${r.latest.toFixed(3)}${r.delta === null ? "" : (r.delta >= 0 ? " ▲" : " ▼") + Math.abs(r.delta).toFixed(3)}`),
+  missing: rows.filter(r => !ok.includes(r)).map(r => r.id)
+};
+-- tools.json --
+{
+  "team-backroom.list_agents": {
+    "agents": [
+      {
+        "agent_id": "ag_1",
+        "agent_name": "falcon"
+      },
+      {
+        "agent_id": "ag_2",
+        "agent_name": "heron"
+      },
+      {
+        "agent_id": "ag_3",
+        "agent_name": "kestrel"
+      },
+      {
+        "agent_id": "ag_4",
+        "agent_name": "osprey"
+      }
+    ]
+  },
+  "team-backroom.get_score_history": {
+    "$sequence": [
+      {
+        "versions": [
+          {
+            "bench_version": 11,
+            "composite": 0.61
+          },
+          {
+            "bench_version": 12,
+            "composite": 0.66
+          }
+        ]
+      },
+      {
+        "versions": [
+          {
+            "bench_version": 12,
+            "aggregate": {
+              "composite": 0.71
+            }
+          }
+        ]
+      },
+      {
+        "versions": []
+      },
+      {
+        "versions": [
+          {
+            "bench_version": 10,
+            "composite": 0.7
+          },
+          {
+            "bench_version": 12,
+            "aggregate": {
+              "composite": 0.58
+            }
+          },
+          {
+            "bench_version": 11,
+            "composite": 0.64
+          }
+        ]
+      }
+    ]
+  }
+}

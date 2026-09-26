@@ -1,0 +1,77 @@
+Rule table of predicates applied to emails; bucket, label and draft replies for some.
+-- script.js --
+const r = mcp.gmail.fetch_emails({query: "in:inbox newer_than:3d", max_results: 50});
+const rules = [
+  {name: "billing", test: m => m.from.endsWith("@vendor.example") || m.subject.toLowerCase().includes("invoice"), action: "label"},
+  {name: "team", test: m => m.from.endsWith("@example.com"), action: "reply"},
+  {name: "other", test: () => true, action: "skip"}
+];
+const buckets = {};
+const actions = [];
+for (const m of r.messages) {
+  const rule = rules.find(rl => rl.test(m));
+  (buckets[rule.name] = buckets[rule.name] || []).push(m.id);
+  if (rule.action === "label") {
+    const res = mcp.gmail.modify_labels({id: m.id, add: ["Billing"], remove: ["UNREAD"]});
+    actions.push(`labeled ${m.id}: ${res.ok ? "ok" : "fail"}`);
+  } else if (rule.action === "reply" && (m.labelIds || []).includes("UNREAD")) {
+    const first = m.from.split("@")[0];
+    const body = `Hi ${first[0].toUpperCase() + first.slice(1)},\n\nThanks — I'll take a look today.\n`;
+    const d = mcp.gmail.create_draft({to: m.from, subject: m.subject.startsWith("Re:") ? m.subject : "Re: " + m.subject, body});
+    actions.push(`drafted ${d.id} for ${m.id}`);
+  }
+}
+return {buckets, actions};
+-- tools.json --
+{
+  "gmail.fetch_emails": {
+    "messages": [
+      {
+        "id": "msg_1",
+        "from": "alice@example.com",
+        "subject": "Re: launch checklist",
+        "snippet": "Looks good, one nit on step 4.",
+        "labelIds": [
+          "INBOX",
+          "UNREAD"
+        ],
+        "date": "2026-09-24T09:12:00Z"
+      },
+      {
+        "id": "msg_2",
+        "from": "billing@vendor.example",
+        "subject": "Your invoice is ready",
+        "snippet": "Invoice INV-0042 for September.",
+        "labelIds": [
+          "INBOX",
+          "CATEGORY_UPDATES"
+        ],
+        "date": "2026-09-23T06:00:00Z"
+      },
+      {
+        "id": "msg_3",
+        "from": "bob@example.com",
+        "subject": "Lunch?",
+        "snippet": "Free Thursday?",
+        "labelIds": [
+          "INBOX"
+        ],
+        "date": "2026-09-22T18:30:00Z"
+      }
+    ],
+    "nextPageToken": null
+  },
+  "gmail.modify_labels": {
+    "ok": true
+  },
+  "gmail.create_draft": {
+    "$sequence": [
+      {
+        "id": "draft_1"
+      },
+      {
+        "id": "draft_2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+Number formatting: toString(radix), exponent, integer checks.
+-- script.js --
+const m = mcp.crm.get_metrics({id:"acct_9"});
+return [m.n.toString(2), m.n.toString(16), (m.big).toString(), Number.isInteger(m.f), Number.isInteger(m.n), (m.f * 100).toFixed(2), String(m.tiny)];
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "n": 255,
+    "big": 12345678901,
+    "f": 0.125,
+    "tiny": 1e-07
+  }
+}

@@ -1,0 +1,19 @@
+Object spread merge and override.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+const { owner, ...rest } = a;
+return {...rest, ownerName: owner.name, tier: "custom", ...{extra: true}};
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

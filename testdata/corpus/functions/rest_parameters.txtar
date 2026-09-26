@@ -1,0 +1,29 @@
+Rest parameters collecting variadic ids.
+-- script.js --
+const fetchAll = (...ids) => mcp.fetch_memories({ids});
+const r = fetchAll("mem_001", "mem_002");
+return r.memories.map(m => m.id);
+-- tools.json --
+{
+  "fetch_memories": {
+    "memories": [
+      {
+        "id": "mem_001",
+        "content": "Alice prefers async standups on Tuesdays and a written agenda the day before.",
+        "created_at": "2026-08-02T14:10:00Z",
+        "tags": [
+          "team",
+          "process"
+        ]
+      },
+      {
+        "id": "mem_002",
+        "content": "Widget-service launch moved to the second week of October after the load test.",
+        "created_at": "2026-08-11T09:30:00Z",
+        "tags": [
+          "launch"
+        ]
+      }
+    ]
+  }
+}

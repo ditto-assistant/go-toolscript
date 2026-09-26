@@ -1,0 +1,10 @@
+replace with a global regex and a callback.
+-- script.js --
+const n = mcp.notes.get({id: "n"});
+return n.body.replace(/\s+/g, " ").replace(/\b(\w)(\w*)/g, (_, a, b) => a.toUpperCase() + b).trim();
+-- tools.json --
+{
+  "notes.get": {
+    "body": "  hello   big\n\nwide   world  "
+  }
+}

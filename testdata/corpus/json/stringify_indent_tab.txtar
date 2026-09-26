@@ -1,0 +1,24 @@
+JSON.stringify with a tab indent string.
+-- script.js --
+const r = mcp["team-backroom"].get_review({submissionId:"sub_77"});
+return JSON.stringify(r.checks, null, "\t");
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

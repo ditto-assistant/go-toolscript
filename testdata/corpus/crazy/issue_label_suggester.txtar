@@ -1,0 +1,72 @@
+Keyword scoring to suggest labels for unlabeled issues; apply only confident suggestions with a cap.
+-- script.js --
+const res = mcp.github.search_issues({owner: "acme", repo: "widget-app", query: "is:open no:label", perPage: 50});
+const issues = (res.result || res).items;
+const lexicon = {
+  bug: ["crash", "error", "broken", "fails", "regression", "exception"],
+  performance: ["slow", "latency", "lag", "memory", "cpu"],
+  ui: ["button", "layout", "dark mode", "overlap", "mobile", "css"],
+  docs: ["readme", "docs", "typo", "example"]
+};
+const suggestions = issues.map(it => {
+  const text = (it.title + " " + (it.body || "")).toLowerCase();
+  const scores = Object.entries(lexicon).map(([label, words]) => [label, words.reduce((s, w) => s + (text.includes(w) ? 1 : 0), 0)]);
+  scores.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  const [best, second] = scores;
+  const confident = best[1] >= 2 && best[1] > second[1];
+  return {number: it.number, title: it.title, label: best[1] ? best[0] : null, score: best[1], confident};
+});
+const applied = [];
+for (const s of suggestions.filter(s => s.confident).slice(0, 3)) {
+  const r = mcp.github.issue_write({method: "update", owner: "acme", repo: "widget-app", issue_number: s.number, labels: [s.label]});
+  applied.push(`#${s.number} +${s.label}${r.result ? "" : " (?)"}`);
+}
+return {
+  applied,
+  unsure: suggestions.filter(s => !s.confident).map(s => `#${s.number} ${s.label ?? "-"}(${s.score})`)
+};
+-- tools.json --
+{
+  "github.search_issues": {
+    "result": {
+      "items": [
+        {
+          "number": 201,
+          "title": "App crash on save",
+          "body": "Unhandled exception, regression since 2.3"
+        },
+        {
+          "number": 202,
+          "title": "Scrolling is slow",
+          "body": "Noticeable lag and high CPU on large lists"
+        },
+        {
+          "number": 203,
+          "title": "Button overlaps text on mobile",
+          "body": "layout breaks in dark mode"
+        },
+        {
+          "number": 204,
+          "title": "Question about pricing",
+          "body": ""
+        },
+        {
+          "number": 205,
+          "title": "Typo in README example",
+          "body": "docs say 'recieve'"
+        },
+        {
+          "number": 206,
+          "title": "Slow crash",
+          "body": "error when memory is high"
+        }
+      ]
+    }
+  },
+  "github.issue_write": {
+    "result": {
+      "id": "x",
+      "url": "https://git.example.com/acme/widget-app/issues/0"
+    }
+  }
+}

@@ -1,0 +1,110 @@
+Group merged PRs by label category, build release notes with counts and contributor list.
+-- script.js --
+const prs = mcp.github.list_pull_requests({owner: "acme", repo: "widget-service", state: "closed", perPage: 100});
+const merged = prs.filter(p => p.merged_at);
+const cat = p => {
+  const names = p.labels.map(l => l.name);
+  if (names.includes("breaking")) return "Breaking changes";
+  if (names.includes("feature")) return "Features";
+  if (names.includes("bug")) return "Fixes";
+  return "Other";
+};
+const order = ["Breaking changes", "Features", "Fixes", "Other"];
+const groups = {};
+for (const p of merged) (groups[cat(p)] = groups[cat(p)] || []).push(p);
+const contributors = [];
+for (const p of merged) if (!contributors.includes(p.user.login)) contributors.push(p.user.login);
+contributors.sort();
+let md = "## v2.4.0\n";
+for (const g of order) {
+  const items = (groups[g] || []).sort((a, b) => a.number - b.number);
+  if (!items.length) continue;
+  md += `\n### ${g} (${items.length})\n` + items.map(p => `- ${p.title} (#${p.number})`).join("\n") + "\n";
+}
+md += `\nThanks to ${contributors.map(c => "@" + c).join(", ")}.`;
+return {skipped: prs.length - merged.length, md};
+-- tools.json --
+{
+  "github.list_pull_requests": [
+    {
+      "number": 120,
+      "title": "Add bulk export",
+      "merged_at": "2026-09-20T10:00:00Z",
+      "user": {
+        "login": "alice"
+      },
+      "labels": [
+        {
+          "name": "feature"
+        }
+      ]
+    },
+    {
+      "number": 118,
+      "title": "Fix race in cache warmup",
+      "merged_at": "2026-09-19T10:00:00Z",
+      "user": {
+        "login": "bob"
+      },
+      "labels": [
+        {
+          "name": "bug"
+        }
+      ]
+    },
+    {
+      "number": 121,
+      "title": "Drop v1 endpoints",
+      "merged_at": "2026-09-21T10:00:00Z",
+      "user": {
+        "login": "carol"
+      },
+      "labels": [
+        {
+          "name": "breaking"
+        },
+        {
+          "name": "feature"
+        }
+      ]
+    },
+    {
+      "number": 119,
+      "title": "Refactor config loader",
+      "merged_at": "2026-09-19T12:00:00Z",
+      "user": {
+        "login": "alice"
+      },
+      "labels": []
+    },
+    {
+      "number": 117,
+      "title": "Abandoned experiment",
+      "merged_at": null,
+      "user": {
+        "login": "dan"
+      },
+      "labels": [
+        {
+          "name": "feature"
+        }
+      ]
+    },
+    {
+      "number": 116,
+      "title": "Fix typo in docs",
+      "merged_at": "2026-09-18T09:00:00Z",
+      "user": {
+        "login": "erin"
+      },
+      "labels": [
+        {
+          "name": "bug"
+        },
+        {
+          "name": "docs"
+        }
+      ]
+    }
+  ]
+}

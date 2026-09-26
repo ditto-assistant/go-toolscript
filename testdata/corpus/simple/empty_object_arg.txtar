@@ -1,0 +1,10 @@
+Tool called with an empty object argument.
+-- script.js --
+return mcp.call("mcp__acme-tracker__whoami", {});
+-- tools.json --
+{
+  "mcp__acme-tracker__whoami": {
+    "user": "user-123",
+    "workspace": "acme"
+  }
+}

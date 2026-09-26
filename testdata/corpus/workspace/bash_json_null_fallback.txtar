@@ -1,0 +1,16 @@
+Uses x.json ?? JSON.parse fallback when json is null.
+-- script.js --
+const x = bash("jq -c '.files | map(.name)' /results/001-googledrive-find-file.json");
+const names = x.json ?? (x.stdout ? JSON.parse(x.stdout) : []);
+return names.length;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -c '.files | map(.name)' /results/001-googledrive-find-file.json": {
+    "stdout": "[\"budget.xlsx\",\"Roadmap\",\"Archive\"]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

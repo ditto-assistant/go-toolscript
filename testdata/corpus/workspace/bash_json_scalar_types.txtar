@@ -1,0 +1,29 @@
+bash .json carrying scalar types: bool, string, null.
+-- script.js --
+const a = bash("jq '.draft' /results/005-pr.json").json;
+const b = bash("jq '.title' /results/005-pr.json").json;
+const c = bash("jq '.merged_at' /results/005-pr.json").json;
+return [a, b, c, typeof a, typeof b, c === null];
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq '.draft' /results/005-pr.json": {
+    "stdout": "false\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": false
+  },
+  "jq '.title' /results/005-pr.json": {
+    "stdout": "\"Fix flaky cache test\"\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": "Fix flaky cache test"
+  },
+  "jq '.merged_at' /results/005-pr.json": {
+    "stdout": "null\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

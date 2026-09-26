@@ -1,0 +1,10 @@
+Side-effecting call then a constant string return.
+-- script.js --
+mcp.notes.append({id: "note_5", text: "- follow up with Bob"});
+return "done";
+-- tools.json --
+{
+  "notes.append": {
+    "ok": true
+  }
+}

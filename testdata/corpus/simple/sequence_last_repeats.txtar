@@ -1,0 +1,19 @@
+$sequence repeats its last value once exhausted.
+-- script.js --
+const a = mcp.call("mcp__acme-tracker__poll_job", {id:"job_1"});
+const b = mcp.call("mcp__acme-tracker__poll_job", {id:"job_1"});
+const c = mcp.call("mcp__acme-tracker__poll_job", {id:"job_1"});
+return [a.state, b.state, c.state].join(",");
+-- tools.json --
+{
+  "mcp__acme-tracker__poll_job": {
+    "$sequence": [
+      {
+        "state": "queued"
+      },
+      {
+        "state": "done"
+      }
+    ]
+  }
+}

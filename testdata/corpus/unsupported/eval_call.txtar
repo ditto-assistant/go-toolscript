@@ -1,0 +1,11 @@
+eval of a constructed expression.
+-- script.js --
+const m = mcp.crm.get_metrics({id: "acct_9"});
+return eval(m.a + " * " + m.b);
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "a": 6,
+    "b": 7
+  }
+}

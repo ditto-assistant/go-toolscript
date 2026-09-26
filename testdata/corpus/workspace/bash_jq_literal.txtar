@@ -1,0 +1,15 @@
+bash with a literal jq script; returns .json.
+-- script.js --
+const x = bash("jq '.items | length' /results/001-notes-list.json");
+return x.json;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq '.items | length' /results/001-notes-list.json": {
+    "stdout": "12\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": 12
+  }
+}

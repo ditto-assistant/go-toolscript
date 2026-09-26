@@ -1,0 +1,20 @@
+var declarations and reassignment.
+-- script.js --
+var r = mcp.crm.get_account({id:"acct_9"});
+var name = r.name;
+name = name + " (" + r.tier + ")";
+return name;
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

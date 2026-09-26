@@ -1,0 +1,8 @@
+Tool whose JSON result is a bare number.
+-- script.js --
+const n = mcp.crm.count_accounts({tier:"enterprise"});
+return n * 2;
+-- tools.json --
+{
+  "crm.count_accounts": 21
+}

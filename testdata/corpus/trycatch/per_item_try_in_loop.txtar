@@ -1,0 +1,19 @@
+Error-tolerant loop: try/catch per item, collect failures.
+-- script.js --
+const ids = ["acct_1", "acct_2", "acct_3"];
+const ok = [], failed = [];
+for (const id of ids) {
+  try {
+    const a = mcp.crm.get_account({id});
+    ok.push(a.name);
+  } catch (e) {
+    failed.push(id + ": " + String(e).slice(0, 80));
+  }
+}
+return {ok, failed};
+-- tools.json --
+{
+  "crm.get_account": {
+    "$error": "crm backend unavailable"
+  }
+}

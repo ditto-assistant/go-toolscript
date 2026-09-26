@@ -1,0 +1,30 @@
+workspace_files() filtered by size and mapped to paths.
+-- script.js --
+const files = workspace_files();
+const big = files.filter(f => f.bytes > 5000).map(f => f.path);
+const total = files.reduce((s, f) => s + f.bytes, 0);
+return {count: files.length, big, totalKb: Math.round(total / 1024)};
+-- tools.json --
+{}
+-- workspace.json --
+{
+  "workspace_files": [
+    {
+      "path": "/results/001-googledrive-find-file.json",
+      "content_type": "application/json",
+      "bytes": 1569
+    },
+    {
+      "path": "/results/002-search-memories.json",
+      "content_type": "application/json",
+      "bytes": 48213,
+      "ref": "cmr_test_002search",
+      "large_result": true
+    },
+    {
+      "path": "/results/003-googledocs-get-document-by-id.json",
+      "content_type": "application/json",
+      "bytes": 5210
+    }
+  ]
+}

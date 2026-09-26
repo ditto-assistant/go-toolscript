@@ -1,0 +1,18 @@
+$sequence returns successive values for repeated calls.
+-- script.js --
+const first = mcp["team-backroom"].get_review({submissionId:"sub_77"});
+const second = mcp["team-backroom"].get_review({submissionId:"sub_77"});
+return first.status + " -> " + second.status;
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "$sequence": [
+      {
+        "status": "open"
+      },
+      {
+        "status": "closed"
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+return await Promise.allSettled([...]) directly.
+-- script.js --
+return await Promise.allSettled([mcp.fetch_memories({ids:["mem_missing"]}),mcp.call("mcp__acme-tracker__deliberately_failing",{})]);
+-- tools.json --
+{
+  "fetch_memories": {
+    "memories": []
+  },
+  "mcp__acme-tracker__deliberately_failing": {
+    "$error": "unknown tool"
+  }
+}

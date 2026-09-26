@@ -1,0 +1,22 @@
+try/catch where the call succeeds; catch never runs.
+-- script.js --
+const out = {};
+try {
+  const res = mcp.github.search_code({query: "retryBudget in:file"});
+  out.search = (res.result || res);
+} catch(e) { out.err = String(e); }
+return out;
+-- tools.json --
+{
+  "github.search_code": {
+    "result": {
+      "incomplete_results": false,
+      "items": [
+        {
+          "name": "retry.go",
+          "path": "pkg/fetch/retry.go"
+        }
+      ]
+    }
+  }
+}

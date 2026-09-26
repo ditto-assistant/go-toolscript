@@ -1,0 +1,106 @@
+Join accounts, tickets and usage by id; compute weighted health; rank and label.
+-- script.js --
+const accounts = mcp.crm.list_accounts({limit: 100}).accounts;
+const tickets = mcp.call("mcp__acme-tracker__list_tickets", {status: "any"}).tickets;
+const usage = mcp.crm.get_usage({period: "30d"}).rows;
+
+const usageBy = {};
+for (const u of usage) usageBy[u.account_id] = u;
+const ticketsBy = {};
+for (const t of tickets) (ticketsBy[t.account_id] = ticketsBy[t.account_id] || []).push(t);
+
+const W = {usage: 0.5, tickets: 0.3, seats: 0.2};
+const scored = accounts.map(a => {
+  const u = usageBy[a.id] || {active_days: 0, seats_used: 0};
+  const ts = ticketsBy[a.id] || [];
+  const openHigh = ts.filter(t => t.status !== "closed" && t.priority === "high").length;
+  const usageScore = Math.min(1, u.active_days / 30);
+  const ticketScore = Math.max(0, 1 - openHigh * 0.34);
+  const seatScore = a.seats ? Math.min(1, u.seats_used / a.seats) : 0;
+  const health = W.usage * usageScore + W.tickets * ticketScore + W.seats * seatScore;
+  return {
+    id: a.id, name: a.name,
+    health: Math.round(health * 1000) / 1000,
+    band: health >= 0.75 ? "healthy" : health >= 0.5 ? "watch" : "at-risk",
+    openHigh, tickets: ts.length
+  };
+});
+scored.sort((x, y) => x.health - y.health || (x.id < y.id ? -1 : 1));
+const summary = scored.reduce((acc, s) => { acc[s.band] = (acc[s.band] || 0) + 1; return acc; }, {});
+const table = ["| Account | Health | Band | Open high |", "|---|---:|---|---:|"]
+  .concat(scored.map(s => `| ${s.name} | ${s.health.toFixed(2)} | ${s.band} | ${s.openHigh} |`)).join("\n");
+return {summary, worst: scored[0], table};
+-- tools.json --
+{
+  "crm.list_accounts": {
+    "accounts": [
+      {
+        "id": "acct_1",
+        "name": "Acme",
+        "seats": 20
+      },
+      {
+        "id": "acct_2",
+        "name": "Globex",
+        "seats": 50
+      },
+      {
+        "id": "acct_3",
+        "name": "Initech",
+        "seats": 0
+      },
+      {
+        "id": "acct_4",
+        "name": "Umbrella",
+        "seats": 10
+      }
+    ]
+  },
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "account_id": "acct_1",
+        "status": "open",
+        "priority": "high"
+      },
+      {
+        "id": "T-2",
+        "account_id": "acct_1",
+        "status": "open",
+        "priority": "high"
+      },
+      {
+        "id": "T-3",
+        "account_id": "acct_2",
+        "status": "closed",
+        "priority": "high"
+      },
+      {
+        "id": "T-4",
+        "account_id": "acct_4",
+        "status": "pending",
+        "priority": "normal"
+      }
+    ]
+  },
+  "crm.get_usage": {
+    "rows": [
+      {
+        "account_id": "acct_1",
+        "active_days": 12,
+        "seats_used": 18
+      },
+      {
+        "account_id": "acct_2",
+        "active_days": 29,
+        "seats_used": 44
+      },
+      {
+        "account_id": "acct_4",
+        "active_days": 30,
+        "seats_used": 3
+      }
+    ]
+  }
+}

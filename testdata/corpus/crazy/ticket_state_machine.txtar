@@ -1,0 +1,58 @@
+Replay a ticket event log through a transition table, detect invalid transitions, compute durations in minutes.
+-- script.js --
+const log = mcp.call("mcp__acme-tracker__ticket_events", {ticket: "T-1"}).events;
+const allowed = {
+  new: ["open"],
+  open: ["pending", "closed"],
+  pending: ["open", "closed"],
+  closed: ["open"]
+};
+const toMin = iso => { const [d, t] = iso.split("T"); const day = Number(d.split("-")[2]); const [h, m] = t.split(":").map(Number); return day * 1440 + h * 60 + m; };
+let state = "new", since = null;
+const time = {};
+const invalid = [];
+for (const ev of log) {
+  const next = ev.to;
+  if (!(allowed[state] || []).includes(next)) { invalid.push(`${state}->${next} at ${ev.at}`); continue; }
+  const now = toMin(ev.at);
+  if (since !== null) time[state] = (time[state] || 0) + (now - since);
+  state = next;
+  since = now;
+}
+const reopened = log.filter((e, i) => i > 0 && e.to === "open" && log[i - 1].to === "closed").length;
+return {final: state, minutesIn: time, invalid, reopened};
+-- tools.json --
+{
+  "mcp__acme-tracker__ticket_events": {
+    "events": [
+      {
+        "to": "open",
+        "at": "2026-09-01T09:00:00Z"
+      },
+      {
+        "to": "pending",
+        "at": "2026-09-01T10:30:00Z"
+      },
+      {
+        "to": "new",
+        "at": "2026-09-01T11:00:00Z"
+      },
+      {
+        "to": "open",
+        "at": "2026-09-01T13:00:00Z"
+      },
+      {
+        "to": "closed",
+        "at": "2026-09-02T08:00:00Z"
+      },
+      {
+        "to": "open",
+        "at": "2026-09-02T09:15:00Z"
+      },
+      {
+        "to": "closed",
+        "at": "2026-09-02T12:00:00Z"
+      }
+    ]
+  }
+}

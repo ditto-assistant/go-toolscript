@@ -1,0 +1,28 @@
+Closure capturing an accumulator across calls.
+-- script.js --
+function makeCounter() {
+  let calls = 0;
+  const seen = [];
+  return {
+    fetch(id) { calls++; seen.push(id); return mcp.crm.get_account({id}); },
+    stats() { return {calls, seen}; }
+  };
+}
+const c = makeCounter();
+const a = c.fetch("acct_1");
+c.fetch("acct_2");
+return {name: a.name, ...c.stats()};
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

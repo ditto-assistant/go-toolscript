@@ -1,0 +1,58 @@
+Classic indexed for loop over a result array.
+-- script.js --
+const prs = mcp.github.list_pull_requests({owner:"acme", repo:"widget-service", state:"all"});
+const titles = [];
+for (let i = 0; i < prs.length; i++) {
+  if (prs[i].state !== "open") continue;
+  titles.push("#" + prs[i].number + " " + prs[i].title);
+}
+return titles;
+-- tools.json --
+{
+  "github.list_pull_requests": [
+    {
+      "number": 101,
+      "title": "Add retry budget to fetcher",
+      "state": "open",
+      "user": {
+        "login": "alice"
+      },
+      "labels": [
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": false,
+      "updated_at": "2026-09-20T12:00:00Z"
+    },
+    {
+      "number": 102,
+      "title": "Fix flaky cache test",
+      "state": "open",
+      "user": {
+        "login": "bob"
+      },
+      "labels": [
+        {
+          "name": "tests"
+        },
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": true,
+      "updated_at": "2026-09-21T08:15:00Z"
+    },
+    {
+      "number": 99,
+      "title": "Bump lint config",
+      "state": "closed",
+      "user": {
+        "login": "carol"
+      },
+      "labels": [],
+      "draft": false,
+      "updated_at": "2026-09-18T17:40:00Z"
+    }
+  ]
+}

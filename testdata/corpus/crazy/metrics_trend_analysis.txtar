@@ -1,0 +1,149 @@
+Moving averages, percent change and trend classification over several metric series.
+-- script.js --
+const series = mcp.crm.get_timeseries({metrics: ["signups", "churn", "latency_ms"], days: 10}).series;
+const ma = (xs, w) => xs.map((_, i) => i + 1 < w ? null : xs.slice(i + 1 - w, i + 1).reduce((a, b) => a + b, 0) / w);
+const out = {};
+for (const [name, pts] of Object.entries(series)) {
+  const vals = pts.map(p => p.v);
+  const m3 = ma(vals, 3).filter(v => v !== null);
+  const first = m3[0], last = m3[m3.length - 1];
+  const change = first ? (last - first) / first : 0;
+  const goodWhenUp = name === "signups";
+  const trend = Math.abs(change) < 0.05 ? "flat" : (change > 0) === goodWhenUp ? "improving" : "worsening";
+  const peak = pts.reduce((b, p) => p.v > b.v ? p : b);
+  out[name] = {last: vals[vals.length - 1], ma3: Number(last.toFixed(2)), change: (change * 100).toFixed(1) + "%", trend, peakDay: peak.d};
+}
+return out;
+-- tools.json --
+{
+  "crm.get_timeseries": {
+    "series": {
+      "signups": [
+        {
+          "d": "09-10",
+          "v": 10
+        },
+        {
+          "d": "09-11",
+          "v": 12
+        },
+        {
+          "d": "09-12",
+          "v": 11
+        },
+        {
+          "d": "09-13",
+          "v": 14
+        },
+        {
+          "d": "09-14",
+          "v": 15
+        },
+        {
+          "d": "09-15",
+          "v": 17
+        },
+        {
+          "d": "09-16",
+          "v": 16
+        },
+        {
+          "d": "09-17",
+          "v": 19
+        },
+        {
+          "d": "09-18",
+          "v": 21
+        },
+        {
+          "d": "09-19",
+          "v": 22
+        }
+      ],
+      "churn": [
+        {
+          "d": "09-10",
+          "v": 3
+        },
+        {
+          "d": "09-11",
+          "v": 3
+        },
+        {
+          "d": "09-12",
+          "v": 4
+        },
+        {
+          "d": "09-13",
+          "v": 3
+        },
+        {
+          "d": "09-14",
+          "v": 3
+        },
+        {
+          "d": "09-15",
+          "v": 3
+        },
+        {
+          "d": "09-16",
+          "v": 4
+        },
+        {
+          "d": "09-17",
+          "v": 3
+        },
+        {
+          "d": "09-18",
+          "v": 3
+        },
+        {
+          "d": "09-19",
+          "v": 3
+        }
+      ],
+      "latency_ms": [
+        {
+          "d": "09-10",
+          "v": 120
+        },
+        {
+          "d": "09-11",
+          "v": 118
+        },
+        {
+          "d": "09-12",
+          "v": 130
+        },
+        {
+          "d": "09-13",
+          "v": 140
+        },
+        {
+          "d": "09-14",
+          "v": 150
+        },
+        {
+          "d": "09-15",
+          "v": 149
+        },
+        {
+          "d": "09-16",
+          "v": 160
+        },
+        {
+          "d": "09-17",
+          "v": 170
+        },
+        {
+          "d": "09-18",
+          "v": 165
+        },
+        {
+          "d": "09-19",
+          "v": 180
+        }
+      ]
+    }
+  }
+}

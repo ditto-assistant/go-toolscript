@@ -1,0 +1,23 @@
+let reassigned after a second call.
+-- script.js --
+let r = mcp.search_web({query: "widget api"});
+let top = r.results[0].url;
+r = mcp.search_web({query: "widget getting started"});
+return [top, r.results.length];
+-- tools.json --
+{
+  "search_web": {
+    "results": [
+      {
+        "title": "Getting started with widgets",
+        "url": "https://example.com/widgets/start",
+        "snippet": "A short guide to widgets."
+      },
+      {
+        "title": "Widget API reference",
+        "url": "https://example.com/widgets/api",
+        "snippet": "Endpoints and parameters."
+      }
+    ]
+  }
+}

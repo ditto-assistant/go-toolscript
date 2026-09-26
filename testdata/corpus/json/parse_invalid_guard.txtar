@@ -1,0 +1,19 @@
+Guarded JSON.parse on text that might not be JSON.
+-- script.js --
+const res = mcp.notes.get_raw({id:"n1"});
+const tryParse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
+return res.parts.map(tryParse);
+-- tools.json --
+{
+  "notes.get_raw": {
+    "parts": [
+      "{\"a\":1}",
+      "not json",
+      "[1,2]",
+      "42",
+      "\"str\"",
+      "",
+      "null"
+    ]
+  }
+}

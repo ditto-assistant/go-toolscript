@@ -1,0 +1,17 @@
+Truthiness of values returned by a tool.
+-- script.js --
+const v = mcp.crm.get_flags({});
+return Object.keys(v).map(k => k + ":" + (v[k] ? "T" : "F")).join(" ");
+-- tools.json --
+{
+  "crm.get_flags": {
+    "zero": 0,
+    "one": 1,
+    "empty": "",
+    "space": " ",
+    "nul": null,
+    "arr": [],
+    "obj": {},
+    "f": false
+  }
+}

@@ -1,0 +1,65 @@
+Interleaves a tool call, a bash reshape, and a final tool write.
+-- script.js --
+const r = mcp.github.list_pull_requests({owner: "acme", repo: "widget-service", state: "open"});
+const x = bash("jq -r 'map(\"- #\\(.number) \\(.title)\") | join(\"\\n\")'", r);
+const note = mcp.notes.create({title: "Open PRs", body: x.stdout});
+return note.args.body;
+-- tools.json --
+{
+  "github.list_pull_requests": [
+    {
+      "number": 101,
+      "title": "Add retry budget to fetcher",
+      "state": "open",
+      "user": {
+        "login": "alice"
+      },
+      "labels": [
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": false,
+      "updated_at": "2026-09-20T12:00:00Z"
+    },
+    {
+      "number": 102,
+      "title": "Fix flaky cache test",
+      "state": "open",
+      "user": {
+        "login": "bob"
+      },
+      "labels": [
+        {
+          "name": "tests"
+        },
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": true,
+      "updated_at": "2026-09-21T08:15:00Z"
+    },
+    {
+      "number": 99,
+      "title": "Bump lint config",
+      "state": "closed",
+      "user": {
+        "login": "carol"
+      },
+      "labels": [],
+      "draft": false,
+      "updated_at": "2026-09-18T17:40:00Z"
+    }
+  ],
+  "notes.create": null
+}
+-- bash.json --
+{
+  "jq -r 'map(\"- #\\(.number) \\(.title)\") | join(\"\\n\")'": {
+    "stdout": "- #101 Add retry budget to fetcher\n- #102 Fix flaky cache test\n- #99 Bump lint config\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

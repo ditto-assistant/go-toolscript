@@ -1,0 +1,57 @@
+Array spread and spread into Math.max/min.
+-- script.js --
+const r = mcp.notes.list_scores({});
+const scores = r.items.map(i => i.score);
+return {max: Math.max(...scores), min: Math.min(...scores), all: [...scores, ...[1]].length, emptyMax: Math.max()};
+-- tools.json --
+{
+  "notes.list_scores": {
+    "items": [
+      {
+        "id": "a1",
+        "name": "alpha",
+        "score": 0.82,
+        "team": "red",
+        "tags": [
+          "x",
+          "y"
+        ]
+      },
+      {
+        "id": "b2",
+        "name": "bravo",
+        "score": 0.45,
+        "team": "blue",
+        "tags": [
+          "y"
+        ]
+      },
+      {
+        "id": "c3",
+        "name": "charlie",
+        "score": 0.91,
+        "team": "red",
+        "tags": []
+      },
+      {
+        "id": "d4",
+        "name": "delta",
+        "score": 0.63,
+        "team": "green",
+        "tags": [
+          "x",
+          "z"
+        ]
+      },
+      {
+        "id": "e5",
+        "name": "echo",
+        "score": 0.27,
+        "team": "blue",
+        "tags": [
+          "z"
+        ]
+      }
+    ]
+  }
+}

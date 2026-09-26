@@ -1,0 +1,14 @@
+Memoization cache avoids duplicate tool calls.
+-- script.js --
+const cache = {};
+function account(id) {
+  if (!(id in cache)) cache[id] = mcp.crm.get_account({id});
+  return cache[id];
+}
+const ids = ["acct_1", "acct_2", "acct_1", "acct_2", "acct_1"];
+const names = ids.map(id => account(id).args.id);
+return {names, cached: Object.keys(cache).length};
+-- tools.json --
+{
+  "crm.get_account": null
+}

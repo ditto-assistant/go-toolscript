@@ -1,0 +1,54 @@
+Template literal with nested expressions, ternaries and calls.
+-- script.js --
+const prs = mcp.github.list_pull_requests({owner:"acme", repo:"widget-service", state:"all"});
+const open = prs.filter(p => p.state === "open");
+return `${open.length} open PR${open.length === 1 ? "" : "s"}: ${open.map(p => `#${p.number}`).join(", ")}`;
+-- tools.json --
+{
+  "github.list_pull_requests": [
+    {
+      "number": 101,
+      "title": "Add retry budget to fetcher",
+      "state": "open",
+      "user": {
+        "login": "alice"
+      },
+      "labels": [
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": false,
+      "updated_at": "2026-09-20T12:00:00Z"
+    },
+    {
+      "number": 102,
+      "title": "Fix flaky cache test",
+      "state": "open",
+      "user": {
+        "login": "bob"
+      },
+      "labels": [
+        {
+          "name": "tests"
+        },
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": true,
+      "updated_at": "2026-09-21T08:15:00Z"
+    },
+    {
+      "number": 99,
+      "title": "Bump lint config",
+      "state": "closed",
+      "user": {
+        "login": "carol"
+      },
+      "labels": [],
+      "draft": false,
+      "updated_at": "2026-09-18T17:40:00Z"
+    }
+  ]
+}

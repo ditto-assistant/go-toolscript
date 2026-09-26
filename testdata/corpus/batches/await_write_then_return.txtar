@@ -1,0 +1,14 @@
+await a write call built from a long body string.
+-- script.js --
+const body = "### Summary\nThe header overlaps the editor on small screens.\n\n### Steps\n1. Open the editor on a phone.\n2. Scroll.\n";
+const r = await mcp.github.issue_write({method:"create",owner:"acme",repo:"widget-app",title:"Header overlaps editor on mobile",body});
+return r;
+-- tools.json --
+{
+  "github.issue_write": {
+    "result": {
+      "id": "9002",
+      "url": "https://git.example.com/acme/widget-app/issues/89"
+    }
+  }
+}

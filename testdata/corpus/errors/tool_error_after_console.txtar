@@ -1,0 +1,59 @@
+Console output before an uncaught tool failure should still be captured.
+-- script.js --
+console.log("step 1: listing");
+const prs = mcp.github.list_pull_requests({owner: "acme", repo: "widget-service"});
+console.log("step 2: found", prs.length);
+const f = mcp.github.get_file_contents({owner: "acme", repo: "widget-service", path: "CHANGELOG.md"});
+return f;
+-- tools.json --
+{
+  "github.list_pull_requests": [
+    {
+      "number": 101,
+      "title": "Add retry budget to fetcher",
+      "state": "open",
+      "user": {
+        "login": "alice"
+      },
+      "labels": [
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": false,
+      "updated_at": "2026-09-20T12:00:00Z"
+    },
+    {
+      "number": 102,
+      "title": "Fix flaky cache test",
+      "state": "open",
+      "user": {
+        "login": "bob"
+      },
+      "labels": [
+        {
+          "name": "tests"
+        },
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": true,
+      "updated_at": "2026-09-21T08:15:00Z"
+    },
+    {
+      "number": 99,
+      "title": "Bump lint config",
+      "state": "closed",
+      "user": {
+        "login": "carol"
+      },
+      "labels": [],
+      "draft": false,
+      "updated_at": "2026-09-18T17:40:00Z"
+    }
+  ],
+  "github.get_file_contents": {
+    "$error": "404 Not Found"
+  }
+}

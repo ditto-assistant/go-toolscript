@@ -1,0 +1,15 @@
+JSON.parse of non-JSON tool text with no try/catch.
+-- script.js --
+const res = mcp.notion.search({query: "roadmap"});
+return JSON.parse(res.content[0].text);
+-- tools.json --
+{
+  "notion.search": {
+    "content": [
+      {
+        "type": "text",
+        "text": "<html>502 Bad Gateway</html>"
+      }
+    ]
+  }
+}

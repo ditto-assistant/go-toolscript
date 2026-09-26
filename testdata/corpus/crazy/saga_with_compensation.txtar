@@ -1,0 +1,48 @@
+Multi-step write saga with a step log; on failure run compensating deletes in reverse order.
+-- script.js --
+const log = [];
+const done = [];
+const steps = [
+  {name: "create_note", run: () => mcp.notes.create({title: "Launch runbook", body: "draft"}).id, undo: id => mcp.notes.delete({id})},
+  {name: "create_ticket", run: () => mcp.call("mcp__acme-tracker__create_ticket", {subject: "Launch runbook review"}).id, undo: id => mcp.call("mcp__acme-tracker__delete_ticket", {id})},
+  {name: "create_event", run: () => mcp.googlecalendar.create_event({summary: "Runbook review", start: "2026-09-30T15:00:00Z"}).id, undo: id => mcp.googlecalendar.delete_event({id})}
+];
+let failedAt = null;
+for (const s of steps) {
+  try {
+    const id = s.run();
+    done.push({s, id});
+    log.push(`ok ${s.name} ${id}`);
+  } catch (e) {
+    failedAt = s.name;
+    log.push(`fail ${s.name}: ${e.message}`);
+    break;
+  }
+}
+if (failedAt) {
+  for (const {s, id} of done.slice().reverse()) {
+    try { s.undo(id); log.push(`undo ${s.name} ${id}`); } catch (e) { log.push(`undo-failed ${s.name}: ${e.message}`); }
+  }
+}
+return {failedAt, log};
+-- tools.json --
+{
+  "notes.create": {
+    "id": "note_91"
+  },
+  "notes.delete": {
+    "ok": true
+  },
+  "mcp__acme-tracker__create_ticket": {
+    "id": "T-88"
+  },
+  "mcp__acme-tracker__delete_ticket": {
+    "$error": "ticket T-88 is locked"
+  },
+  "googlecalendar.create_event": {
+    "$error": "calendar write scope missing"
+  },
+  "googlecalendar.delete_event": {
+    "ok": true
+  }
+}

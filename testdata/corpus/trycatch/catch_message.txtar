@@ -1,0 +1,13 @@
+Uses e.message in the catch block.
+-- script.js --
+try {
+  return mcp.github.get_file_contents({owner:"acme", repo:"widget-service", path:"missing.md"});
+} catch (e) {
+  return "failed: " + e.message;
+}
+-- tools.json --
+{
+  "github.get_file_contents": {
+    "$error": "404 Not Found"
+  }
+}

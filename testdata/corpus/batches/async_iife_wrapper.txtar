@@ -1,0 +1,24 @@
+Model wraps its logic in an async IIFE and awaits it.
+-- script.js --
+const res = await (async () => {
+  const r = await mcp.search_web({query: "widget changelog"});
+  return r.results.map(x => x.title);
+})();
+return res;
+-- tools.json --
+{
+  "search_web": {
+    "results": [
+      {
+        "title": "Getting started with widgets",
+        "url": "https://example.com/widgets/start",
+        "snippet": "A short guide to widgets."
+      },
+      {
+        "title": "Widget API reference",
+        "url": "https://example.com/widgets/api",
+        "snippet": "Endpoints and parameters."
+      }
+    ]
+  }
+}

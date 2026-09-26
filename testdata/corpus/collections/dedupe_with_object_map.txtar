@@ -1,0 +1,51 @@
+Dedupe by id using an object as a seen-map.
+-- script.js --
+const a = mcp.search_memories({queries:["billing", "launch", "design"]});
+const seen = {};
+const out = [];
+for (const q of a.queries) for (const h of q.results) {
+  if (seen[h.id]) continue;
+  seen[h.id] = true;
+  out.push(h.id);
+}
+return out;
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "results": [
+          {
+            "id": "m1"
+          },
+          {
+            "id": "m2"
+          }
+        ]
+      },
+      {
+        "query_index": 1,
+        "results": [
+          {
+            "id": "m2"
+          },
+          {
+            "id": "m3"
+          }
+        ]
+      },
+      {
+        "query_index": 2,
+        "results": [
+          {
+            "id": "m1"
+          },
+          {
+            "id": "m4"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+Uses e.toString() and String concatenation with the error.
+-- script.js --
+try {
+  mcp.call("mcp__acme-tracker__close_ticket", {id: "T-9"});
+} catch (err) {
+  return ["" + err, err.toString() === String(err)];
+}
+-- tools.json --
+{
+  "mcp__acme-tracker__close_ticket": {
+    "$error": "ticket T-9 already closed"
+  }
+}

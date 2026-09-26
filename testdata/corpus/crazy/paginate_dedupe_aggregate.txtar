@@ -1,0 +1,110 @@
+Cursor pagination with $sequence, dedupe across overlapping pages, then aggregate by label.
+-- script.js --
+const all = [];
+const seen = {};
+let cursor = null, pages = 0;
+while (true) {
+  const page = mcp.linear.list_issues({team: "ENG", first: 2, after: cursor});
+  pages++;
+  for (const n of page.nodes) {
+    if (seen[n.identifier]) continue;
+    seen[n.identifier] = true;
+    all.push(n);
+  }
+  if (!page.pageInfo.hasNextPage || pages >= 20) break;
+  cursor = page.pageInfo.endCursor;
+}
+const byLabel = {};
+for (const n of all) {
+  const labels = n.labels.length ? n.labels : ["(none)"];
+  for (const l of labels) {
+    byLabel[l] = byLabel[l] || {count: 0, open: 0, ids: []};
+    byLabel[l].count++;
+    if (n.state.name !== "Done") byLabel[l].open++;
+    byLabel[l].ids.push(n.identifier);
+  }
+}
+return {pages, total: all.length, byLabel};
+-- tools.json --
+{
+  "linear.list_issues": {
+    "$sequence": [
+      {
+        "nodes": [
+          {
+            "identifier": "ENG-1",
+            "title": "A",
+            "state": {
+              "name": "Todo"
+            },
+            "priority": 1,
+            "labels": [
+              "api"
+            ]
+          },
+          {
+            "identifier": "ENG-2",
+            "title": "B",
+            "state": {
+              "name": "Done"
+            },
+            "priority": 3,
+            "labels": []
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": true,
+          "endCursor": "c1"
+        }
+      },
+      {
+        "nodes": [
+          {
+            "identifier": "ENG-2",
+            "title": "B",
+            "state": {
+              "name": "Done"
+            },
+            "priority": 3,
+            "labels": []
+          },
+          {
+            "identifier": "ENG-3",
+            "title": "C",
+            "state": {
+              "name": "In Progress"
+            },
+            "priority": 2,
+            "labels": [
+              "api",
+              "perf"
+            ]
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": true,
+          "endCursor": "c2"
+        }
+      },
+      {
+        "nodes": [
+          {
+            "identifier": "ENG-4",
+            "title": "D",
+            "state": {
+              "name": "Todo"
+            },
+            "priority": 2,
+            "labels": [
+              "perf"
+            ]
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false,
+          "endCursor": null
+        }
+      }
+    ]
+  }
+}

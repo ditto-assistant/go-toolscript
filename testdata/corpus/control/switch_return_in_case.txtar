@@ -1,0 +1,38 @@
+switch with return in each case inside a helper.
+-- script.js --
+function icon(kind) {
+  switch (kind) {
+    case "application/vnd.google-apps.folder": return "[dir]";
+    case "application/vnd.google-apps.document": return "[doc]";
+    default: return "[file]";
+  }
+}
+const r = mcp.googledrive.find_file({q:"'root' in parents"});
+return r.files.map(f => icon(f.mimeType) + " " + f.name).join("\n");
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "files": [
+      {
+        "id": "file_001",
+        "name": "budget.xlsx",
+        "mimeType": "application/vnd.ms-excel",
+        "modifiedTime": "2026-09-10T08:00:00Z",
+        "size": "20480"
+      },
+      {
+        "id": "file_002",
+        "name": "Roadmap",
+        "mimeType": "application/vnd.google-apps.document",
+        "modifiedTime": "2026-09-12T13:20:00Z"
+      },
+      {
+        "id": "fold_001",
+        "name": "Archive",
+        "mimeType": "application/vnd.google-apps.folder",
+        "modifiedTime": "2026-06-01T00:00:00Z"
+      }
+    ],
+    "nextPageToken": ""
+  }
+}

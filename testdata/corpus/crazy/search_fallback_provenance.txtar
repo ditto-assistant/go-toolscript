@@ -1,0 +1,82 @@
+Search several providers in priority order, merge with provenance, dedupe by normalized URL, stop after K.
+-- script.js --
+const providers = [
+  {name: "web", run: q => mcp.search_web({query: q}).results.map(r => ({title: r.title, url: r.url}))},
+  {name: "notes", run: q => mcp.notes.search({query: q}).notes.map(n => ({title: n.title, url: "notes://" + n.id}))},
+  {name: "docs", run: q => mcp.googledocs.search_documents({query: `fullText contains '${q}'`}).documents.map(d => ({title: d.name, url: d.webViewLink}))}
+];
+const norm = u => u.toLowerCase().split("#")[0].split("?")[0].replace("https://", "").replace("http://", "").replace("www.", "");
+const K = 5;
+const seen = {};
+const results = [];
+const errors = [];
+for (const q of ["widgets", "widget api"]) {
+  for (const p of providers) {
+    if (results.length >= K) break;
+    let hits;
+    try { hits = p.run(q); } catch (e) { errors.push(`${p.name}/${q}: ${e.message}`); continue; }
+    for (const h of hits) {
+      const key = norm(h.url);
+      if (seen[key]) { seen[key].sources.push(p.name + ":" + q); continue; }
+      if (results.length >= K) break;
+      seen[key] = {title: h.title, url: h.url, sources: [p.name + ":" + q]};
+      results.push(seen[key]);
+    }
+  }
+}
+return {results, errors};
+-- tools.json --
+{
+  "search_web": {
+    "$sequence": [
+      {
+        "results": [
+          {
+            "title": "Getting started with widgets",
+            "url": "https://example.com/widgets/start",
+            "snippet": "A short guide to widgets."
+          },
+          {
+            "title": "Widget API reference",
+            "url": "https://example.com/widgets/api",
+            "snippet": "Endpoints and parameters."
+          }
+        ]
+      },
+      {
+        "results": [
+          {
+            "title": "Widget API reference",
+            "url": "https://www.example.com/widgets/api?ref=x",
+            "snippet": ""
+          },
+          {
+            "title": "Widget SDK",
+            "url": "https://example.com/widgets/sdk#top",
+            "snippet": ""
+          }
+        ]
+      }
+    ]
+  },
+  "notes.search": {
+    "$error": "notes index rebuilding"
+  },
+  "googledocs.search_documents": {
+    "documents": [
+      {
+        "id": "doc_abc",
+        "name": "Q3 Planning",
+        "modifiedTime": "2026-09-01T10:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_abc"
+      },
+      {
+        "id": "doc_def",
+        "name": "Onboarding Checklist",
+        "modifiedTime": "2026-08-15T09:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_def"
+      }
+    ],
+    "nextPageToken": null
+  }
+}

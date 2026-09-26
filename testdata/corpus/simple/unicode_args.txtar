@@ -1,0 +1,8 @@
+Non-ASCII text in args and results.
+-- script.js --
+const r = mcp.notes.create({title: "Café menü — draft", body: "naïve résumé ✓"});
+return r.args.title.length;
+-- tools.json --
+{
+  "notes.create": null
+}

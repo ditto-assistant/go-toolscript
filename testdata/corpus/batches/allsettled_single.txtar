@@ -1,0 +1,29 @@
+allSettled with a single element, like a real trace.
+-- script.js --
+const r=await Promise.allSettled([mcp.tasks.list_all_tasks({max_tasks_total:100, showCompleted:false})]); return r;
+-- tools.json --
+{
+  "tasks.list_all_tasks": {
+    "tasklists": [
+      {
+        "id": "list_1",
+        "title": "My Tasks",
+        "task_count": 2
+      }
+    ],
+    "tasks": [
+      {
+        "id": "task_1",
+        "title": "Renew domain",
+        "due": "2026-10-01T00:00:00.000Z",
+        "status": "needsAction"
+      },
+      {
+        "id": "task_2",
+        "title": "File expenses",
+        "due": null,
+        "status": "needsAction"
+      }
+    ]
+  }
+}

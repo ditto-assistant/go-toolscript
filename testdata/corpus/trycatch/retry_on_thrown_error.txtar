@@ -1,0 +1,17 @@
+Retry loop that catches thrown errors and gives up after N attempts.
+-- script.js --
+let lastErr = null;
+for (let i = 0; i < 3; i++) {
+  try {
+    return mcp.search_web({query: "widget status page"});
+  } catch (e) {
+    lastErr = String(e);
+  }
+}
+return {gaveUp: true, lastErr};
+-- tools.json --
+{
+  "search_web": {
+    "$error": "search provider timeout"
+  }
+}

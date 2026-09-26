@@ -1,0 +1,47 @@
+mount_result(ref) re-mounts a durable result by ref.
+-- script.js --
+const f = mount_result("cmr_test_002search");
+const x = bash(`jq -r '.queries[0].results[0].summary' ${f.path}`);
+return {file: f.path, bytes: f.bytes, first: x.stdout.trim()};
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -r '.queries[0].results[0].summary' /results/002-search-memories.json": {
+    "stdout": "Alice prefers async standups on Tuesdays.\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}
+-- workspace.json --
+{
+  "mount_result": {
+    "cmr_test_002search": {
+      "path": "/results/002-search-memories.json",
+      "content_type": "application/json",
+      "bytes": 48213,
+      "ref": "cmr_test_002search",
+      "large_result": true
+    }
+  },
+  "workspace_files": [
+    {
+      "path": "/results/001-googledrive-find-file.json",
+      "content_type": "application/json",
+      "bytes": 1569
+    },
+    {
+      "path": "/results/002-search-memories.json",
+      "content_type": "application/json",
+      "bytes": 48213,
+      "ref": "cmr_test_002search",
+      "large_result": true
+    },
+    {
+      "path": "/results/003-googledocs-get-document-by-id.json",
+      "content_type": "application/json",
+      "bytes": 5210
+    }
+  ]
+}

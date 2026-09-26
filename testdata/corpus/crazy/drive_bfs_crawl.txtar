@@ -1,0 +1,92 @@
+Breadth-first crawl of folders via repeated list_children calls ($sequence), with a node budget.
+-- script.js --
+const root = "fold_root";
+const queue = [{id: root, path: ""}];
+const files = [];
+let calls = 0;
+const BUDGET = 10;
+while (queue.length && calls < BUDGET) {
+  const cur = queue.shift();
+  const res = mcp.googledrive.list_children({folderId: cur.id, pageSize: 100});
+  calls++;
+  for (const f of res.files || []) {
+    const p = cur.path + "/" + f.name;
+    if (f.mimeType === "application/vnd.google-apps.folder") queue.push({id: f.id, path: p});
+    else files.push({path: p, size: Number(f.size || 0), kind: f.mimeType.split("/").pop()});
+  }
+}
+files.sort((a, b) => b.size - a.size || (a.path < b.path ? -1 : 1));
+const byKind = {};
+for (const f of files) byKind[f.kind] = (byKind[f.kind] || 0) + 1;
+return {calls, pending: queue.length, files: files.length, largest: files.slice(0, 3), byKind};
+-- tools.json --
+{
+  "googledrive.list_children": {
+    "$sequence": [
+      {
+        "files": [
+          {
+            "id": "fold_a",
+            "name": "Specs",
+            "mimeType": "application/vnd.google-apps.folder"
+          },
+          {
+            "id": "f1",
+            "name": "readme.txt",
+            "mimeType": "text/plain",
+            "size": "120"
+          },
+          {
+            "id": "fold_b",
+            "name": "Assets",
+            "mimeType": "application/vnd.google-apps.folder"
+          }
+        ]
+      },
+      {
+        "files": [
+          {
+            "id": "f2",
+            "name": "api.pdf",
+            "mimeType": "application/pdf",
+            "size": "90000"
+          },
+          {
+            "id": "fold_c",
+            "name": "Old",
+            "mimeType": "application/vnd.google-apps.folder"
+          }
+        ]
+      },
+      {
+        "files": [
+          {
+            "id": "f3",
+            "name": "logo.png",
+            "mimeType": "image/png",
+            "size": "40960"
+          },
+          {
+            "id": "f4",
+            "name": "hero.png",
+            "mimeType": "image/png",
+            "size": "81920"
+          }
+        ]
+      },
+      {
+        "files": [
+          {
+            "id": "f5",
+            "name": "v0.pdf",
+            "mimeType": "application/pdf",
+            "size": "1000"
+          }
+        ]
+      },
+      {
+        "files": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+String(x), Number(x), parseInt, parseFloat on tool strings.
+-- script.js --
+const f = mcp.googledrive.find_file({q:"name = 'budget.xlsx'"}).files[0];
+const bytes = Number(f.size);
+return {
+  kb: bytes / 1024, asInt: parseInt("42px", 10), hex: parseInt("ff", 16),
+  float: parseFloat("3.75 units"), bad: Number("abc"), empty: Number(""),
+  str: String(bytes), plus: "" + 7 + 3, sum: 7 + 3 + ""
+};
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "files": [
+      {
+        "id": "file_001",
+        "name": "budget.xlsx",
+        "mimeType": "application/vnd.ms-excel",
+        "modifiedTime": "2026-09-10T08:00:00Z",
+        "size": "20480"
+      },
+      {
+        "id": "file_002",
+        "name": "Roadmap",
+        "mimeType": "application/vnd.google-apps.document",
+        "modifiedTime": "2026-09-12T13:20:00Z"
+      },
+      {
+        "id": "fold_001",
+        "name": "Archive",
+        "mimeType": "application/vnd.google-apps.folder",
+        "modifiedTime": "2026-06-01T00:00:00Z"
+      }
+    ],
+    "nextPageToken": ""
+  }
+}

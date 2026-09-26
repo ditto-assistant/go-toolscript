@@ -1,0 +1,13 @@
+Numeric edge values round-tripped from a tool.
+-- script.js --
+const m = mcp.crm.get_metrics({id:"acct_9"});
+return [m.big, m.small, m.neg, m.ratio];
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "big": 9007199254740991,
+    "small": 0.000125,
+    "neg": -42,
+    "ratio": 0.3333333333333333
+  }
+}

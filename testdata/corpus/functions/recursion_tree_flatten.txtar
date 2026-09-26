@@ -1,0 +1,45 @@
+Recursive flatten of a folder tree.
+-- script.js --
+const tree = mcp.googledrive.list_tree({root: "root"});
+function flatten(node, depth, out) {
+  out.push("  ".repeat(depth) + node.name);
+  for (const c of node.children || []) flatten(c, depth + 1, out);
+  return out;
+}
+return flatten(tree, 0, []).join("\n");
+-- tools.json --
+{
+  "googledrive.list_tree": {
+    "id": "root",
+    "name": "Workspace",
+    "children": [
+      {
+        "id": "f1",
+        "name": "Specs",
+        "children": [
+          {
+            "id": "d1",
+            "name": "API spec",
+            "children": []
+          },
+          {
+            "id": "f2",
+            "name": "Drafts",
+            "children": [
+              {
+                "id": "d2",
+                "name": "Old draft",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "d3",
+        "name": "README",
+        "children": []
+      }
+    ]
+  }
+}

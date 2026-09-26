@@ -1,0 +1,13 @@
+Write tool call, then return a status string.
+-- script.js --
+const r = mcp.github.issue_write({method:"create", owner:"acme", repo:"widget-app", title:"Header overlaps content on mobile", body:"Steps: open editor on a phone."});
+return r.result.url;
+-- tools.json --
+{
+  "github.issue_write": {
+    "result": {
+      "id": "9001",
+      "url": "https://git.example.com/acme/widget-app/issues/88"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+JSON.parse of malformed tool text is caught.
+-- script.js --
+const res = mcp.notion.search({query:"roadmap"});
+let parsed;
+try {
+  parsed = JSON.parse(res.content[0].text);
+} catch (e) {
+  parsed = {raw: res.content[0].text.slice(0, 40), parseError: e.name};
+}
+return parsed;
+-- tools.json --
+{
+  "notion.search": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Error: upstream returned HTML <html>...</html>"
+      }
+    ]
+  }
+}

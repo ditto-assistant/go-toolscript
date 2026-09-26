@@ -1,0 +1,15 @@
+Split bash stdout into lines and parse TSV columns.
+-- script.js --
+const x = bash("jq -r '.items[] | [.id, .score] | @tsv' /results/002-notes-list-scores.json");
+return x.stdout.trim().split("\n").map(l => { const [id, s] = l.split("\t"); return {id, score: Number(s)}; }).filter(r => r.score > 0.5);
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -r '.items[] | [.id, .score] | @tsv' /results/002-notes-list-scores.json": {
+    "stdout": "a1\t0.82\nb2\t0.45\nc3\t0.91\nd4\t0.63\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

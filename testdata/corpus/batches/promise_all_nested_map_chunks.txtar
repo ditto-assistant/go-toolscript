@@ -1,0 +1,14 @@
+Chunked fan-out: Promise.all per chunk inside a loop.
+-- script.js --
+const ids = ["m1", "m2", "m3", "m4", "m5"];
+const out = [];
+for (let i = 0; i < ids.length; i += 2) {
+  const chunk = ids.slice(i, i + 2);
+  const res = await Promise.all(chunk.map(id => mcp.fetch_memories({ids: [id]})));
+  out.push(...res.map(r => r.args.ids[0]));
+}
+return out;
+-- tools.json --
+{
+  "fetch_memories": null
+}

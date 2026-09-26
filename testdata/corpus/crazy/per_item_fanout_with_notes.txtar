@@ -1,0 +1,75 @@
+Loop over hard-coded rows, per-item try/catch, parse MCP envelopes, walk nested agents, collect notes.
+-- script.js --
+const rows = [
+  ["1", "key_alpha", "0.803"],
+  ["2", "key_bravo", "0.787"],
+  ["3", "key_charlie", "0.718"],
+  ["4", "key_delta", "0.616"],
+];
+const out = []; const notes = [];
+function merge(list, shared){ return (list||[]).map(r=>({...(shared||{}),...r})); }
+for (const [rank, hk, comp] of rows) {
+  let res;
+  try { res = mcp["team-backroom"].get_owner_footprint({key: hk, perKey: 50, depth: 1}); }
+  catch(e){ notes.push(hk+": ERR "+String(e).slice(0,200)); continue; }
+  const r = (res && res.content) ? JSON.parse(res.content[0].text) : res;
+  if (out.length===0 && notes.length===0) notes.push("KEYS:"+JSON.stringify(Object.keys(r)).slice(0,400));
+  let agents = [];
+  const walk = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    for (const k of Object.keys(o)) {
+      if (k==='agents' && Array.isArray(o[k])) agents.push(...merge(o[k], o['agents_shared']));
+      else if (k!=='agents_shared') walk(o[k]);
+    }
+  };
+  walk(r);
+  if (agents.length===0) notes.push(hk+": no agents; sample="+JSON.stringify(r).slice(0,200));
+  for (const a of agents) {
+    const st = a.agent_status || a.status;
+    if (st!=='scored' && st!=='live') continue;
+    out.push({agent_id:a.agent_id||a.id, name:a.name||a.agent_name, rank:Number(rank), comp:parseFloat(comp), team:a.team||null});
+  }
+}
+out.sort((a,b)=>a.rank-b.rank || (a.agent_id<b.agent_id?-1:1));
+return {count: out.length, notes, out: out.slice(0, 20)};
+-- tools.json --
+{
+  "team-backroom.get_owner_footprint": {
+    "$sequence": [
+      {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"keys\": [{\"key\": \"key_alpha\", \"agents_shared\": {\"team\": \"red\"}, \"agents\": [{\"agent_id\": \"ag_1\", \"name\": \"one\", \"agent_status\": \"scored\"}, {\"agent_id\": \"ag_2\", \"name\": \"two\", \"agent_status\": \"retired\"}]}]}"
+          }
+        ]
+      },
+      {
+        "keys": [
+          {
+            "key": "key_bravo",
+            "agents": [
+              {
+                "id": "ag_3",
+                "agent_name": "three",
+                "status": "live"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "keys": []
+      },
+      {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"nested\": {\"deeper\": {\"agents\": [{\"agent_id\": \"ag_4\", \"name\": \"four\", \"agent_status\": \"scored\", \"team\": \"blue\"}]}}}"
+          }
+        ]
+      }
+    ]
+  }
+}

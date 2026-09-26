@@ -1,0 +1,11 @@
+Default to an empty array on failure, then use array methods.
+-- script.js --
+let items;
+try { items = mcp.linear.list_issues({team:"OPS"}).nodes; } catch (e) { items = []; }
+return items.filter(i => i.priority <= 2).map(i => i.identifier);
+-- tools.json --
+{
+  "linear.list_issues": {
+    "$error": "team OPS not found"
+  }
+}

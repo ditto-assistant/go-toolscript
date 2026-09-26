@@ -1,0 +1,14 @@
+try/catch around an awaited failing call.
+-- script.js --
+try {
+  const r = await mcp.github.get_file_contents({owner: "acme", repo: "widget-service", path: "docs/missing.md"});
+  return r;
+} catch (e) {
+  return {error: String(e)};
+}
+-- tools.json --
+{
+  "github.get_file_contents": {
+    "$error": "404 Not Found"
+  }
+}

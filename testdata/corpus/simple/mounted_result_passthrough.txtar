@@ -1,0 +1,14 @@
+Large results come back as a mounted file descriptor; returned verbatim.
+-- script.js --
+const r = mcp.search_memories({queries:["everything about widgets"], limit:50}); return r;
+-- tools.json --
+{
+  "search_memories": {
+    "path": "/results/006-search-memories.json",
+    "ref": "cmr_test_006search",
+    "content_type": "application/json",
+    "hint": "Re-process it with bash, for example jq or rg, instead of printing it.",
+    "bytes": 48213,
+    "large_result": true
+  }
+}

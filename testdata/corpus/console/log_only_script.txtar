@@ -1,0 +1,6 @@
+A script that only logs constants and makes no tool calls.
+-- script.js --
+console.log("code mode is available");
+console.log([1, 2, 3].map(x => x * x).join(" "));
+-- tools.json --
+{}

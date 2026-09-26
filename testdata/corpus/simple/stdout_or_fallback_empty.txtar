@@ -1,0 +1,14 @@
+`x.stdout || x` when stdout is empty falls back to the whole object.
+-- script.js --
+const x = bash("rg -n 'nonexistent' /results/001-notes-search.json"); return x.stdout || x;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "rg -n 'nonexistent' /results/001-notes-search.json": {
+    "stdout": "",
+    "stderr": "",
+    "exit_code": 1,
+    "json": null
+  }
+}

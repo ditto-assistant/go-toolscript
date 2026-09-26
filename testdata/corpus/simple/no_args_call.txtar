@@ -1,0 +1,12 @@
+Tool called with zero arguments.
+-- script.js --
+const me = mcp.crm.whoami();
+return me.name;
+-- tools.json --
+{
+  "crm.whoami": {
+    "id": "user-123",
+    "name": "Test User",
+    "role": "admin"
+  }
+}

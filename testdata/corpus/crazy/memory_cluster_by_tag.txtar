@@ -1,0 +1,154 @@
+Search memories with many queries, fetch full records in chunks, cluster by tag, summarize per cluster.
+-- script.js --
+const queries = ["launch", "billing", "hiring", "vendors", "process"];
+const s = mcp.search_memories({queries, limit: 5});
+const scoreById = {};
+s.queries.forEach(q => q.results.forEach(r => { scoreById[r.id] = Math.max(scoreById[r.id] || 0, r.score); }));
+const ids = Object.keys(scoreById).sort();
+const full = [];
+for (let i = 0; i < ids.length; i += 3) {
+  const chunk = ids.slice(i, i + 3);
+  const r = mcp.fetch_memories({ids: chunk});
+  full.push(...r.memories);
+}
+const clusters = {};
+for (const m of full) {
+  const tags = m.tags && m.tags.length ? m.tags : ["untagged"];
+  for (const t of tags) {
+    const c = clusters[t] || (clusters[t] = {n: 0, best: null, words: 0});
+    c.n++;
+    c.words += m.content.split(" ").filter(Boolean).length;
+    if (!c.best || scoreById[m.id] > scoreById[c.best]) c.best = m.id;
+  }
+}
+const lines = Object.entries(clusters)
+  .sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1))
+  .map(([t, c]) => `${t}: ${c.n} memories, ~${Math.round(c.words / c.n)} words avg, best=${c.best}`);
+return {ids: ids.length, fetchedChunks: Math.ceil(ids.length / 3), lines};
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "results": [
+          {
+            "id": "m_a",
+            "score": 0.9
+          },
+          {
+            "id": "m_b",
+            "score": 0.5
+          }
+        ]
+      },
+      {
+        "query_index": 1,
+        "results": [
+          {
+            "id": "m_c",
+            "score": 0.8
+          },
+          {
+            "id": "m_a",
+            "score": 0.95
+          }
+        ]
+      },
+      {
+        "query_index": 2,
+        "results": [
+          {
+            "id": "m_d",
+            "score": 0.7
+          }
+        ]
+      },
+      {
+        "query_index": 3,
+        "results": []
+      },
+      {
+        "query_index": 4,
+        "results": [
+          {
+            "id": "m_e",
+            "score": 0.6
+          },
+          {
+            "id": "m_f",
+            "score": 0.4
+          },
+          {
+            "id": "m_g",
+            "score": 0.3
+          }
+        ]
+      }
+    ]
+  },
+  "fetch_memories": {
+    "$sequence": [
+      {
+        "memories": [
+          {
+            "id": "m_a",
+            "content": "Launch moved to October after load testing.",
+            "tags": [
+              "launch"
+            ]
+          },
+          {
+            "id": "m_b",
+            "content": "Launch comms owner is Carol.",
+            "tags": [
+              "launch",
+              "process"
+            ]
+          },
+          {
+            "id": "m_c",
+            "content": "Billing migration phase two starts next sprint.",
+            "tags": [
+              "billing"
+            ]
+          }
+        ]
+      },
+      {
+        "memories": [
+          {
+            "id": "m_d",
+            "content": "Two open roles for platform team.",
+            "tags": [
+              "hiring"
+            ]
+          },
+          {
+            "id": "m_e",
+            "content": "Weekly written updates on Fridays.",
+            "tags": [
+              "process"
+            ]
+          },
+          {
+            "id": "m_f",
+            "content": "Standups are async.",
+            "tags": []
+          }
+        ]
+      },
+      {
+        "memories": [
+          {
+            "id": "m_g",
+            "content": "Vendor contract renews in March.",
+            "tags": [
+              "vendors"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

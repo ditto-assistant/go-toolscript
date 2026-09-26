@@ -1,0 +1,17 @@
+?? keeps 0 and "" while || replaces them.
+-- script.js --
+const m = mcp.crm.get_metrics({id:"acct_9"});
+return {
+  orCount: m.count || 10, nullishCount: m.count ?? 10,
+  orLabel: m.label || "none", nullishLabel: m.label ?? "none",
+  orMissing: m.missing || "dflt", nullishMissing: m.missing ?? "dflt",
+  nullishNull: m.nothing ?? "was null"
+};
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "count": 0,
+    "label": "",
+    "nothing": null
+  }
+}

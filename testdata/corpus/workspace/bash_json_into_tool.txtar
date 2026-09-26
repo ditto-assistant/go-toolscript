@@ -1,0 +1,41 @@
+bash .json value passed straight into a later tool call.
+-- script.js --
+const ids = bash("jq -c '[.queries[0].results[].id]' /results/002-search-memories.json").json;
+const full = mcp.fetch_memories({ids});
+return full.memories.map(m => m.content.slice(0, 40));
+-- tools.json --
+{
+  "fetch_memories": {
+    "memories": [
+      {
+        "id": "mem_001",
+        "content": "Alice prefers async standups on Tuesdays and a written agenda the day before.",
+        "created_at": "2026-08-02T14:10:00Z",
+        "tags": [
+          "team",
+          "process"
+        ]
+      },
+      {
+        "id": "mem_002",
+        "content": "Widget-service launch moved to the second week of October after the load test.",
+        "created_at": "2026-08-11T09:30:00Z",
+        "tags": [
+          "launch"
+        ]
+      }
+    ]
+  }
+}
+-- bash.json --
+{
+  "jq -c '[.queries[0].results[].id]' /results/002-search-memories.json": {
+    "stdout": "[\"mem_001\",\"mem_002\"]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": [
+      "mem_001",
+      "mem_002"
+    ]
+  }
+}

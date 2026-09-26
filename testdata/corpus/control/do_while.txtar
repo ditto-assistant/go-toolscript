@@ -1,0 +1,27 @@
+do/while loop polling until a status changes.
+-- script.js --
+let r, polls = 0;
+do {
+  r = mcp.call("mcp__acme-tracker__poll_job", {id:"job_2"});
+  polls++;
+} while (r.state !== "done" && polls < 10);
+return polls;
+-- tools.json --
+{
+  "mcp__acme-tracker__poll_job": {
+    "$sequence": [
+      {
+        "state": "queued"
+      },
+      {
+        "state": "running"
+      },
+      {
+        "state": "running"
+      },
+      {
+        "state": "done"
+      }
+    ]
+  }
+}

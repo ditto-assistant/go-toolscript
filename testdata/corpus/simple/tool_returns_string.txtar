@@ -1,0 +1,8 @@
+Tool whose JSON result is a bare string.
+-- script.js --
+const s = mcp.notes.get_text({id:"note_5"});
+return s.toUpperCase();
+-- tools.json --
+{
+  "notes.get_text": "remember to water the plants"
+}

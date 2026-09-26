@@ -1,0 +1,13 @@
+Strings with quotes, newlines, tabs and unicode.
+-- script.js --
+const n = mcp.notes.get({id:"note_5"});
+console.log(n.body);
+console.log(JSON.stringify(n.body));
+return n.body.length;
+-- tools.json --
+{
+  "notes.get": {
+    "id": "note_5",
+    "body": "line one\n\tindented \"quoted\" — ✓ done"
+  }
+}

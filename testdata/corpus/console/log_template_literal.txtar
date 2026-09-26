@@ -1,0 +1,47 @@
+console.log with template literals interpolating tool data.
+-- script.js --
+const r = mcp.gmail.fetch_emails({query:"is:unread"});
+for (const m of r.messages) {
+  console.log(`${m.id} | ${m.from} | ${m.subject}`);
+}
+return `${r.messages.length} messages`;
+-- tools.json --
+{
+  "gmail.fetch_emails": {
+    "messages": [
+      {
+        "id": "msg_1",
+        "from": "alice@example.com",
+        "subject": "Re: launch checklist",
+        "snippet": "Looks good, one nit on step 4.",
+        "labelIds": [
+          "INBOX",
+          "UNREAD"
+        ],
+        "date": "2026-09-24T09:12:00Z"
+      },
+      {
+        "id": "msg_2",
+        "from": "billing@vendor.example",
+        "subject": "Your invoice is ready",
+        "snippet": "Invoice INV-0042 for September.",
+        "labelIds": [
+          "INBOX",
+          "CATEGORY_UPDATES"
+        ],
+        "date": "2026-09-23T06:00:00Z"
+      },
+      {
+        "id": "msg_3",
+        "from": "bob@example.com",
+        "subject": "Lunch?",
+        "snippet": "Free Thursday?",
+        "labelIds": [
+          "INBOX"
+        ],
+        "date": "2026-09-22T18:30:00Z"
+      }
+    ],
+    "nextPageToken": null
+  }
+}

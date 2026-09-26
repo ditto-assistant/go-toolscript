@@ -1,0 +1,14 @@
+Template-literal bash script with embedded double quotes and escapes.
+-- script.js --
+const x=bash(`jq -r '.tabs[0].documentTab.body.content[] | select(.paragraph) | [.startIndex, (.paragraph.elements | map(.textRun.content // "") | join(""))] | @tsv' /results/003-googledocs-get-document-by-id.json | rg -n 'Risks'`); return x.stdout||x;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -r '.tabs[0].documentTab.body.content[] | select(.paragraph) | [.startIndex, (.paragraph.elements | map(.textRun.content // \"\") | join(\"\"))] | @tsv' /results/003-googledocs-get-document-by-id.json | rg -n 'Risks'": {
+    "stdout": "4:52\tRisks\\n\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

@@ -1,0 +1,16 @@
+Checks exit_code !== 0 and returns stderr.
+-- script.js --
+const x = bash("jq '.missing[' /results/001-notes-list.json");
+if (x.exit_code !== 0) return {failed: true, code: x.exit_code, err: x.stderr.trim()};
+return x.json;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq '.missing[' /results/001-notes-list.json": {
+    "stdout": "",
+    "stderr": "jq: error: syntax error, unexpected end of file\n",
+    "exit_code": 3,
+    "json": null
+  }
+}

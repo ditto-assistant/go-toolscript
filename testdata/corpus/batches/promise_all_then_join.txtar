@@ -1,0 +1,35 @@
+Promise.all fan-out then join results by id.
+-- script.js --
+const [users, assignments] = await Promise.all([
+  mcp.crm.list_users({}),
+  mcp.call("mcp__acme-tracker__list_assignments", {})
+]);
+const byId = Object.fromEntries(users.users.map(u => [u.id, u.name]));
+return assignments.assignments.map(a => `${a.ticket} -> ${byId[a.user_id] ?? "unassigned"}`);
+-- tools.json --
+{
+  "crm.list_users": {
+    "users": [
+      {
+        "id": "u1",
+        "name": "Alice"
+      },
+      {
+        "id": "u2",
+        "name": "Bob"
+      }
+    ]
+  },
+  "mcp__acme-tracker__list_assignments": {
+    "assignments": [
+      {
+        "ticket": "T-1",
+        "user_id": "u2"
+      },
+      {
+        "ticket": "T-2",
+        "user_id": "u3"
+      }
+    ]
+  }
+}

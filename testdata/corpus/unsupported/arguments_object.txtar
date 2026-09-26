@@ -1,0 +1,19 @@
+The `arguments` object in a sloppy function.
+-- script.js --
+function joinAll() { return Array.prototype.slice.call(arguments).join("+"); }
+const a = mcp.crm.get_account({id: "acct_9"});
+return joinAll(a.name, a.tier, arguments.length);
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

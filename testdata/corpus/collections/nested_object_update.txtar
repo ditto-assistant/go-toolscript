@@ -1,0 +1,22 @@
+Update nested objects in place and read back.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+a.owner.name = a.owner.name.toUpperCase();
+a.flags = a.flags || {};
+a.flags.reviewed = true;
+delete a.contacts;
+return a;
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

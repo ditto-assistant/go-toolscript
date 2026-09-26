@@ -1,0 +1,84 @@
+Two large mounted results reshaped with jq via bash, joined in JS, written back through a tool.
+-- script.js --
+const a = mcp.googledrive.find_file({q: "trashed = false", pageSize: 1000});
+const b = mcp.search_memories({queries: ["file mentions"], limit: 200});
+const files = bash(`jq -c '[.files[] | {id, name, modifiedTime}]' ${a.path}`).json || [];
+const mentions = bash(`jq -c '[.queries[0].results[] | select(.file_id != null) | {file_id, id}]' ${b.path}`).json || [];
+const counts = {};
+for (const m of mentions) counts[m.file_id] = (counts[m.file_id] || 0) + 1;
+const ranked = files.map(f => ({...f, mentions: counts[f.id] || 0}))
+  .filter(f => f.mentions > 0)
+  .sort((x, y) => y.mentions - x.mentions || (x.name < y.name ? -1 : 1));
+const body = ranked.map((f, i) => `${i + 1}. ${f.name} — ${f.mentions} mention${f.mentions === 1 ? "" : "s"} (updated ${f.modifiedTime.slice(0, 10)})`).join("\n");
+const note = mcp.notes.create({title: "Most-referenced files", body});
+return {files: files.length, mentions: mentions.length, top: ranked.slice(0, 3).map(f => f.name), note: note.id};
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "path": "/results/001-googledrive-find-file.json",
+    "ref": "cmr_test_001google",
+    "content_type": "application/json",
+    "hint": "Re-process it with bash, for example jq or rg, instead of printing it.",
+    "bytes": 204800,
+    "large_result": true
+  },
+  "search_memories": {
+    "path": "/results/002-search-memories.json",
+    "ref": "cmr_test_002search",
+    "content_type": "application/json",
+    "hint": "Re-process it with bash, for example jq or rg, instead of printing it.",
+    "bytes": 96000,
+    "large_result": true
+  },
+  "notes.create": {
+    "id": "note_77"
+  }
+}
+-- bash.json --
+{
+  "jq -c '[.files[] | {id, name, modifiedTime}]' /results/001-googledrive-find-file.json": {
+    "stdout": "[{\"id\":\"file_001\",\"name\":\"budget.xlsx\",\"modifiedTime\":\"2026-09-10T08:00:00Z\"},{\"id\":\"file_002\",\"name\":\"Roadmap\",\"modifiedTime\":\"2026-09-12T13:20:00Z\"},{\"id\":\"file_003\",\"name\":\"Notes\",\"modifiedTime\":\"2026-09-01T00:00:00Z\"}]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": [
+      {
+        "id": "file_001",
+        "name": "budget.xlsx",
+        "modifiedTime": "2026-09-10T08:00:00Z"
+      },
+      {
+        "id": "file_002",
+        "name": "Roadmap",
+        "modifiedTime": "2026-09-12T13:20:00Z"
+      },
+      {
+        "id": "file_003",
+        "name": "Notes",
+        "modifiedTime": "2026-09-01T00:00:00Z"
+      }
+    ]
+  },
+  "jq -c '[.queries[0].results[] | select(.file_id != null) | {file_id, id}]' /results/002-search-memories.json": {
+    "stdout": "[{\"file_id\":\"file_002\",\"id\":\"m1\"},{\"file_id\":\"file_002\",\"id\":\"m2\"},{\"file_id\":\"file_001\",\"id\":\"m3\"},{\"file_id\":\"file_999\",\"id\":\"m4\"}]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": [
+      {
+        "file_id": "file_002",
+        "id": "m1"
+      },
+      {
+        "file_id": "file_002",
+        "id": "m2"
+      },
+      {
+        "file_id": "file_001",
+        "id": "m3"
+      },
+      {
+        "file_id": "file_999",
+        "id": "m4"
+      }
+    ]
+  }
+}

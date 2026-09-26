@@ -1,0 +1,23 @@
+`res.result || res` unwrap idiom.
+-- script.js --
+const res = mcp.github.search_code({query: "retryBudget in:file"});
+const body = res.result || res;
+return body.items.map(i => i.path);
+-- tools.json --
+{
+  "github.search_code": {
+    "result": {
+      "incomplete_results": false,
+      "items": [
+        {
+          "name": "fetch.go",
+          "path": "pkg/fetch/fetch.go"
+        },
+        {
+          "name": "retry.go",
+          "path": "pkg/fetch/retry.go"
+        }
+      ]
+    }
+  }
+}

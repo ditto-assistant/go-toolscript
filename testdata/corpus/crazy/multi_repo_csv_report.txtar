@@ -1,0 +1,86 @@
+Iterate repos via mcp.github with per-repo errors, compute PR ages from ISO strings, emit CSV.
+-- script.js --
+const repos = ["widget-service", "widget-app", "widget-docs"];
+const dayNum = iso => { const [y, m, d] = iso.slice(0, 10).split("-").map(Number); return y * 372 + m * 31 + d; };
+const today = dayNum("2026-09-25");
+const rows = [["repo", "number", "title", "author", "age_days", "draft"]];
+const errs = {};
+for (const repo of repos) {
+  let prs;
+  try { prs = mcp.github.list_pull_requests({owner: "acme", repo, state: "open"}); }
+  catch (e) { errs[repo] = e.message; continue; }
+  for (const p of prs.filter(p => p.state === "open")) {
+    rows.push([repo, p.number, p.title, p.user.login, today - dayNum(p.updated_at), p.draft]);
+  }
+}
+const esc = v => { const s = String(v); return s.includes(",") || s.includes("\"") ? "\"" + s.split("\"").join("\"\"") + "\"" : s; };
+const csv = rows.map(r => r.map(esc).join(",")).join("\n");
+const stale = rows.slice(1).filter(r => r[4] > 3).length;
+return {csv, stale, errs};
+-- tools.json --
+{
+  "github.list_pull_requests": {
+    "$sequence": [
+      [
+        {
+          "number": 101,
+          "title": "Add retry budget to fetcher",
+          "state": "open",
+          "user": {
+            "login": "alice"
+          },
+          "labels": [
+            {
+              "name": "backend"
+            }
+          ],
+          "draft": false,
+          "updated_at": "2026-09-20T12:00:00Z"
+        },
+        {
+          "number": 102,
+          "title": "Fix flaky cache test",
+          "state": "open",
+          "user": {
+            "login": "bob"
+          },
+          "labels": [
+            {
+              "name": "tests"
+            },
+            {
+              "name": "backend"
+            }
+          ],
+          "draft": true,
+          "updated_at": "2026-09-21T08:15:00Z"
+        },
+        {
+          "number": 99,
+          "title": "Bump lint config",
+          "state": "closed",
+          "user": {
+            "login": "carol"
+          },
+          "labels": [],
+          "draft": false,
+          "updated_at": "2026-09-18T17:40:00Z"
+        }
+      ],
+      [
+        {
+          "number": 7,
+          "title": "Tweak, polish \"header\"",
+          "state": "open",
+          "user": {
+            "login": "erin"
+          },
+          "labels": [],
+          "draft": false,
+          "updated_at": "2026-09-10T00:00:00Z"
+        }
+      ],
+      []
+    ]
+  }
+}

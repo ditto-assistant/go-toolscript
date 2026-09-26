@@ -1,0 +1,19 @@
+console.log with an object argument (not stringified).
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+console.log(a.owner);
+console.log({name: a.name, contacts: a.contacts});
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

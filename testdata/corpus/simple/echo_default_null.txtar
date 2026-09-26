@@ -1,0 +1,8 @@
+Tool mapped to null returns the default echo response.
+-- script.js --
+const r = mcp.notes.create({title: "Standup", body: "Nothing blocked."});
+return r;
+-- tools.json --
+{
+  "notes.create": null
+}

@@ -1,0 +1,650 @@
+package toolscript
+
+import (
+	"math"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+// Runtime values are JSON-shaped: nil (null), Undefined, bool, float64,
+// string, *object, *array, *function and *hostObject. Strings are Go (UTF-8)
+// strings; every index-based operation uses JavaScript UTF-16 code units.
+
+// object is an ordinary JavaScript object: own data properties only, with the
+// ECMAScript enumeration order (array-index keys ascending, then insertion).
+type object struct {
+	props    map[string]any
+	keys     []string
+	errName  string // non-empty for Error objects
+	errMsg   string
+	indexKey bool // at least one key is a canonical array index
+}
+
+type array struct{ items []any }
+
+// function is a user closure or a built-in (native != nil).
+type function struct {
+	code   *funcCode
+	scope  *scope
+	native func(r *rt, this any, args []any) (any, error)
+	props  *object // own properties assigned by the script (fn.state = ...)
+	name   string
+}
+
+// hostObject exposes a host Object's property view while preserving its
+// original export until the script writes to it.
+type hostObject struct {
+	view   *object
+	export any
+	dirty  bool
+}
+
+type tdzMarker struct{}
+
+// tdz marks a lexical binding that has not been initialized yet.
+var tdz any = tdzMarker{}
+
+func newObject(size int) *object {
+	return &object{props: make(map[string]any, size), keys: make([]string, 0, size)}
+}
+
+func newError(name, msg string) *object {
+	o := newObject(0)
+	o.errName, o.errMsg = name, msg
+	return o
+}
+
+func (o *object) get(key string) (any, bool) {
+	v, ok := o.props[key]
+	if !ok && o.errName != "" {
+		switch key {
+		case "message":
+			return o.errMsg, true
+		case "name":
+			return o.errName, true
+		case "stack":
+			return o.errName + ": " + o.errMsg, true
+		}
+	}
+	return v, ok
+}
+
+func (o *object) set(key string, v any) {
+	if o.errName != "" && key == "message" {
+		if _, own := o.props[key]; !own {
+			if s, ok := v.(string); ok {
+				o.errMsg = s
+				return
+			}
+		}
+	}
+	if _, ok := o.props[key]; !ok {
+		o.keys = append(o.keys, key)
+		if !o.indexKey && isIndexKey(key) {
+			o.indexKey = true
+		}
+	}
+	o.props[key] = v
+}
+
+func (o *object) delete(key string) {
+	if _, ok := o.props[key]; !ok {
+		return
+	}
+	delete(o.props, key)
+	for i, k := range o.keys {
+		if k == key {
+			o.keys = append(o.keys[:i:i], o.keys[i+1:]...)
+			break
+		}
+	}
+}
+
+// ownKeys returns keys in ECMAScript OrdinaryOwnPropertyKeys order.
+func (o *object) ownKeys() []string {
+	if !o.indexKey {
+		return o.keys
+	}
+	var idx, rest []string
+	for _, k := range o.keys {
+		if isIndexKey(k) {
+			idx = append(idx, k)
+		} else {
+			rest = append(rest, k)
+		}
+	}
+	sort.Slice(idx, func(i, j int) bool {
+		a, _ := strconv.ParseUint(idx[i], 10, 64)
+		b, _ := strconv.ParseUint(idx[j], 10, 64)
+		return a < b
+	})
+	return append(idx, rest...)
+}
+
+// isIndexKey reports whether k is a canonical array index (0 .. 2^32-2).
+func isIndexKey(k string) bool {
+	if k == "" || len(k) > 10 || (len(k) > 1 && k[0] == '0') {
+		return false
+	}
+	for i := 0; i < len(k); i++ {
+		if k[i] < '0' || k[i] > '9' {
+			return false
+		}
+	}
+	n, err := strconv.ParseUint(k, 10, 64)
+	return err == nil && n < math.MaxUint32
+}
+
+// arrayIndex converts a property key to an array index, or -1.
+func arrayIndex(k string) int {
+	if !isIndexKey(k) {
+		return -1
+	}
+	n, _ := strconv.Atoi(k)
+	return n
+}
+
+func isNullish(v any) bool {
+	if v == nil {
+		return true
+	}
+	_, ok := v.(undefined)
+	return ok
+}
+
+func typeOf(v any) string {
+	switch v.(type) {
+	case undefined, tdzMarker:
+		return "undefined"
+	case nil:
+		return "object"
+	case bool:
+		return "boolean"
+	case float64:
+		return "number"
+	case string:
+		return "string"
+	case *function:
+		return "function"
+	}
+	return "object"
+}
+
+func toBoolean(v any) bool {
+	switch v := v.(type) {
+	case nil, undefined:
+		return false
+	case bool:
+		return v
+	case float64:
+		return v != 0 && !math.IsNaN(v)
+	case string:
+		return v != ""
+	}
+	return true
+}
+
+// toPrimitive applies OrdinaryToPrimitive for the value shapes we model.
+// Objects have no user-defined valueOf/toString, so both hints yield strings.
+func (r *rt) toPrimitive(v any) (any, error) {
+	switch v := v.(type) {
+	case *object, *array, *function, *hostObject:
+		s, err := r.toString(v)
+		return s, err
+	}
+	return v, nil
+}
+
+func (r *rt) toString(v any) (string, error) {
+	switch v := v.(type) {
+	case string:
+		return v, nil
+	case nil:
+		return "null", nil
+	case undefined:
+		return "undefined", nil
+	case bool:
+		if v {
+			return "true", nil
+		}
+		return "false", nil
+	case float64:
+		return numberToString(v), nil
+	case *array:
+		return r.join(v, ",")
+	case *object:
+		if v.errName != "" {
+			return errorToString(v), nil
+		}
+		return "[object Object]", nil
+	case *hostObject:
+		return "[object Object]", nil
+	case *function:
+		if v.native != nil {
+			return "function " + v.name + "() { [native code] }", nil
+		}
+		return v.code.source, nil
+	}
+	return "", errInternal
+}
+
+func errorToString(o *object) string {
+	name, _ := o.get("name")
+	msg, _ := o.get("message")
+	ns, _ := name.(string)
+	ms, _ := msg.(string)
+	if ns == "" {
+		return ms
+	}
+	if ms == "" {
+		return ns
+	}
+	return ns + ": " + ms
+}
+
+// join implements Array.prototype.join, guarding against cyclic arrays the
+// same way engines do (a cycle renders as the empty string).
+func (r *rt) join(a *array, sep string) (string, error) {
+	if r.joining == nil {
+		r.joining = map[*array]bool{}
+	}
+	if r.joining[a] {
+		return "", nil
+	}
+	r.joining[a] = true
+	defer delete(r.joining, a)
+	var b strings.Builder
+	for i, v := range a.items {
+		if i > 0 {
+			b.WriteString(sep)
+		}
+		if isNullish(v) {
+			continue
+		}
+		s, err := r.toString(v)
+		if err != nil {
+			return "", err
+		}
+		b.WriteString(s)
+		if b.Len() > r.x.maxString {
+			return "", r.rangeError("Invalid string length")
+		}
+	}
+	return b.String(), nil
+}
+
+func (r *rt) toNumber(v any) (float64, error) {
+	switch v := v.(type) {
+	case float64:
+		return v, nil
+	case nil:
+		return 0, nil
+	case undefined:
+		return math.NaN(), nil
+	case bool:
+		if v {
+			return 1, nil
+		}
+		return 0, nil
+	case string:
+		return stringToNumber(v), nil
+	}
+	p, err := r.toPrimitive(v)
+	if err != nil {
+		return 0, err
+	}
+	return r.toNumber(p)
+}
+
+func (r *rt) toPropertyKey(v any) (string, error) {
+	if s, ok := v.(string); ok {
+		return s, nil
+	}
+	if f, ok := v.(float64); ok {
+		return numberToString(f), nil
+	}
+	return r.toString(v)
+}
+
+func toInt32(f float64) int32 {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0
+	}
+	return int32(uint32(int64(math.Mod(math.Trunc(f), 4294967296))))
+}
+
+func toUint32(f float64) uint32 { return uint32(toInt32(f)) }
+
+// toIntegerOrInfinity implements ToIntegerOrInfinity on a number.
+func toIntegerOrInfinity(f float64) float64 {
+	if math.IsNaN(f) {
+		return 0
+	}
+	return math.Trunc(f) + 0
+}
+
+func strictEquals(a, b any) bool {
+	switch a := a.(type) {
+	case float64:
+		b, ok := b.(float64)
+		return ok && a == b
+	case string:
+		b, ok := b.(string)
+		return ok && a == b
+	case bool:
+		b, ok := b.(bool)
+		return ok && a == b
+	case nil:
+		return b == nil
+	case undefined:
+		_, ok := b.(undefined)
+		return ok
+	}
+	return a == b // reference identity for objects, arrays and functions
+}
+
+// sameValueZero is strict equality where NaN equals NaN (includes()).
+func sameValueZero(a, b any) bool {
+	if x, ok := a.(float64); ok {
+		if y, ok := b.(float64); ok && math.IsNaN(x) && math.IsNaN(y) {
+			return true
+		}
+	}
+	return strictEquals(a, b)
+}
+
+func isObjectValue(v any) bool {
+	switch v.(type) {
+	case *object, *array, *function, *hostObject:
+		return true
+	}
+	return false
+}
+
+func (r *rt) looseEquals(a, b any) (bool, error) {
+	if typeOf(a) == typeOf(b) && (a == nil) == (b == nil) {
+		return strictEquals(a, b), nil
+	}
+	if isNullish(a) && isNullish(b) {
+		return true, nil
+	}
+	if isNullish(a) || isNullish(b) {
+		return false, nil
+	}
+	switch x := a.(type) {
+	case float64:
+		switch y := b.(type) {
+		case string:
+			return x == stringToNumber(y), nil
+		case bool:
+			return r.looseEquals(x, boolNumber(y))
+		}
+	case string:
+		switch b.(type) {
+		case float64:
+			return r.looseEquals(b, a)
+		case bool:
+			return r.looseEquals(a, boolNumber(b.(bool)))
+		}
+	case bool:
+		return r.looseEquals(boolNumber(x), b)
+	}
+	if _, ok := b.(bool); ok {
+		return r.looseEquals(a, boolNumber(b.(bool)))
+	}
+	if isObjectValue(a) && !isObjectValue(b) {
+		p, err := r.toPrimitive(a)
+		if err != nil {
+			return false, err
+		}
+		return r.looseEquals(p, b)
+	}
+	if isObjectValue(b) && !isObjectValue(a) {
+		p, err := r.toPrimitive(b)
+		if err != nil {
+			return false, err
+		}
+		return r.looseEquals(a, p)
+	}
+	return false, nil
+}
+
+func boolNumber(b bool) float64 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// compareValues implements IsLessThan. It returns (less, undefinedResult).
+func (r *rt) compareValues(a, b any) (bool, bool, error) {
+	pa, err := r.toPrimitive(a)
+	if err != nil {
+		return false, false, err
+	}
+	pb, err := r.toPrimitive(b)
+	if err != nil {
+		return false, false, err
+	}
+	if sa, ok := pa.(string); ok {
+		if sb, ok := pb.(string); ok {
+			return compareUTF16(sa, sb) < 0, false, nil
+		}
+	}
+	na, err := r.toNumber(pa)
+	if err != nil {
+		return false, false, err
+	}
+	nb, err := r.toNumber(pb)
+	if err != nil {
+		return false, false, err
+	}
+	if math.IsNaN(na) || math.IsNaN(nb) {
+		return false, true, nil
+	}
+	return na < nb, false, nil
+}
+
+// getProp reads a property with JavaScript semantics for our value shapes.
+func (r *rt) getProp(v any, key string) (any, error) {
+	switch v := v.(type) {
+	case *object:
+		if p, ok := v.get(key); ok {
+			return p, nil
+		}
+		return Undefined, nil
+	case *array:
+		if key == "length" {
+			return float64(len(v.items)), nil
+		}
+		if i := arrayIndex(key); i >= 0 {
+			if i < len(v.items) {
+				return v.items[i], nil
+			}
+			return Undefined, nil
+		}
+		if arrayMethods[key] != nil {
+			return boundMethod(v, key), nil
+		}
+		return Undefined, nil
+	case string:
+		if key == "length" {
+			return float64(utf16Len(v)), nil
+		}
+		if i := arrayIndex(key); i >= 0 {
+			if s, ok := utf16At(v, i); ok {
+				return s, nil
+			}
+			return Undefined, nil
+		}
+		if stringMethods[key] != nil {
+			return boundMethod(v, key), nil
+		}
+		return Undefined, nil
+	case *hostObject:
+		return r.getProp(v.view, key)
+	case float64:
+		if numberMethods[key] != nil {
+			return boundMethod(v, key), nil
+		}
+		return Undefined, nil
+	case bool:
+		if key == "toString" || key == "valueOf" {
+			return boundMethod(v, key), nil
+		}
+		return Undefined, nil
+	case *function:
+		if v.props != nil {
+			if p, ok := v.props.get(key); ok {
+				return p, nil
+			}
+		}
+		switch key {
+		case "name":
+			return v.name, nil
+		case "length":
+			if v.code != nil {
+				return float64(v.code.length), nil
+			}
+			return float64(0), nil
+		}
+		return Undefined, nil
+	case nil, undefined:
+		return nil, r.typeError("Cannot read property '" + key + "' of undefined")
+	case tdzMarker:
+		return nil, r.referenceError("Cannot access a variable before initialization")
+	}
+	return Undefined, nil
+}
+
+// boundMethod lets scripts read built-in methods as values (e.g. to test
+// typeof). Calling the value applies the method to its original receiver.
+func boundMethod(recv any, key string) *function {
+	return &function{name: key, native: func(r *rt, _ any, args []any) (any, error) {
+		return r.callBuiltinMethod(recv, key, args)
+	}}
+}
+
+func (r *rt) setProp(target any, key string, v any) error {
+	switch t := target.(type) {
+	case *object:
+		t.set(key, v)
+		return nil
+	case *array:
+		if key == "length" {
+			n, err := r.toNumber(v)
+			if err != nil {
+				return err
+			}
+			if n < 0 || n != math.Trunc(n) || n > math.MaxUint32-1 {
+				return r.rangeError("Invalid array length")
+			}
+			return r.resize(t, int(n))
+		}
+		if i := arrayIndex(key); i >= 0 {
+			if i >= len(t.items) {
+				if err := r.resize(t, i+1); err != nil {
+					return err
+				}
+			}
+			t.items[i] = v
+			return nil
+		}
+		return errRuntimeUnsupported("named property on an array")
+	case *hostObject:
+		t.dirty = true
+		t.view.set(key, v)
+		return nil
+	case nil, undefined:
+		return r.typeError("Cannot set property '" + key + "' of undefined")
+	case *function:
+		if t.native != nil || key == "name" || key == "length" {
+			return nil // built-ins and read-only function properties ignore writes
+		}
+		if t.props == nil {
+			t.props = newObject(1)
+		}
+		t.props.set(key, v)
+		return nil
+	}
+	return nil // primitives silently ignore writes in sloppy mode
+}
+
+func (r *rt) resize(a *array, n int) error {
+	if n > r.x.maxItems {
+		return r.rangeError("Invalid array length")
+	}
+	for len(a.items) < n {
+		a.items = append(a.items, Undefined)
+	}
+	a.items = a.items[:n]
+	return nil
+}
+
+func (r *rt) deleteProp(target any, key string) (bool, error) {
+	switch t := target.(type) {
+	case *object:
+		t.delete(key)
+		return true, nil
+	case *hostObject:
+		t.dirty = true
+		t.view.delete(key)
+		return true, nil
+	case *array:
+		if i := arrayIndex(key); i >= 0 {
+			if i < len(t.items) {
+				t.items[i] = Undefined
+			}
+			return true, nil
+		}
+		return key != "length", nil
+	case nil, undefined:
+		return false, r.typeError("Cannot convert undefined or null to object")
+	}
+	return true, nil
+}
+
+// hasProperty implements the `in` operator.
+func (r *rt) hasProperty(target any, key string) (bool, error) {
+	switch t := target.(type) {
+	case *object:
+		_, ok := t.get(key)
+		return ok || (t.errName != "" && key == "toString"), nil
+	case *hostObject:
+		_, ok := t.view.get(key)
+		return ok, nil
+	case *array:
+		if key == "length" || arrayMethods[key] != nil {
+			return true, nil
+		}
+		i := arrayIndex(key)
+		return i >= 0 && i < len(t.items), nil
+	case *function:
+		return key == "name" || key == "length", nil
+	}
+	return false, r.typeError("Cannot use 'in' operator to search for '" + key + "' in non-object")
+}
+
+func ownEnumerableKeys(v any) []string {
+	switch v := v.(type) {
+	case *object:
+		return v.ownKeys()
+	case *hostObject:
+		return v.view.ownKeys()
+	case *array:
+		keys := make([]string, len(v.items))
+		for i := range v.items {
+			keys[i] = strconv.Itoa(i)
+		}
+		return keys
+	case string:
+		n := utf16Len(v)
+		keys := make([]string, n)
+		for i := range n {
+			keys[i] = strconv.Itoa(i)
+		}
+		return keys
+	}
+	return nil
+}

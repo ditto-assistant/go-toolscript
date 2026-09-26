@@ -1,0 +1,58 @@
+Partial results preserved when a later call fails.
+-- script.js --
+const result = {prs: null, issues: null, errors: []};
+try { result.prs = mcp.github.list_pull_requests({owner:"acme", repo:"widget-service"}).length; } catch (e) { result.errors.push(String(e)); }
+try { result.issues = mcp.github.search_issues({query:"is:open"}).result.total_count; } catch (e) { result.errors.push(String(e)); }
+return result;
+-- tools.json --
+{
+  "github.list_pull_requests": [
+    {
+      "number": 101,
+      "title": "Add retry budget to fetcher",
+      "state": "open",
+      "user": {
+        "login": "alice"
+      },
+      "labels": [
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": false,
+      "updated_at": "2026-09-20T12:00:00Z"
+    },
+    {
+      "number": 102,
+      "title": "Fix flaky cache test",
+      "state": "open",
+      "user": {
+        "login": "bob"
+      },
+      "labels": [
+        {
+          "name": "tests"
+        },
+        {
+          "name": "backend"
+        }
+      ],
+      "draft": true,
+      "updated_at": "2026-09-21T08:15:00Z"
+    },
+    {
+      "number": 99,
+      "title": "Bump lint config",
+      "state": "closed",
+      "user": {
+        "login": "carol"
+      },
+      "labels": [],
+      "draft": false,
+      "updated_at": "2026-09-18T17:40:00Z"
+    }
+  ],
+  "github.search_issues": {
+    "$error": "secondary rate limit"
+  }
+}

@@ -65,7 +65,7 @@ func TestExamples(t *testing.T) {
 	}
 }
 func TestUnsupportedBeforeDispatch(t *testing.T) {
-	for _, s := range []string{`mcp.echo({}); for (;;) {}`, `mcp.echo({}); return Date.now()`, `mcp.echo({}); throw new Error('x')`, `mcp.echo({}); return eval('1')`, `const mcp={};return mcp.echo({})`, `const Promise={};return Promise.all([])`, `return mcp.echo({...x})`, `return mcp.echo({get x(){return 1}})`, `return mcp.echo({__proto__:{x:1}})`, `return mcp.echo({}).constructor`, `return mcp.echo({}).toString`, `return mcp.echo({}).x()`, `let a=1;a=2;return a`, `return Promise.all([Promise.all([])])`, `return mcp.echo({}); try {} catch(e){}`, `const a=a;return a`, `const a=1;const a=2`, `return [1].map(async x=>mcp.echo(x))`, `return mcp.echo(/x/)`, `return mcp.echo(1,2)`, `return mcp.call(name,{})`, `const r=mcp.echo({});return r[1e21]`, `return {0.1:1}`} {
+	for _, s := range []string{`mcp.echo({}); return Date.now()`, `mcp.echo({}); return eval('1')`, `return mcp.echo({...x})`, `return mcp.echo({get x(){return 1}})`, `return mcp.echo({__proto__:{x:1}})`, `return mcp.echo({}).constructor`, `return mcp.echo({}).toString`, `return Promise.all([Promise.all([])])`, `const a=1;const a=2`, `return mcp.echo(/x/)`, `return mcp.call(name,{})`, `return mcp.echo({}).match("x")`, `mcp.echo({}); label: for(;;) break label`, `return this`, `class A {}`, `return new Map()`, `return Object.keys(mcp)`, `return mcp.echo({}).x.bind(null)`, `return [1].map(function*(){})`, `"use strict"; return 1`, `return tools.echo`} {
 		if _, err := Compile(s, options()); !errors.Is(err, ErrUnsupported) {
 			t.Errorf("accepted %q (%v)", s, err)
 		}
@@ -76,6 +76,43 @@ func TestUnsupportedBeforeDispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+// Constructs outside the old pipeline subset now run with JS semantics.
+func TestGeneralSemantics(t *testing.T) {
+	cases := []struct{ code, want string }{
+		{`let a=1;a=2;return a`, `2`},
+		{`const mcp={echo:x=>({local:x})};return mcp.echo(1)`, `{"local":1}`},
+		{`try { throw new Error('x') } catch (e) { return String(e) }`, `"Error: x"`},
+		{`const r=mcp.echo({});return r[1e21]`, `null`},
+		{`return {0.1:1}`, `{"0.1":1}`},
+		{`return mcp.echo(1,2)`, `1`},
+		{`let n=0; for (;;) { if (++n > 3) break } return n`, `4`},
+		{`const xs=[3,1,2]; xs.sort(); return xs.map(x=>x*2).join("-")`, `"2-4-6"`},
+		{"const o={a:1}; for (const k in o) o[k+k]=o[k]; return `${Object.keys(o)}`", `"a,aa"`},
+		{`function fib(n){return n<2?n:fib(n-1)+fib(n-2)} return fib(15)`, `610`},
+		{`const {a=5, ...rest} = {b:2, c:3}; return [a, rest]`, `[5,{"b":2,"c":3}]`},
+		{`return [1,2,3].reduce((s,x)=>s+x) + "!"`, `"6!"`},
+		{`return JSON.stringify({b:1,a:[1,{c:2}]}, null, 1)`, `"{\n \"b\": 1,\n \"a\": [\n  1,\n  {\n   \"c\": 2\n  }\n ]\n}"`},
+		{`try { mcp.fail({}) } catch (e) { return [e.name, e.message, String(e)] }`, `["GoError","boom","GoError: boom"]`},
+		{`return (0.1+0.2).toFixed(2) + " " + 1e21 + " " + (-1e-7)`, `"0.30 1e+21 -1e-7"`},
+	}
+	for _, tt := range cases {
+		t.Run(tt.code, func(t *testing.T) {
+			r, e := compile(t, tt.code).Execute(context.Background(), ExecuteOptions{Dispatch: func(_ context.Context, name string, a any) (any, error) {
+				if name == "fail" {
+					return nil, errors.New("boom")
+				}
+				return a, nil
+			}})
+			if e != nil {
+				t.Fatal(e)
+			}
+			if got := encoded(t, r.Value); got != tt.want {
+				t.Fatalf("got %s want %s", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDifferentialSynchronous(t *testing.T) {
 	for _, source := range []string{
 		`const r=mcp.echo({a:1,b:"hi",c:[true,null]});return r;`,
@@ -192,6 +229,18 @@ func TestBudgets(t *testing.T) {
 	p := compile(t, `return [1,2,3].map(x=>[1,2,3].map(y=>mcp.echo({x,y})));`)
 	if _, err := p.Execute(context.Background(), ExecuteOptions{Dispatch: echo, MaxSteps: 4}); err == nil {
 		t.Fatal("no step limit")
+	}
+	if _, err := compile(t, `for (;;) {}`).Execute(context.Background(), ExecuteOptions{MaxSteps: 1000}); !errors.Is(err, errStepLimit) {
+		t.Fatalf("infinite loop: %v", err)
+	}
+	if _, err := compile(t, `function f(){return f()} return f()`).Execute(context.Background(), ExecuteOptions{}); err == nil || !strings.Contains(err.Error(), "Maximum call stack") {
+		t.Fatalf("recursion: %v", err)
+	}
+	if _, err := compile(t, `let s="x"; for (;;) s+=s`).Execute(context.Background(), ExecuteOptions{}); err == nil || !strings.Contains(err.Error(), "Invalid string length") {
+		t.Fatalf("string growth: %v", err)
+	}
+	if _, err := compile(t, `const a=[]; for (;;) a.push(a.length)`).Execute(context.Background(), ExecuteOptions{MaxArrayLength: 1000}); err == nil || !strings.Contains(err.Error(), "Invalid array length") {
+		t.Fatalf("array growth: %v", err)
 	}
 	var v any = float64(1)
 	for range 20 {

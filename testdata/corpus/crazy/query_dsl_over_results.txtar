@@ -1,0 +1,87 @@
+A tiny where/orderBy/limit query builder with closures, applied to tool results.
+-- script.js --
+function from(rows) {
+  const preds = [];
+  let order = null, lim = Infinity, fields = null;
+  const api = {
+    where(f, op, v) {
+      const get = r => f.split(".").reduce((o, k) => (o == null ? undefined : o[k]), r);
+      const ops = {"=": (a, b) => a === b, "!=": (a, b) => a !== b, ">": (a, b) => a > b, "<=": (a, b) => a <= b, "in": (a, b) => b.includes(a), "has": (a, b) => Array.isArray(a) && a.includes(b)};
+      preds.push(r => ops[op](get(r), v));
+      return api;
+    },
+    orderBy(f, dir = "asc") { order = {f, s: dir === "desc" ? -1 : 1}; return api; },
+    limit(n) { lim = n; return api; },
+    select(...fs) { fields = fs; return api; },
+    run() {
+      let out = rows.filter(r => preds.every(p => p(r)));
+      if (order) out = out.slice().sort((a, b) => (a[order.f] < b[order.f] ? -1 : a[order.f] > b[order.f] ? 1 : (a.identifier < b.identifier ? -1 : 1)) * order.s);
+      out = out.slice(0, lim);
+      return fields ? out.map(r => Object.fromEntries(fields.map(f => [f, r[f]]))) : out;
+    }
+  };
+  return api;
+}
+const issues = mcp.linear.list_issues({team: "ENG"}).nodes;
+return {
+  todo: from(issues).where("state.name", "=", "Todo").orderBy("priority").select("identifier", "priority").run(),
+  mine: from(issues).where("assignee.name", "in", ["Alice", "Carol"]).select("identifier").run(),
+  top2: from(issues).where("estimate", "<=", 3).orderBy("estimate", "desc").limit(2).select("identifier", "estimate").run()
+};
+-- tools.json --
+{
+  "linear.list_issues": {
+    "nodes": [
+      {
+        "identifier": "ENG-12",
+        "title": "Migrate cron jobs",
+        "state": {
+          "name": "In Progress"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Alice"
+        },
+        "estimate": 3
+      },
+      {
+        "identifier": "ENG-15",
+        "title": "Rate limit webhooks",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 1,
+        "assignee": null,
+        "estimate": 5
+      },
+      {
+        "identifier": "ENG-19",
+        "title": "Docs for SDK",
+        "state": {
+          "name": "Done"
+        },
+        "priority": 4,
+        "assignee": {
+          "name": "Bob"
+        },
+        "estimate": 1
+      },
+      {
+        "identifier": "ENG-21",
+        "title": "Alert on queue depth",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Carol"
+        },
+        "estimate": 2
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": null
+    }
+  }
+}

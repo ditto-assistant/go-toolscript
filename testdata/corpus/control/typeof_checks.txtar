@@ -1,0 +1,35 @@
+typeof checks to normalize a polymorphic field.
+-- script.js --
+const r = mcp.notes.search({query:"mixed"});
+return r.notes.map(n => {
+  if (typeof n.body === "string") return n.body.length;
+  if (typeof n.body === "number") return n.body;
+  if (n.body === null) return -1;
+  if (typeof n.body === "object") return Object.keys(n.body).length;
+  return typeof n.body;
+});
+-- tools.json --
+{
+  "notes.search": {
+    "notes": [
+      {
+        "body": "hello"
+      },
+      {
+        "body": 7
+      },
+      {
+        "body": null
+      },
+      {
+        "body": {
+          "a": 1,
+          "b": 2
+        }
+      },
+      {
+        "body": true
+      }
+    ]
+  }
+}

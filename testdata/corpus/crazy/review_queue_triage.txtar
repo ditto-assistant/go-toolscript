@@ -1,0 +1,112 @@
+Iterate a queue, fetch each review via $sequence, classify with thresholds, post comments for some.
+-- script.js --
+const queue = mcp["team-backroom"].list_queue({status: "open", limit: 10}).items;
+const decisions = [];
+let posted = 0;
+for (const item of queue) {
+  let r;
+  try { r = mcp["team-backroom"].get_review({submissionId: item.id}); }
+  catch (e) { decisions.push({id: item.id, decision: "error", why: e.message}); continue; }
+  if (r.status !== "open") { decisions.push({id: item.id, decision: "skip", why: "status " + r.status}); continue; }
+  const failing = r.checks.filter(c => !c.passed);
+  let decision, why;
+  if (!r.checks.length) { decision = "needs-checks"; why = "no checks ran"; }
+  else if (failing.length === 0 && r.score >= 0.85) { decision = "approve"; why = "green and score " + r.score; }
+  else if (failing.length > 0) { decision = "request-changes"; why = failing.map(c => c.name + (c.detail ? ` (${c.detail})` : "")).join("; "); }
+  else { decision = "manual"; why = "score " + r.score; }
+  if (decision === "request-changes" && posted < 2) {
+    mcp["team-backroom"].post_comment({submissionId: item.id, body: `Please fix: ${why}`});
+    posted++;
+  }
+  decisions.push({id: item.id, decision, why});
+}
+const tally = decisions.reduce((t, d) => (t[d.decision] = (t[d.decision] || 0) + 1, t), {});
+return {tally, posted, decisions};
+-- tools.json --
+{
+  "team-backroom.list_queue": {
+    "items": [
+      {
+        "id": "sub_1"
+      },
+      {
+        "id": "sub_2"
+      },
+      {
+        "id": "sub_3"
+      },
+      {
+        "id": "sub_4"
+      },
+      {
+        "id": "sub_5"
+      }
+    ]
+  },
+  "team-backroom.get_review": {
+    "$sequence": [
+      {
+        "submission_id": "sub_1",
+        "status": "open",
+        "score": 0.91,
+        "checks": [
+          {
+            "name": "lint",
+            "passed": true
+          },
+          {
+            "name": "tests",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "submission_id": "sub_2",
+        "status": "open",
+        "score": 0.55,
+        "checks": [
+          {
+            "name": "lint",
+            "passed": false
+          },
+          {
+            "name": "tests",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "submission_id": "sub_3",
+        "status": "closed",
+        "score": 0.88,
+        "checks": [
+          {
+            "name": "lint",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "submission_id": "sub_4",
+        "status": "open",
+        "score": 0.72,
+        "checks": [
+          {
+            "name": "tests",
+            "passed": false,
+            "detail": "3 failing"
+          }
+        ]
+      },
+      {
+        "submission_id": "sub_5",
+        "status": "open",
+        "score": 0.3,
+        "checks": []
+      }
+    ]
+  },
+  "team-backroom.post_comment": {
+    "ok": true
+  }
+}

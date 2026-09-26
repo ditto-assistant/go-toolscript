@@ -1,0 +1,25 @@
+Object literal getters and setters.
+-- script.js --
+const a = mcp.crm.get_account({id: "acct_9"});
+const view = {
+  _arr: a.arr,
+  get arrK() { return (this._arr / 1000).toFixed(1) + "k"; },
+  set arrK(v) { this._arr = parseFloat(v) * 1000; }
+};
+const before = view.arrK;
+view.arrK = "200";
+return [before, view.arrK];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

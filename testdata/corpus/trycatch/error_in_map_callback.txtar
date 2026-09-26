@@ -1,0 +1,14 @@
+Error thrown inside a map callback aborts the map and is caught.
+-- script.js --
+const ids = ["mem_001", "mem_404", "mem_002"];
+try {
+  return ids.map(id => mcp.fetch_memories({ids:[id]}).memories[0].content);
+} catch (e) {
+  return "map aborted: " + e.message;
+}
+-- tools.json --
+{
+  "fetch_memories": {
+    "$error": "memory store offline"
+  }
+}

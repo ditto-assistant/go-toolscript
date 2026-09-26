@@ -1,0 +1,10 @@
+trim/trimStart/trimEnd on padded fields.
+-- script.js --
+const n = mcp.notes.get({id:"n"});
+return [n.body.trim(), n.body.trimStart(), n.body.trimEnd(), n.body.length];
+-- tools.json --
+{
+  "notes.get": {
+    "body": "   padded value \t\n"
+  }
+}

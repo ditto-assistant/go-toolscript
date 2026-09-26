@@ -136,6 +136,12 @@ func (r *rt) rangeError(msg string) error     { return r.throw("RangeError", msg
 func (r *rt) referenceError(msg string) error { return r.throw("ReferenceError", msg) }
 func (r *rt) syntaxError(msg string) error    { return r.throw("SyntaxError", msg) }
 
+// TypeError lets Dispatch/HostDispatch raise a JavaScript TypeError (as a
+// JS host function would) instead of a GoError. It stays catchable.
+type TypeError struct{ Message string }
+
+func (e *TypeError) Error() string { return "TypeError: " + e.Message }
+
 func goError(err error) *Throw {
 	e := newError("GoError", err.Error())
 	e.set("value", newObject(0))
@@ -472,6 +478,10 @@ func (r *rt) effect(counter *atomic.Int64, limit int, label string, dispatch fun
 	}
 	if cerr := r.ctx.Err(); cerr != nil && errors.Is(err, cerr) {
 		return nil, err
+	}
+	var te *TypeError
+	if errors.As(err, &te) {
+		return nil, &Throw{Value: newError("TypeError", te.Message), cause: err}
 	}
 	return nil, goError(err)
 }

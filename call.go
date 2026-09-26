@@ -809,6 +809,8 @@ func classString(v any) string {
 			return "[object Map]"
 		}
 		return "[object Set]"
+	case *iterator:
+		return "[object " + t.name + " Iterator]"
 	case *object:
 		if t.errName != "" {
 			return "[object Error]"

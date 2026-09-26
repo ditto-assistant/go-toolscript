@@ -13,3 +13,5 @@ return {fn: mcp.search_memories, hits: r.hits, arrow: x => x + 1};
     ]
   }
 }
+-- divergence --
+Functions inside a returned value: Goja's Export cannot be JSON-encoded (Ditto then returns a %v dump with pointer addresses, which no engine can reproduce); the native engine encodes them as null like JSON.stringify would. Same as adversarial/arr_nested_undefined_export.

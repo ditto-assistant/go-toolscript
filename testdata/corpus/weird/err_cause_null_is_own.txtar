@@ -1,0 +1,8 @@
+Error cause given as null is still an own (hidden) property; an emptied name.
+-- script.js --
+const r = mcp.a.b({});
+const e = new Error("x", {cause: null});
+const f = new Error("y"); f.name = ""; 
+return [e.hasOwnProperty("cause"), e.cause === null, Object.keys(e), String(f), f.hasOwnProperty("name"), Object.keys(f)];
+-- tools.json --
+{"a.b": {"v": 1}}

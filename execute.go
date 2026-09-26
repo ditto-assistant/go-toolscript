@@ -114,11 +114,15 @@ type rt struct {
 type Throw struct {
 	Value any
 	cause error
+	text  *string // ToString(Value) when it ran script code (own toString)
 }
 
 func (t *Throw) Error() string {
 	if t.cause != nil {
 		return t.cause.Error()
+	}
+	if t.text != nil {
+		return *t.text
 	}
 	switch v := t.Value.(type) {
 	case *object:
@@ -224,6 +228,16 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (res Result,
 	}
 	if err == nil {
 		v, err = exportValue(v, r.location())
+	}
+	var thrown *Throw
+	if errors.As(err, &thrown) && thrown.cause == nil {
+		// Goja's runner reports ToString(value), which runs a script-defined
+		// toString/valueOf; Error() alone cannot call back into the script.
+		if o, ok := thrown.Value.(*object); ok && userConversion(o) {
+			if s, serr := r.toString(o); serr == nil {
+				thrown.text = &s
+			}
+		}
 	}
 	if x.fatal != nil {
 		err = x.fatal
@@ -762,15 +776,25 @@ func jsonValue(v any, depth int, nodes *int, omitUndefined bool) (any, error) {
 		return jsonValue(v.Export, depth+1, nodes, omitUndefined)
 	case map[string]any:
 		out := make(map[string]any, len(v))
+		var firstErr error
+		firstKey := ""
 		for k, a := range v {
 			if _, ok := a.(undefined); ok && omitUndefined {
 				continue
 			}
 			b, err := jsonValue(a, depth+1, nodes, omitUndefined)
 			if err != nil {
-				return nil, err
+				// encoding/json reports the failure under the smallest key;
+				// map iteration order must not pick the message.
+				if firstErr == nil || k < firstKey {
+					firstErr, firstKey = err, k
+				}
+				continue
 			}
 			out[k] = b
+		}
+		if firstErr != nil {
+			return nil, firstErr
 		}
 		return out, nil
 	case []any:

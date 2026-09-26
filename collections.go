@@ -13,6 +13,7 @@ type collection struct {
 	keys  []any
 	vals  []any
 	dead  []bool
+	props *object // own properties assigned by the script (m.k = v)
 	live  int
 	isMap bool
 }
@@ -192,7 +193,7 @@ func (r *rt) newCollectionFrom(isMap bool, args []any) (any, error) {
 		}
 		if !isObjectValue(item) {
 			s, _ := r.toString(item)
-			return nil, r.typeError("Iterator value " + s + " is not an entry object")
+			return nil, r.typeError("Value is not an object: " + s) // Goja's text
 		}
 		k, err := r.getProp(item, "0")
 		if err != nil {

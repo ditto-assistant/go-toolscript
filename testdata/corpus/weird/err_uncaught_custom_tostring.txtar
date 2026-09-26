@@ -1,0 +1,6 @@
+Uncaught plain object with a script-defined toString: the runner reports ToString(value).
+-- script.js --
+const r = mcp.a.b({});
+throw {toString() { return "custom " + r.v; }};
+-- tools.json --
+{"a.b": {"v": 1}}

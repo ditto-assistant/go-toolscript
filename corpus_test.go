@@ -470,12 +470,16 @@ func runGoja(c *corpusCase) outcome {
 	return out
 }
 
-func gojaErrorText(v goja.Value) string {
-	if o, ok := v.(*goja.Object); ok {
-		if name := o.Get("name"); name != nil && !goja.IsUndefined(name) {
-			return name.String() + ": " + o.Get("message").String()
+// gojaErrorText renders an uncaught exception the way Ditto's runner does:
+// classifyError reports goja.Exception.Error(), which is ToString(value)
+// followed by the stack position (stripped here, as native has none). So
+// `new Error()` reads "Error" and a thrown {name, message} "[object Object]".
+func gojaErrorText(v goja.Value) (text string) {
+	defer func() {
+		if recover() != nil {
+			text = "exception"
 		}
-	}
+	}()
 	return v.String()
 }
 

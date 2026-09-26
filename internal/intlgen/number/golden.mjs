@@ -212,6 +212,21 @@ for (let e = -12; e <= 24; e++) {
   }
 }
 
+// Rounding modes x increments x ties, and zero/negative-zero display.
+const tieValues = [0, -0, 0.5, -0.5, 1.5, 2.5, -2.5, 1.005, 1.015, 1.025, 1.045, 2.675, 0.125, 0.375, -0.125, 99.995, 1234.5, -1234.5, 0.0001, -0.0001, 1e-9, -1e-9, 12.345, "2.50", "-2.5000000000000000001", "0.12500000000000000000001"];
+for (const mode of ["ceil", "floor", "expand", "trunc", "halfCeil", "halfFloor", "halfExpand", "halfTrunc", "halfEven"]) {
+  for (const inc of [1, 2, 5, 10, 25, 50, 250, 5000]) {
+    for (const fd of [0, 1, 2, 3]) {
+      if (inc !== 1 && fd === 3 && inc > 100) continue;
+      nfCase(`round-${n++}`, "en", { roundingMode: mode, roundingIncrement: inc, minimumFractionDigits: fd, maximumFractionDigits: fd, signDisplay: pick(["auto", "exceptZero", "negative", "always"]) }, tieValues);
+    }
+  }
+  for (const sig of [1, 2, 3]) {
+    nfCase(`round-${n++}`, "en", { roundingMode: mode, maximumSignificantDigits: sig, minimumSignificantDigits: pick([1, sig]), notation: pick(["standard", "scientific", "engineering", "compact"]), minimumIntegerDigits: pick([1, 1, 3]) }, tieValues);
+    nfCase(`round-${n++}`, "en", { roundingMode: mode, maximumSignificantDigits: sig + 1, maximumFractionDigits: sig - 1, roundingPriority: pick(["morePrecision", "lessPrecision"]), trailingZeroDisplay: pick(["auto", "stripIfInteger"]) }, tieValues);
+  }
+}
+
 // ---------------------------------------------------------------- toLocaleString
 rand = mulberry32(99 + seedOffset);
 for (let i = 0; i < 400 * scale; i++) {

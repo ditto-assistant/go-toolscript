@@ -167,12 +167,12 @@ type cfunc struct {
 type compiler struct {
 	opts          CompileOptions
 	namespaceUsed bool
-	fn         *cfunc
-	sc         *cscope
-	depth      int
-	batchDepth int
-	loops      int
-	breakable  int
+	fn            *cfunc
+	sc            *cscope
+	depth         int
+	batchDepth    int
+	loops         int
+	breakable     int
 }
 
 // Compile validates the WHOLE source before producing an executable plan.

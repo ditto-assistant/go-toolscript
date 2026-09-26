@@ -76,6 +76,7 @@ func TestUnsupportedBeforeDispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 // Constructs outside the old pipeline subset now run with JS semantics.
 func TestGeneralSemantics(t *testing.T) {
 	cases := []struct{ code, want string }{

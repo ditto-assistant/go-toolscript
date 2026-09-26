@@ -205,8 +205,8 @@ func (c *corpusCase) compileOptions() CompileOptions {
 		}
 	}
 	return CompileOptions{
-		Bindings:      bindings,
-		Batches: true,
+		Bindings: bindings,
+		Batches:  true,
 		HostFunctions: map[string]HostFunction{
 			"bash":            {MinArgs: 1, MaxArgs: 3, StringArgs: []int{0}, JSONArgs: []int{1, 2}},
 			"mount_result":    {MinArgs: 1, MaxArgs: 1, StringArgs: []int{0}},

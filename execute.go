@@ -693,8 +693,11 @@ func (x *exporter) export(v any, depth int) (any, error) {
 		}
 		tm := timeFromMsec(t.msec).In(loc)
 		if x.strict && (tm.Year() < 0 || tm.Year() > 9999) {
-			// What json.Marshal reports for the exported time.Time.
-			return nil, errors.New("json: error calling MarshalJSON for type *time.Time: year outside of range [0,9999]")
+			// Report exactly what encoding/json says for the exported value
+			// inside an argument map (the text varies across Go versions).
+			if _, err := json.Marshal(map[string]any{"": tm}); err != nil {
+				return nil, err
+			}
 		}
 		return tm, nil
 	case *collection:

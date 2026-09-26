@@ -1,0 +1,13 @@
+Promise.all over ids.map(async id => ...) with locals in the body.
+-- script.js --
+const ids = ["acct_1", "acct_2", "acct_3"];
+const rows = await Promise.all(ids.map(async id => {
+  const a = await mcp.crm.get_account({id});
+  const label = `${a.args.id}`.toUpperCase();
+  return {id, label};
+}));
+return rows;
+-- tools.json --
+{
+  "crm.get_account": null
+}

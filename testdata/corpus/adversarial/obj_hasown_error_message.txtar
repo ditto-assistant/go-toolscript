@@ -1,0 +1,7 @@
+Object.hasOwn on an Error instance's message property.
+-- script.js --
+const e = new Error("m");
+const t = new TypeError("t");
+return [Object.hasOwn(e, "message"), e.hasOwnProperty("message"), Object.hasOwn(t, "message"), Object.hasOwn(e, "name"), Object.hasOwn(e, "stack")];
+-- tools.json --
+{}

@@ -1,0 +1,11 @@
+split with a limit and into characters.
+-- script.js --
+const r = mcp.notes.get({id:"csv"});
+const [header, ...rows] = r.body.split("\n");
+return {cols: header.split(","), first2: rows.slice(0, 2).map(x => x.split(",", 2)), chars: "abc".split("")};
+-- tools.json --
+{
+  "notes.get": {
+    "body": "id,name,score\n1,alpha,0.5\n2,beta,0.7\n3,gamma,0.9"
+  }
+}

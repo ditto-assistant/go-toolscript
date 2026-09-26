@@ -1,0 +1,21 @@
+Regex over non-ASCII and astral (emoji) subjects: indexes in UTF-16 units.
+-- script.js --
+const m = mcp.chat.last({});
+const s = m.text;
+const e = /ü/.exec(s);
+return {
+  len: s.length,
+  idx: e ? e.index : -1,
+  words: s.match(/[a-zé]+/gi),
+  replaced: s.replace(/é/g, "e"),
+  dots: s.replace(/./g, "."),
+  split: s.split(/ /),
+  search: s.search(/caf/),
+  test: /ü/.test(s),
+};
+-- tools.json --
+{
+  "chat.last": {
+    "text": "Caf\u00e9 \ud83c\udf89 \u00fcber na\u00efve \ud83c\udf89"
+  }
+}

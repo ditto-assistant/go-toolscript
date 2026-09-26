@@ -1,0 +1,19 @@
+Browser-style tool returning a nested session object.
+-- script.js --
+return mcp.browser_navigate({action:"open",url:"https://example.com/login",screenshot:false,timeout_ms:20000});
+-- tools.json --
+{
+  "browser_navigate": {
+    "browser": {
+      "id": "sess_1",
+      "url": "https://example.com/login",
+      "title": "Sign in"
+    },
+    "action_log": [
+      {
+        "operation": "navigate",
+        "success": true
+      }
+    ]
+  }
+}

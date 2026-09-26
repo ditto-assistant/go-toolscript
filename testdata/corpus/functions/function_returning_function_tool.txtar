@@ -1,0 +1,36 @@
+Factory creating per-server lookup functions.
+-- script.js --
+const lookup = (server) => (id) => server === "crm" ? mcp.crm.get_account({id}).name : mcp["team-backroom"].get_review({submissionId: id}).status;
+const crm = lookup("crm"), br = lookup("backroom");
+return [crm("acct_9"), br("sub_77")];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  },
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

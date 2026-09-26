@@ -1,0 +1,36 @@
+info/warn/error/debug are all captured.
+-- script.js --
+const t = mcp.call("mcp__acme-tracker__list_tickets", {});
+console.info("tickets", t.tickets.length);
+console.warn("high priority:", t.tickets.filter(x => x.priority === "high").length);
+console.error("closed:", t.tickets.filter(x => x.status === "closed").map(x => x.id).join(","));
+console.debug("debug line");
+return "logged";
+-- tools.json --
+{
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  }
+}

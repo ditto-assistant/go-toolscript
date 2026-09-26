@@ -1,0 +1,9 @@
+Same tool called twice with different args (echo default).
+-- script.js --
+const a = mcp.notes.search({query:"alpha"});
+const b = mcp.notes.search({query:"beta"});
+return [a.args.query, b.args.query];
+-- tools.json --
+{
+  "notes.search": null
+}

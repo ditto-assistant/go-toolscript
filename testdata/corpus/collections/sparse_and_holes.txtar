@@ -1,0 +1,22 @@
+Arrays with null entries from a tool, compacted with filter(Boolean).
+-- script.js --
+const r = mcp.notes.search({query:"x"});
+return {raw: r.notes.length, compact: r.notes.filter(Boolean).length, titles: r.notes.filter(n => n && n.title).map(n => n.title)};
+-- tools.json --
+{
+  "notes.search": {
+    "notes": [
+      {
+        "title": "a"
+      },
+      null,
+      {
+        "title": ""
+      },
+      {
+        "title": "b"
+      },
+      null
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+Objects with toJSON methods are serialized through them.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+const wrapped = {account: a.name, secret: {value: "hidden", toJSON() { return "[redacted]"; }}};
+return JSON.stringify(wrapped);
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

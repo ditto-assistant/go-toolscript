@@ -1,0 +1,313 @@
+Large payload logged with a hard slice limit.
+-- script.js --
+const r = mcp.notes.search({query:"*", limit:200});
+console.log("count", r.notes.length);
+console.log(JSON.stringify(r.notes).slice(0, 1500));
+return "ok";
+-- tools.json --
+{
+  "notes.search": {
+    "notes": [
+      {
+        "id": "note_000",
+        "title": "Meeting notes 0",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_001",
+        "title": "Meeting notes 1",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_002",
+        "title": "Meeting notes 2",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_003",
+        "title": "Meeting notes 3",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_004",
+        "title": "Meeting notes 4",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_005",
+        "title": "Meeting notes 5",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_006",
+        "title": "Meeting notes 6",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_007",
+        "title": "Meeting notes 7",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_008",
+        "title": "Meeting notes 8",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_009",
+        "title": "Meeting notes 9",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_010",
+        "title": "Meeting notes 10",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_011",
+        "title": "Meeting notes 11",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_012",
+        "title": "Meeting notes 12",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_013",
+        "title": "Meeting notes 13",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_014",
+        "title": "Meeting notes 14",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_015",
+        "title": "Meeting notes 15",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_016",
+        "title": "Meeting notes 16",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_017",
+        "title": "Meeting notes 17",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_018",
+        "title": "Meeting notes 18",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_019",
+        "title": "Meeting notes 19",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_020",
+        "title": "Meeting notes 20",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_021",
+        "title": "Meeting notes 21",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_022",
+        "title": "Meeting notes 22",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_023",
+        "title": "Meeting notes 23",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_024",
+        "title": "Meeting notes 24",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_025",
+        "title": "Meeting notes 25",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_026",
+        "title": "Meeting notes 26",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_027",
+        "title": "Meeting notes 27",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_028",
+        "title": "Meeting notes 28",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_029",
+        "title": "Meeting notes 29",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_030",
+        "title": "Meeting notes 30",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_031",
+        "title": "Meeting notes 31",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_032",
+        "title": "Meeting notes 32",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_033",
+        "title": "Meeting notes 33",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_034",
+        "title": "Meeting notes 34",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_035",
+        "title": "Meeting notes 35",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_036",
+        "title": "Meeting notes 36",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_037",
+        "title": "Meeting notes 37",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_038",
+        "title": "Meeting notes 38",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_039",
+        "title": "Meeting notes 39",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_040",
+        "title": "Meeting notes 40",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_041",
+        "title": "Meeting notes 41",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_042",
+        "title": "Meeting notes 42",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_043",
+        "title": "Meeting notes 43",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_044",
+        "title": "Meeting notes 44",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_045",
+        "title": "Meeting notes 45",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_046",
+        "title": "Meeting notes 46",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_047",
+        "title": "Meeting notes 47",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_048",
+        "title": "Meeting notes 48",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_049",
+        "title": "Meeting notes 49",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_050",
+        "title": "Meeting notes 50",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_051",
+        "title": "Meeting notes 51",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_052",
+        "title": "Meeting notes 52",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_053",
+        "title": "Meeting notes 53",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_054",
+        "title": "Meeting notes 54",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_055",
+        "title": "Meeting notes 55",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_056",
+        "title": "Meeting notes 56",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_057",
+        "title": "Meeting notes 57",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_058",
+        "title": "Meeting notes 58",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      },
+      {
+        "id": "note_059",
+        "title": "Meeting notes 59",
+        "body": "Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. Discussed roadmap items, owners and dates. "
+      }
+    ]
+  }
+}

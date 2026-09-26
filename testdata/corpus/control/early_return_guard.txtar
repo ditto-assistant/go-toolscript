@@ -1,0 +1,17 @@
+Early return when the tool returns nothing useful.
+-- script.js --
+const r = mcp.search_memories({queries:["quarterly offsite"], limit: 5});
+const hits = r.queries[0].results;
+if (!hits.length) return "no memories found";
+return hits.map(h => h.summary);
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "results": []
+      }
+    ]
+  }
+}

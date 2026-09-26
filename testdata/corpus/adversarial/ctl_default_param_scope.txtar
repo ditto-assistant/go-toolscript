@@ -1,0 +1,8 @@
+Default parameters see outer bindings, not body let/var declarations.
+-- script.js --
+const x = "outer";
+function f(a = x) { let x = "inner"; return a; }
+function g(a = x) { var x = "body"; return a; }
+return [f(), g()];
+-- tools.json --
+{}

@@ -1,0 +1,93 @@
+Parse a sheet into records, coerce numbers, compute mean/stddev, flag z-score outliers per category.
+-- script.js --
+const v = mcp.googlesheets.values_get({spreadsheetId: "sheet_ops", range: "Costs!A1:D20"}).values;
+const [head, ...rows] = v;
+const idx = Object.fromEntries(head.map((h, i) => [h.trim().toLowerCase(), i]));
+const recs = rows
+  .filter(r => r.length && r[idx.category])
+  .map(r => ({day: r[idx.day], category: r[idx.category].trim().toLowerCase(), cost: Number(String(r[idx.cost]).split(",").join("")), note: r[idx.note] || ""}))
+  .filter(r => !isNaN(r.cost));
+const byCat = {};
+for (const r of recs) (byCat[r.category] = byCat[r.category] || []).push(r);
+const report = {};
+for (const [cat, list] of Object.entries(byCat)) {
+  const n = list.length;
+  const mean = list.reduce((s, r) => s + r.cost, 0) / n;
+  const sd = Math.sqrt(list.reduce((s, r) => s + (r.cost - mean) ** 2, 0) / n);
+  const outliers = sd === 0 ? [] : list.filter(r => Math.abs(r.cost - mean) / sd > 1.5).map(r => `${r.day}: ${r.cost}${r.note ? " (" + r.note + ")" : ""}`);
+  report[cat] = {n, mean: Number(mean.toFixed(2)), sd: Number(sd.toFixed(2)), outliers};
+}
+return report;
+-- tools.json --
+{
+  "googlesheets.values_get": {
+    "values": [
+      [
+        "Day",
+        "Category",
+        "Cost",
+        "Note"
+      ],
+      [
+        "09-01",
+        "Compute",
+        "1,200",
+        ""
+      ],
+      [
+        "09-02",
+        "compute",
+        "1,150",
+        ""
+      ],
+      [
+        "09-03",
+        "Compute ",
+        "1,230",
+        ""
+      ],
+      [
+        "09-04",
+        "compute",
+        "4,900",
+        "load test"
+      ],
+      [
+        "09-05",
+        "compute",
+        "1,180",
+        ""
+      ],
+      [
+        "09-01",
+        "Storage",
+        "300",
+        ""
+      ],
+      [
+        "09-02",
+        "storage",
+        "310"
+      ],
+      [
+        "09-03",
+        "storage",
+        "n/a",
+        "missing"
+      ],
+      [
+        "09-04",
+        "storage",
+        "305",
+        ""
+      ],
+      [],
+      [
+        "09-05",
+        "Egress",
+        "90",
+        ""
+      ]
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+Projects the args back out of the default echo response.
+-- script.js --
+const r = mcp.call("mcp__acme-tracker__add_comment", {ticket: "T-1", body: "Following up"});
+return r.args.ticket + ":" + r.tool;
+-- tools.json --
+{
+  "mcp__acme-tracker__add_comment": null
+}

@@ -1,0 +1,6 @@
+JSON.stringify indent with numbers over 10, strings over 10 chars, 0 and negatives.
+-- script.js --
+const o = {a: [1, {b: 2}], c: "x"};
+return [JSON.stringify(o, null, 12), JSON.stringify(o, null, "-----------|"), JSON.stringify(o, null, 0), JSON.stringify(o, null, -3), JSON.stringify(o, null, 2.9), JSON.stringify(o, null, "\t"), JSON.stringify(o, null, "")];
+-- tools.json --
+{}

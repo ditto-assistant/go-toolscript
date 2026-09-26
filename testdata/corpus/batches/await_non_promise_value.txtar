@@ -1,0 +1,11 @@
+await on plain values and a tool result used in arithmetic.
+-- script.js --
+const n = await 5;
+const m = await mcp.crm.get_metrics({id: "acct_9"});
+return n + m.a;
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "a": 37
+  }
+}

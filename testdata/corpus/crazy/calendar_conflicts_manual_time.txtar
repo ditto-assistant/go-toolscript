@@ -1,0 +1,89 @@
+Parse ISO times by hand (no Date), detect overlaps, compute free slots.
+-- script.js --
+const ev = mcp.googlecalendar.events_list({calendarId: "primary", timeMin: "2026-09-25T00:00:00Z", timeMax: "2026-09-26T00:00:00Z"}).items;
+const toMin = iso => { const t = iso.split("T")[1]; const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
+const fmt = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+const timed = ev.filter(e => e.start.dateTime).map(e => ({id: e.id, title: e.summary, s: toMin(e.start.dateTime), e: toMin(e.end.dateTime)}))
+  .sort((a, b) => a.s - b.s || a.e - b.e || (a.id < b.id ? -1 : 1));
+const conflicts = [];
+for (let i = 0; i < timed.length; i++) {
+  for (let j = i + 1; j < timed.length && timed[j].s < timed[i].e; j++) {
+    conflicts.push(`${timed[i].title} overlaps ${timed[j].title} (${fmt(timed[j].s)}-${fmt(Math.min(timed[i].e, timed[j].e))})`);
+  }
+}
+const free = [];
+let cursor = 9 * 60;
+for (const t of timed) {
+  if (t.s > cursor) free.push(`${fmt(cursor)}-${fmt(t.s)}`);
+  cursor = Math.max(cursor, t.e);
+}
+if (cursor < 18 * 60) free.push(`${fmt(cursor)}-18:00`);
+const allDay = ev.filter(e => !e.start.dateTime).map(e => e.summary);
+return {conflicts, free, allDay, busyMinutes: timed.reduce((s, t) => s + (t.e - t.s), 0)};
+-- tools.json --
+{
+  "googlecalendar.events_list": {
+    "items": [
+      {
+        "id": "e1",
+        "summary": "Standup",
+        "start": {
+          "dateTime": "2026-09-25T09:30:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T09:45:00Z"
+        }
+      },
+      {
+        "id": "e2",
+        "summary": "Design review",
+        "start": {
+          "dateTime": "2026-09-25T11:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T12:00:00Z"
+        }
+      },
+      {
+        "id": "e3",
+        "summary": "Customer call",
+        "start": {
+          "dateTime": "2026-09-25T11:30:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T12:15:00Z"
+        }
+      },
+      {
+        "id": "e4",
+        "summary": "Lunch",
+        "start": {
+          "dateTime": "2026-09-25T12:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T13:00:00Z"
+        }
+      },
+      {
+        "id": "e5",
+        "summary": "Company holiday",
+        "start": {
+          "date": "2026-09-25"
+        },
+        "end": {
+          "date": "2026-09-26"
+        }
+      },
+      {
+        "id": "e6",
+        "summary": "Planning",
+        "start": {
+          "dateTime": "2026-09-25T15:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T16:30:00Z"
+        }
+      }
+    ]
+  }
+}

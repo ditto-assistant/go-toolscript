@@ -1,0 +1,14 @@
+Shell for-loop inside one bash call, with options object.
+-- script.js --
+return bash("for f in /results/001-googledrive-find-file.json /results/003-googledocs-get-document-by-id.json; do echo ===$f===; jq -r '.. | strings | select(length>40)' $f | head -5; done",undefined,{timeout_ms:5000});
+-- tools.json --
+{}
+-- bash.json --
+{
+  "for f in /results/001-googledrive-find-file.json /results/003-googledocs-get-document-by-id.json; do echo ===$f===; jq -r '.. | strings | select(length>40)' $f | head -5; done": {
+    "stdout": "===/results/001-googledrive-find-file.json===\napplication/vnd.google-apps.document\n===/results/003-googledocs-get-document-by-id.json===\nHiring may slip by two weeks.\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

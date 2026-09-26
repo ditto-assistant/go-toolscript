@@ -1,0 +1,17 @@
+Checks truncation flags on a large stdout.
+-- script.js --
+const x = bash("jq -r '.. | strings' /results/002-search-memories.json");
+return {truncated: !!x.truncated, stdoutTruncated: !!x.stdout_truncated, head: x.stdout.split("\n").slice(0, 2)};
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -r '.. | strings' /results/002-search-memories.json": {
+    "stdout": "mem_001\nAlice prefers async standups on Tuesdays.\nmem_002\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null,
+    "truncated": true,
+    "stdout_truncated": true
+  }
+}

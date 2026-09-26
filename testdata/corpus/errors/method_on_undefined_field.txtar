@@ -1,0 +1,19 @@
+Calling an array method on a field the response does not have (undefined).
+-- script.js --
+const d = mcp.crm.get_account({id: "acct_9"});
+const names = d.contacts_list.map(c => c.name);
+return names;
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

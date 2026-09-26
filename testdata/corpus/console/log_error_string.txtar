@@ -1,0 +1,14 @@
+console.error of a caught tool failure.
+-- script.js --
+try {
+  mcp.linear.get_issue({id: "ENG-404"});
+} catch (e) {
+  console.error("lookup failed:", String(e));
+}
+return "handled";
+-- tools.json --
+{
+  "linear.get_issue": {
+    "$error": "issue ENG-404 not found"
+  }
+}

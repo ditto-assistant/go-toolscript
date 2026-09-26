@@ -1,0 +1,6 @@
+split('') on astral characters splits UTF-16 code units.
+-- script.js --
+const parts = "a😀b".split("");
+return {n: parts.length, codes: parts.map(p => p.charCodeAt(0))};
+-- tools.json --
+{}

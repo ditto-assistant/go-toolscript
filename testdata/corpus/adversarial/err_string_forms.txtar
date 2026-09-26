@@ -1,0 +1,6 @@
+String(e), e.message, e.name, JSON.stringify(e), e.toString() and template for thrown Errors.
+-- script.js --
+const errs = [new Error("boom"), new TypeError("bad type"), new RangeError(), new Error(undefined), new Error(""), Error("no new")];
+return errs.map(e => [String(e), e.message, e.name, JSON.stringify(e), e.toString(), `${e}`, e + ""]);
+-- tools.json --
+{}

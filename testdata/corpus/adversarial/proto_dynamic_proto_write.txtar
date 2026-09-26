@@ -1,0 +1,10 @@
+Assigning to __proto__ through a dynamic key sets the prototype.
+-- script.js --
+const k = "__proto__";
+const o = {own: 1};
+o[k] = {inherited: 2};
+return [o.inherited, Object.keys(o), JSON.stringify(o)];
+-- tools.json --
+{}
+-- divergence --
+Assigning __proto__ through a dynamic key is outside the subset and raises ErrRuntimeUnsupported (hosts fall back when no effect has happened).

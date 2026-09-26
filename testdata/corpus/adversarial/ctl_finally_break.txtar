@@ -1,0 +1,7 @@
+break inside finally cancels a pending throw.
+-- script.js --
+let r = "none";
+for (;;) { try { throw new Error("lost"); } finally { r = "broke"; break; } }
+return r;
+-- tools.json --
+{}

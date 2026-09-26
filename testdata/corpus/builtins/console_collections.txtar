@@ -1,0 +1,12 @@
+console.log of Set, Map and iterators (exported values).
+-- script.js --
+const m = new Map([["a", 1], ["b", {x: 2}]]);
+console.log(m);
+console.log(new Set(["x", "y"]));
+console.log([1, 2].keys());
+console.log("size", m.size, new Set().size);
+return mcp.noop({m, s: new Set([1, 2])});
+-- tools.json --
+{
+  "noop": null
+}

@@ -1,0 +1,23 @@
+Numbered log lines inside a classic for loop.
+-- script.js --
+const r = mcp.search_web({query:"widgets"});
+for (let i = 0; i < r.results.length; i++) {
+  console.log((i + 1) + ". " + r.results[i].title + " <" + r.results[i].url + ">");
+}
+-- tools.json --
+{
+  "search_web": {
+    "results": [
+      {
+        "title": "Getting started with widgets",
+        "url": "https://example.com/widgets/start",
+        "snippet": "A short guide to widgets."
+      },
+      {
+        "title": "Widget API reference",
+        "url": "https://example.com/widgets/api",
+        "snippet": "Endpoints and parameters."
+      }
+    ]
+  }
+}

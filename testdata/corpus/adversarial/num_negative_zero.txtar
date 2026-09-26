@@ -1,0 +1,9 @@
+Negative zero through String, template, JSON, division and console.
+-- script.js --
+const z = -0;
+console.log(z, [z], {z});
+const m = -5 % 5;
+const r = Math.round(-0.4);
+return {s: String(z), t: `${z}`, j: JSON.stringify([z, -0.0, m, r]), inv: 1 / z, invm: 1 / m, invr: 1 / r, neg: -z};
+-- tools.json --
+{}

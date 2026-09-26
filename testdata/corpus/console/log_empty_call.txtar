@@ -1,0 +1,8 @@
+console.log() with no arguments emits an empty line.
+-- script.js --
+console.log("header");
+console.log();
+console.log("footer");
+return 1;
+-- tools.json --
+{}

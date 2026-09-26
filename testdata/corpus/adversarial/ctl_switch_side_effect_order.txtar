@@ -1,0 +1,8 @@
+Case expressions are evaluated in order until a match, even after default.
+-- script.js --
+const log = [];
+const t = v => { log.push(v); return v; };
+switch (3) { case t(1): break; default: log.push("d"); case t(2): break; case t(3): log.push("hit"); }
+return log;
+-- tools.json --
+{}

@@ -1,0 +1,13 @@
+Catch block rethrows a wrapped error.
+-- script.js --
+try {
+  return mcp.googledocs.get_document_by_id({id: "doc_gone"});
+} catch (e) {
+  throw new Error("could not load document: " + e.message);
+}
+-- tools.json --
+{
+  "googledocs.get_document_by_id": {
+    "$error": "document not found"
+  }
+}

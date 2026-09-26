@@ -1,0 +1,34 @@
+Counting occurrences into an object then sorting entries.
+-- script.js --
+const t = mcp.call("mcp__acme-tracker__list_tickets", {});
+const counts = {};
+for (const x of t.tickets) counts[x.customer] = (counts[x.customer] || 0) + 1;
+return Object.entries(counts).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+-- tools.json --
+{
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  }
+}

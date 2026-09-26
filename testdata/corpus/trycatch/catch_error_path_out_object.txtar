@@ -1,0 +1,14 @@
+Same shape as catch_success_path but the call fails.
+-- script.js --
+const out = {};
+try {
+  const res = mcp.github.search_code({query: "retryBudget in:file"});
+  out.search = (res.result || res);
+} catch(e) { out.err = String(e); }
+return out;
+-- tools.json --
+{
+  "github.search_code": {
+    "$error": "rate limited: retry after 30s"
+  }
+}

@@ -1,0 +1,37 @@
+Loop that stops after collecting N matches.
+-- script.js --
+const r = mcp.notes.search({query:"todo"});
+const out = [];
+for (const n of r.notes) {
+  if (out.length >= 3) break;
+  if (n.done) continue;
+  out.push(n.title);
+}
+return out;
+-- tools.json --
+{
+  "notes.search": {
+    "notes": [
+      {
+        "title": "a",
+        "done": false
+      },
+      {
+        "title": "b",
+        "done": true
+      },
+      {
+        "title": "c",
+        "done": false
+      },
+      {
+        "title": "d",
+        "done": false
+      },
+      {
+        "title": "e",
+        "done": false
+      }
+    ]
+  }
+}

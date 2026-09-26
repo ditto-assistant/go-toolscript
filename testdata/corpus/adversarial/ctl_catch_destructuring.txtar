@@ -1,0 +1,5 @@
+catch parameter destructuring.
+-- script.js --
+try { throw {code: 7, info: {msg: "m"}}; } catch ({code, info: {msg}, missing = "d"}) { return [code, msg, missing]; }
+-- tools.json --
+{}

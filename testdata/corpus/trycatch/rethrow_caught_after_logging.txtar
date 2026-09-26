@@ -1,0 +1,21 @@
+Logs then rethrows inside an outer try that converts it.
+-- script.js --
+function load() {
+  try {
+    return mcp.linear.list_issues({team: "ENG"});
+  } catch (e) {
+    console.log("inner:", String(e));
+    throw e;
+  }
+}
+try {
+  return load();
+} catch (e) {
+  return {outer: e.message};
+}
+-- tools.json --
+{
+  "linear.list_issues": {
+    "$error": "unauthorized: token expired"
+  }
+}

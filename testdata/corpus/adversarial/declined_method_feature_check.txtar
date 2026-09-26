@@ -1,0 +1,9 @@
+Feature-detecting a method before calling it.
+-- script.js --
+const s = "Crème";
+const norm = typeof s.normalize === "function" ? "has-normalize" : "no-normalize";
+const arr = [3, 1];
+const hasEntries = arr.entries ? "has-entries" : "no-entries";
+return [norm, hasEntries];
+-- tools.json --
+{}

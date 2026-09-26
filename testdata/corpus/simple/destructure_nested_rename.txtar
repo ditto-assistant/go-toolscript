@@ -1,0 +1,18 @@
+Nested destructuring with renaming and a default.
+-- script.js --
+const { owner: { name: ownerName }, region = "unknown" } = mcp.crm.get_account({id:"acct_9"});
+return ownerName + " / " + region;
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

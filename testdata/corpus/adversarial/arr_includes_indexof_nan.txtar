@@ -1,0 +1,8 @@
+includes finds NaN, indexOf does not; -0 vs +0.
+-- script.js --
+const a = [NaN, -0, "1", null, undefined];
+return [a.includes(NaN), a.indexOf(NaN), a.includes(0), a.indexOf(0), a.includes(1), a.includes(undefined), a.indexOf(undefined), a.includes(null, 4), a.lastIndexOf(null, -3), a.includes("1", -2)];
+-- tools.json --
+{}
+-- divergence --
+Goja bug: [-0].includes(0) is false in Goja; the spec (SameValueZero) and the native engine say true.

@@ -1,0 +1,42 @@
+Labeled break/continue, fn.call/apply/bind, Object.prototype helpers.
+-- script.js --
+const r = mcp.grid.get({});
+const found = [];
+outer: for (let i = 0; i < r.rows.length; i++) {
+  for (const cell of r.rows[i]) {
+    if (cell < 0) continue outer;
+    if (cell > 100) break outer;
+    found.push(cell);
+  }
+}
+let n = 0;
+block: { n = 1; if (r.rows.length) break block; n = 2; }
+function add(a, b, c) { return a + b + (c || 0); }
+const add5 = add.bind(null, 5);
+return {found, n, call: add.call(null, 1, 2), apply: add.apply(null, [1, 2, 3]), bound: add5(10), name: add5.name, len: add5.length,
+  own: Object.prototype.hasOwnProperty.call(r, "rows"), tag: Object.prototype.toString.call([]), tag2: Object.prototype.toString.call(null), sliced: Array.prototype.slice.call(r.rows[0], 1), holes: Array(3).length, arr: Array(2, 3), filled: new Array(3).fill(0)};
+-- tools.json --
+{
+  "grid.get": {
+    "rows": [
+      [
+        1,
+        2,
+        -1,
+        3
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        6,
+        200,
+        7
+      ],
+      [
+        8
+      ]
+    ]
+  }
+}

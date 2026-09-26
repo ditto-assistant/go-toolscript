@@ -1,0 +1,10 @@
+Object.assign and spread key order with overwrites.
+-- script.js --
+const a = {x: 1, y: 2};
+const b = {y: 3, z: 4, x: 5};
+const s = {...a, ...b, w: 0};
+const t = Object.assign({}, b, a);
+const u = Object.assign(a, null, undefined, {q: 1});
+return [Object.keys(s), JSON.stringify(t), u === a, JSON.stringify(u)];
+-- tools.json --
+{}

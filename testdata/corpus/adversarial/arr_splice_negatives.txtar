@@ -1,0 +1,14 @@
+splice/slice with negative, NaN, overflowing and fractional args.
+-- script.js --
+const a = [1, 2, 3, 4, 5, 6];
+const r1 = a.slice(-2), r2 = a.slice(2, -1), r3 = a.slice(-100, 2), r4 = a.slice(1.5, 3.9);
+const b = [1, 2, 3, 4, 5];
+const s1 = b.splice(-2, 1);
+const s2 = b.splice(1, -5, "x", "y");
+const s3 = b.splice(NaN, 1);
+const c = [1, 2, 3];
+const s4 = c.splice(1);
+const s5 = c.splice();
+return {r1, r2, r3, r4, s1, s2, s3, b, s4, s5, c};
+-- tools.json --
+{}

@@ -1,0 +1,25 @@
+Object.keys/values/entries on a response object.
+-- script.js --
+const q = mcp.crm.get_quota({id:"acct_9"});
+return {
+  keys: Object.keys(q),
+  used: Object.values(q).map(v => v.used),
+  pairs: Object.entries(q).map(([k, v]) => k + "=" + v.used + "/" + v.limit)
+};
+-- tools.json --
+{
+  "crm.get_quota": {
+    "seats": {
+      "used": 12,
+      "limit": 10
+    },
+    "storage": {
+      "used": 3,
+      "limit": 50
+    },
+    "api": {
+      "used": 1001,
+      "limit": 1000
+    }
+  }
+}

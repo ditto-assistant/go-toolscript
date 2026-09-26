@@ -1,0 +1,88 @@
+Promise.all with three calls across bindings styles.
+-- script.js --
+const [mem, tickets, review] = await Promise.all([
+  mcp.search_memories({queries: ["customer escalations"], limit: 5}),
+  mcp.call("mcp__acme-tracker__list_tickets", {status: "open"}),
+  mcp["team-backroom"].get_review({submissionId: "sub_77"})
+]);
+return {
+  memories: mem.queries[0].results.map(r => r.id),
+  open: tickets.tickets.filter(t => t.status === "open").length,
+  review: review.status
+};
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "query": "project kickoff notes",
+        "results": [
+          {
+            "id": "mem_001",
+            "summary": "Alice prefers async standups on Tuesdays.",
+            "score": 0.91,
+            "created_at": "2026-08-02T14:10:00Z",
+            "charLen": 212
+          },
+          {
+            "id": "mem_002",
+            "summary": "Widget-service launch moved to the second week of October.",
+            "score": 0.84,
+            "created_at": "2026-08-11T09:30:00Z",
+            "charLen": 344
+          },
+          {
+            "id": "mem_003",
+            "summary": "Bob owns the billing migration and wants weekly check-ins.",
+            "score": 0.77,
+            "created_at": "2026-07-28T16:45:00Z",
+            "charLen": 198
+          }
+        ]
+      }
+    ]
+  },
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  },
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

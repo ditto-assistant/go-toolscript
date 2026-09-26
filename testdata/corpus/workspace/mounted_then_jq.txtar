@@ -1,0 +1,25 @@
+Large result mounted as a file; path interpolated into a jq script.
+-- script.js --
+const r = mcp.search_memories({queries: ["everything"], limit: 200});
+const x = bash(`jq '[.queries[].results[] | .id] | length' ${r.path}`);
+return {path: r.path, count: x.json};
+-- tools.json --
+{
+  "search_memories": {
+    "path": "/results/002-search-memories.json",
+    "ref": "cmr_test_002search",
+    "content_type": "application/json",
+    "hint": "Re-process it with bash, for example jq or rg, instead of printing it.",
+    "bytes": 48213,
+    "large_result": true
+  }
+}
+-- bash.json --
+{
+  "jq '[.queries[].results[] | .id] | length' /results/002-search-memories.json": {
+    "stdout": "187\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": 187
+  }
+}

@@ -1,0 +1,106 @@
+Logging interleaved with several tool calls.
+-- script.js --
+console.log("fetching issues");
+const i = mcp.github.search_issues({query:"is:open"});
+console.log("issues:", i.result.items.length);
+console.log("fetching events");
+const e = mcp.googlecalendar.events_list({calendarId:"primary"});
+console.log("events:", e.items.length);
+return "ok";
+-- tools.json --
+{
+  "github.search_issues": {
+    "result": {
+      "incomplete_results": false,
+      "total_count": 3,
+      "items": [
+        {
+          "number": 42,
+          "title": "Composer loses focus on resize",
+          "state": "open",
+          "html_url": "https://git.example.com/acme/widget-app/issues/42",
+          "labels": [
+            {
+              "name": "bug"
+            }
+          ],
+          "comments": 4
+        },
+        {
+          "number": 57,
+          "title": "Add dark mode to settings page",
+          "state": "open",
+          "html_url": "https://git.example.com/acme/widget-app/issues/57",
+          "labels": [
+            {
+              "name": "feature"
+            }
+          ],
+          "comments": 1
+        },
+        {
+          "number": 12,
+          "title": "Crash when uploading empty file",
+          "state": "closed",
+          "html_url": "https://git.example.com/acme/widget-app/issues/12",
+          "labels": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "p1"
+            }
+          ],
+          "comments": 9
+        }
+      ]
+    }
+  },
+  "googlecalendar.events_list": {
+    "items": [
+      {
+        "id": "ev_1",
+        "summary": "Team sync",
+        "start": {
+          "dateTime": "2026-09-25T15:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T15:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "alice@example.com"
+          },
+          {
+            "email": "bob@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_2",
+        "summary": "1:1 with Carol",
+        "start": {
+          "dateTime": "2026-09-25T17:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T17:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "carol@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_3",
+        "summary": "Focus block",
+        "start": {
+          "date": "2026-09-26"
+        },
+        "end": {
+          "date": "2026-09-27"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+Reading a property of undefined inside try is caught.
+-- script.js --
+const r = mcp.crm.get_account({id:"acct_9"});
+try {
+  return r.billing.plan.name;
+} catch (e) {
+  return {error: e instanceof TypeError ? "TypeError" : "other", has: Object.keys(r).length};
+}
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

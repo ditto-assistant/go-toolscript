@@ -1,0 +1,13 @@
+Unary ops: !, !!, -, +, typeof, void.
+-- script.js --
+const m = mcp.crm.get_metrics({id:"acct_9"});
+return [!m.active, !!m.name, -m.delta, +m.str, typeof m.str, void 0 === undefined];
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "active": false,
+    "name": "x",
+    "delta": 4,
+    "str": "12.5"
+  }
+}

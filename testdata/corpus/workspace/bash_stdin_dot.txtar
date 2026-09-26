@@ -1,0 +1,23 @@
+bash("jq .", data) echo of a value.
+-- script.js --
+const data = {a: 1, list: [1, 2, 3]};
+const x = bash("jq -c .", data);
+return x.stdout.trim();
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -c .": {
+    "stdout": "{\"a\":1,\"list\":[1,2,3]}\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": {
+      "a": 1,
+      "list": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

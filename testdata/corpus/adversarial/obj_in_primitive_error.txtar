@@ -1,0 +1,5 @@
+in operator on a string right-hand side throws TypeError.
+-- script.js --
+try { return "x" in "str"; } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}

@@ -1,0 +1,8 @@
+Remainder of negative zero keeps the sign (fast integer path).
+-- script.js --
+const a = -0;
+const b = a % 3;
+const c = 0 * -1;
+return [1 / b, 1 / (c % 7), 1 / (-4 % 2), 1 / (4 % -2), 5.5 % 2, -5.5 % 2, 5 % 0].map(String);
+-- tools.json --
+{}

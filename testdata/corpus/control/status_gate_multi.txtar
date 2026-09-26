@@ -1,0 +1,33 @@
+Gate a write call on multiple conditions.
+-- script.js --
+const r = mcp["team-backroom"].get_review({submissionId:"sub_77"});
+const failing = r.checks.filter(c => !c.passed);
+if (r.status === "open" && failing.length > 0 && r.score < 0.8) {
+  const res = mcp["team-backroom"].post_comment({submissionId:"sub_77", body:"Failing checks: " + failing.map(c => c.name).join(", ")});
+  return res.ok ? "commented" : "comment failed";
+}
+return "no action";
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  },
+  "team-backroom.post_comment": {
+    "ok": true,
+    "id": "c_1"
+  }
+}

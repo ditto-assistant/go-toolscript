@@ -1,0 +1,7 @@
+Reading prototype members through a dynamic key.
+-- script.js --
+const o = {a: 1};
+const keys = ["a", "toString", "constructor", "hasOwnProperty", "__proto__", "isPrototypeOf"];
+return keys.map(k => typeof o[k]);
+-- tools.json --
+{}

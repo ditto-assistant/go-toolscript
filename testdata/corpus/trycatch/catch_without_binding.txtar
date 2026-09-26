@@ -1,0 +1,11 @@
+Optional catch binding: catch { ... }.
+-- script.js --
+let r;
+try { r = mcp.crm.get_account({id: "acct_missing"}); } catch { r = null; }
+return r === null ? "no account" : r.name;
+-- tools.json --
+{
+  "crm.get_account": {
+    "$error": "not found"
+  }
+}

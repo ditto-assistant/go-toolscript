@@ -1,0 +1,9 @@
+Script with a call and no return (result is undefined).
+-- script.js --
+mcp.notes.append({id:"note_5", text:"hello"});
+-- tools.json --
+{
+  "notes.append": {
+    "ok": true
+  }
+}

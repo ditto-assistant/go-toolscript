@@ -1,0 +1,37 @@
+ES class with constructor, methods and a static helper.
+-- script.js --
+class Tally {
+  constructor() { this.counts = {}; }
+  add(k) { this.counts[k] = (this.counts[k] || 0) + 1; return this; }
+  static from(xs) { const t = new Tally(); xs.forEach(x => t.add(x)); return t; }
+}
+const r = mcp.call("mcp__acme-tracker__list_tickets", {});
+return Tally.from(r.tickets.map(t => t.status)).counts;
+-- tools.json --
+{
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  }
+}

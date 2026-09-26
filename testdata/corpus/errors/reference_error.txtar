@@ -1,0 +1,21 @@
+Using an undeclared identifier.
+-- script.js --
+const r = mcp.search_web({query: "widgets"});
+return resultz.results.length;
+-- tools.json --
+{
+  "search_web": {
+    "results": [
+      {
+        "title": "Getting started with widgets",
+        "url": "https://example.com/widgets/start",
+        "snippet": "A short guide to widgets."
+      },
+      {
+        "title": "Widget API reference",
+        "url": "https://example.com/widgets/api",
+        "snippet": "Endpoints and parameters."
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+Object destructuring from a tool result.
+-- script.js --
+const { name, tier, arr } = mcp.crm.get_account({id: "acct_9"});
+return { name, tier, arr };
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

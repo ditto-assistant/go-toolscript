@@ -1,0 +1,116 @@
+Locate paragraph indices in a doc, compute a section range, then call an update tool with markdown.
+-- script.js --
+const id = "doc_abc";
+const d = mcp.googledocs.get_document_by_id({id, includeTabsContent: true});
+const content = d.tabs[0].documentTab.body.content;
+const p = content.filter(x => x.paragraph).map(x => ({
+  s: x.startIndex, e: x.endIndex,
+  t: (x.paragraph.elements || []).map(el => el.textRun?.content || "").join("").trim(),
+  style: x.paragraph.paragraphStyle?.namedStyleType || "NORMAL_TEXT"
+}));
+const i = p.findIndex(x => x.t.startsWith("Risks"));
+const j = p.findIndex((x, k) => k > i && x.style.startsWith("HEADING"));
+if (i < 0) return {error: "section not found", headings: p.filter(x => x.style !== "NORMAL_TEXT").map(x => x.t)};
+const end = j < 0 ? p[p.length - 1].e : p[j].s;
+const rows = [["Hiring slip", "medium", "Alice"], ["Vendor delay", "high", "Bob"]];
+const md = `### Risks
+
+| Risk | Severity | Owner |
+|---|---|---|
+${rows.map(r => `| ${r.join(" | ")} |`).join("\n")}
+`;
+const res = mcp.googledocs.update_document_section_markdown({document_id: id, tab_id: "t.0", start_index: p[i].s, end_index: end, markdown_text: md});
+return {range: [p[i].s, end], replaced: p.slice(i, j < 0 ? undefined : j).map(x => x.t), status: res.status};
+-- tools.json --
+{
+  "googledocs.get_document_by_id": {
+    "documentId": "doc_abc",
+    "title": "Q3 Planning",
+    "tabs": [
+      {
+        "tabProperties": {
+          "tabId": "t.0",
+          "title": "Main"
+        },
+        "documentTab": {
+          "body": {
+            "content": [
+              {
+                "startIndex": 1,
+                "endIndex": 13,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Q3 Planning\n"
+                      }
+                    }
+                  ],
+                  "paragraphStyle": {
+                    "namedStyleType": "HEADING_1"
+                  }
+                }
+              },
+              {
+                "startIndex": 13,
+                "endIndex": 40,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Goals: ship "
+                      }
+                    },
+                    {
+                      "textRun": {
+                        "content": "widget v2.\n"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "startIndex": 40,
+                "endIndex": 52,
+                "sectionBreak": {}
+              },
+              {
+                "startIndex": 52,
+                "endIndex": 70,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Risks\n"
+                      }
+                    }
+                  ],
+                  "paragraphStyle": {
+                    "namedStyleType": "HEADING_2"
+                  }
+                }
+              },
+              {
+                "startIndex": 70,
+                "endIndex": 110,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Hiring may slip by two weeks.\n"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "googledocs.update_document_section_markdown": {
+    "status": "submitted",
+    "revisionId": "rev_2"
+  }
+}

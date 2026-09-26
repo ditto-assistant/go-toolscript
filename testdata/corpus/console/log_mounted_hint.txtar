@@ -1,0 +1,17 @@
+Logs the hint from a mounted large result.
+-- script.js --
+const r = mcp.googledrive.find_file({q:"trashed = false", pageSize:1000});
+console.log(r.hint);
+console.log("bytes:", r.bytes, "path:", r.path);
+return r.ref;
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "path": "/results/003-googledrive-find-file.json",
+    "ref": "cmr_test_003google",
+    "content_type": "application/json",
+    "hint": "Re-process it with bash, for example jq or rg, instead of printing it.",
+    "bytes": 120455,
+    "large_result": true
+  }
+}

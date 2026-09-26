@@ -1,0 +1,42 @@
+Recursive leaf counter with an arrow function referencing itself.
+-- script.js --
+const tree = mcp.googledrive.list_tree({root: "root"});
+const leaves = n => (n.children && n.children.length) ? n.children.reduce((s, c) => s + leaves(c), 0) : 1;
+const depth = n => 1 + Math.max(0, ...(n.children || []).map(depth));
+return {leaves: leaves(tree), depth: depth(tree)};
+-- tools.json --
+{
+  "googledrive.list_tree": {
+    "id": "root",
+    "name": "Workspace",
+    "children": [
+      {
+        "id": "f1",
+        "name": "Specs",
+        "children": [
+          {
+            "id": "d1",
+            "name": "API spec",
+            "children": []
+          },
+          {
+            "id": "f2",
+            "name": "Drafts",
+            "children": [
+              {
+                "id": "d2",
+                "name": "Old draft",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "d3",
+        "name": "README",
+        "children": []
+      }
+    ]
+  }
+}

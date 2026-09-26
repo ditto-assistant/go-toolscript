@@ -1,0 +1,13 @@
+Error thrown deep inside nested helpers propagates to the top.
+-- script.js --
+function a(x) { return b(x) + 1; }
+function b(x) { return c(x) * 2; }
+function c(x) { if (x.value === undefined) throw new RangeError("value missing on " + x.id); return x.value; }
+const m = mcp.crm.get_metrics({id: "acct_9"});
+return a(m);
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "id": "acct_9"
+  }
+}

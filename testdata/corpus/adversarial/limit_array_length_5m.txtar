@@ -1,0 +1,8 @@
+Setting an array length to five million.
+-- script.js --
+const a = [];
+try { a.length = 5000000; return a.length; } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{}
+-- divergence --
+Huge sparse lengths are stored lazily by Goja; the engine raises ErrRuntimeUnsupported past 65536 holes instead of materializing them (hosts fall back before any effect).

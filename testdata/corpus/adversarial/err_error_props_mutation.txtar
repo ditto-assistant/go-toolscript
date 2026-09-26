@@ -1,0 +1,11 @@
+Mutating message/name on Error objects.
+-- script.js --
+const e = new Error("orig");
+e.message = "changed";
+e.name = "CustomError";
+e.code = 42;
+const f = new Error("x");
+f.message = 123;
+return [String(e), e.code, JSON.stringify(e), Object.keys(e), String(f), typeof f.message];
+-- tools.json --
+{}

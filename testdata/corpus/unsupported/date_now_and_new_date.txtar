@@ -1,0 +1,46 @@
+Date.now() and new Date() for relative time filtering.
+-- script.js --
+const now = Date.now();
+const r = mcp.gmail.fetch_emails({query: "in:inbox"});
+const ages = r.messages.map(m => Math.round((now - new Date(m.date).getTime()) / 3600000));
+return {count: ages.length, allPositive: ages.every(a => a > 0), iso: new Date(0).toISOString()};
+-- tools.json --
+{
+  "gmail.fetch_emails": {
+    "messages": [
+      {
+        "id": "msg_1",
+        "from": "alice@example.com",
+        "subject": "Re: launch checklist",
+        "snippet": "Looks good, one nit on step 4.",
+        "labelIds": [
+          "INBOX",
+          "UNREAD"
+        ],
+        "date": "2026-09-24T09:12:00Z"
+      },
+      {
+        "id": "msg_2",
+        "from": "billing@vendor.example",
+        "subject": "Your invoice is ready",
+        "snippet": "Invoice INV-0042 for September.",
+        "labelIds": [
+          "INBOX",
+          "CATEGORY_UPDATES"
+        ],
+        "date": "2026-09-23T06:00:00Z"
+      },
+      {
+        "id": "msg_3",
+        "from": "bob@example.com",
+        "subject": "Lunch?",
+        "snippet": "Free Thursday?",
+        "labelIds": [
+          "INBOX"
+        ],
+        "date": "2026-09-22T18:30:00Z"
+      }
+    ],
+    "nextPageToken": null
+  }
+}

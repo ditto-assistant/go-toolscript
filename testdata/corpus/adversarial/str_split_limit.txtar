@@ -1,0 +1,5 @@
+split with limits, missing separators and trailing separators.
+-- script.js --
+return ["a,b,c".split(",", 2), "a,b,c".split(",", 0), "a,b,c".split(",", -1), "a,b,,".split(","), "".split(","), "".split(""), "abc".split(), "a b  c".split(" "), "a,b".split(",", 10)];
+-- tools.json --
+{}

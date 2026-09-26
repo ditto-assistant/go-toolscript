@@ -1,0 +1,14 @@
+The `r.stdout || r` idiom on a bash result.
+-- script.js --
+const x=bash("jq -r '.documents[].name' /results/001-googledocs-search-documents.json"); return x.stdout||x;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -r '.documents[].name' /results/001-googledocs-search-documents.json": {
+    "stdout": "Q3 Planning\nOnboarding Checklist\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

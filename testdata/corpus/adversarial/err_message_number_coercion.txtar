@@ -1,0 +1,6 @@
+new Error(42).message is converted to the string "42".
+-- script.js --
+const e = new Error(42);
+return [typeof e.message, e.message, String(e), typeof new Error(null).message, new Error(null).message, new Error([1, 2]).message];
+-- tools.json --
+{}

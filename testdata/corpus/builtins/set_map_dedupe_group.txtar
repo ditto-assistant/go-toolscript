@@ -1,0 +1,43 @@
+Set/Map idioms: dedupe, grouping, counts, iteration order, size, delete during iteration.
+-- script.js --
+const r = mcp.crm.list_contacts({});
+const domains = [...new Set(r.contacts.map(c => c.email.split("@")[1]))];
+const byCompany = new Map();
+for (const c of r.contacts) {
+  if (!byCompany.has(c.company)) byCompany.set(c.company, []);
+  byCompany.get(c.company).push(c.name);
+}
+const counts = new Map();
+r.contacts.forEach(c => counts.set(c.company, (counts.get(c.company) || 0) + 1));
+const seen = new Set([NaN, 0, -0, "0"]);
+for (const k of seen) { if (k === "0") seen.delete(k); }
+const out = [];
+byCompany.forEach((names, company) => out.push(`${company}: ${names.join(", ")}`));
+return {domains, groups: Object.fromEntries(byCompany), counts: [...counts], out, seenSize: seen.size, seen: [...seen], keys: Array.from(counts.keys()), str: String(counts), json: JSON.stringify({s: new Set([1])}), top: [...counts.entries()].sort((a, b) => b[1] - a[1])[0]};
+-- tools.json --
+{
+  "crm.list_contacts": {
+    "contacts": [
+      {
+        "name": "Ann",
+        "email": "ann@acme.com",
+        "company": "Acme"
+      },
+      {
+        "name": "Bob",
+        "email": "bob@globex.com",
+        "company": "Globex"
+      },
+      {
+        "name": "Cy",
+        "email": "cy@acme.com",
+        "company": "Acme"
+      },
+      {
+        "name": "Di",
+        "email": "di@initech.com",
+        "company": "Initech"
+      }
+    ]
+  }
+}

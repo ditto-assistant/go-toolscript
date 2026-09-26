@@ -1,0 +1,15 @@
+MCP text-content envelope parsed with JSON.parse.
+-- script.js --
+const res = mcp.notion.search({query: "roadmap"});
+return JSON.parse(res.content[0].text).results.length;
+-- tools.json --
+{
+  "notion.search": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"results\": [{\"id\": \"page_1\", \"title\": \"Roadmap\"}, {\"id\": \"page_2\", \"title\": \"Roadmap archive\"}]}"
+      }
+    ]
+  }
+}

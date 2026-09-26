@@ -1,0 +1,37 @@
+Generator yielding pages lazily.
+-- script.js --
+function* pages() {
+  let tok = null, n = 0;
+  do {
+    const p = mcp.googledrive.find_file({q: "trashed = false", pageToken: tok});
+    yield p.files;
+    tok = p.nextPageToken;
+    n++;
+  } while (tok && n < 5);
+}
+const names = [];
+for (const files of pages()) names.push(...files.map(f => f.name));
+return names;
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "$sequence": [
+      {
+        "files": [
+          {
+            "name": "a"
+          }
+        ],
+        "nextPageToken": "t2"
+      },
+      {
+        "files": [
+          {
+            "name": "b"
+          }
+        ],
+        "nextPageToken": ""
+      }
+    ]
+  }
+}

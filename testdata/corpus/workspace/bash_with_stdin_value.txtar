@@ -1,0 +1,75 @@
+bash with a JS value piped as JSON stdin.
+-- script.js --
+const r = mcp.linear.list_issues({team: "ENG"});
+const x = bash("jq '[.nodes[] | select(.priority <= 2) | .identifier]'", r);
+return x.json;
+-- tools.json --
+{
+  "linear.list_issues": {
+    "nodes": [
+      {
+        "identifier": "ENG-12",
+        "title": "Migrate cron jobs",
+        "state": {
+          "name": "In Progress"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Alice"
+        },
+        "estimate": 3
+      },
+      {
+        "identifier": "ENG-15",
+        "title": "Rate limit webhooks",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 1,
+        "assignee": null,
+        "estimate": 5
+      },
+      {
+        "identifier": "ENG-19",
+        "title": "Docs for SDK",
+        "state": {
+          "name": "Done"
+        },
+        "priority": 4,
+        "assignee": {
+          "name": "Bob"
+        },
+        "estimate": 1
+      },
+      {
+        "identifier": "ENG-21",
+        "title": "Alert on queue depth",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Carol"
+        },
+        "estimate": 2
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": null
+    }
+  }
+}
+-- bash.json --
+{
+  "jq '[.nodes[] | select(.priority <= 2) | .identifier]'": {
+    "stdout": "[\n  \"ENG-12\",\n  \"ENG-15\",\n  \"ENG-21\"\n]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": [
+      "ENG-12",
+      "ENG-15",
+      "ENG-21"
+    ]
+  }
+}

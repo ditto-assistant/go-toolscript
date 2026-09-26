@@ -1,0 +1,19 @@
+Computed key built from a variable.
+-- script.js --
+const id = "acct_9";
+const a = mcp.crm.get_account({id});
+return {[id]: a.name};
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

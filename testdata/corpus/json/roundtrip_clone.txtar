@@ -1,0 +1,20 @@
+Deep clone via JSON round-trip then mutate the clone.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+const b = JSON.parse(JSON.stringify(a));
+b.owner.name = "Changed";
+return [a.owner.name, b.owner.name];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

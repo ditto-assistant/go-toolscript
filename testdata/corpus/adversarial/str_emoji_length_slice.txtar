@@ -1,0 +1,6 @@
+UTF-16 length, slice, substring and at() with astral characters.
+-- script.js --
+const s = "hi 😀 there 👍🏽!";
+return [s.length, s.slice(3, 5), s.slice(-4), s.substring(5, 3), s.at(-1), s.charAt(3).length, s.indexOf("there"), s.lastIndexOf("!"), s.slice(0, 4).length];
+-- tools.json --
+{}

@@ -1,0 +1,24 @@
+Result with a null field returned via projection.
+-- script.js --
+const r = mcp.googledocs.search_documents({query:"name contains 'Q3'"});
+return {count: r.documents.length, next: r.nextPageToken};
+-- tools.json --
+{
+  "googledocs.search_documents": {
+    "documents": [
+      {
+        "id": "doc_abc",
+        "name": "Q3 Planning",
+        "modifiedTime": "2026-09-01T10:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_abc"
+      },
+      {
+        "id": "doc_def",
+        "name": "Onboarding Checklist",
+        "modifiedTime": "2026-08-15T09:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_def"
+      }
+    ],
+    "nextPageToken": null
+  }
+}

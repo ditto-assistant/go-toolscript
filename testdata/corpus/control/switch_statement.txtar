@@ -1,0 +1,46 @@
+switch on a status string with fallthrough and default.
+-- script.js --
+const t = mcp.call("mcp__acme-tracker__list_tickets", {});
+const counts = {active: 0, done: 0, other: 0};
+for (const x of t.tickets) {
+  switch (x.status) {
+    case "open":
+    case "pending":
+      counts.active++;
+      break;
+    case "closed":
+      counts.done++;
+      break;
+    default:
+      counts.other++;
+  }
+}
+return counts;
+-- tools.json --
+{
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  }
+}

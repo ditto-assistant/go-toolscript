@@ -1,0 +1,12 @@
+Pushing and popping during forEach/map/filter uses the initial length.
+-- script.js --
+const a = [1, 2, 3];
+const seen = [];
+a.forEach((x, i) => { seen.push(x); if (i === 0) a.push(99); });
+const b = [1, 2, 3, 4];
+const mapped = b.map((x, i) => { if (i === 0) b.pop(); return x * 2; });
+const c = [1, 2, 3];
+const filtered = c.filter((x, i) => { if (i === 0) c.shift(); return true; });
+return {seen, a, mapped, b, filtered, c};
+-- tools.json --
+{}

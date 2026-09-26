@@ -1,0 +1,16 @@
+JSON.parse of a JSON string carried in a text field.
+-- script.js --
+const res = mcp.call("mcp__acme-tracker__raw_query", {sql: "select 1"});
+const rows = JSON.parse(res.content[0].text);
+return rows.map(r => r.name + ":" + r.count);
+-- tools.json --
+{
+  "mcp__acme-tracker__raw_query": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"name\": \"open\", \"count\": 4}, {\"name\": \"closed\", \"count\": 11}]"
+      }
+    ]
+  }
+}

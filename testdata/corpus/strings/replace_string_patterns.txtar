@@ -1,0 +1,15 @@
+replace (first only) vs replaceAll with string patterns.
+-- script.js --
+const n = mcp.notes.get({id:"note_7"});
+return {
+  first: n.body.replace("TODO", "DONE"),
+  all: n.body.replaceAll("TODO", "DONE"),
+  split: n.body.split("TODO").length - 1
+};
+-- tools.json --
+{
+  "notes.get": {
+    "id": "note_7",
+    "body": "TODO: a; TODO: b; TODO: c"
+  }
+}

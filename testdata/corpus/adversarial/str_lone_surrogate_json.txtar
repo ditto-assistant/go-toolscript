@@ -1,0 +1,8 @@
+JSON.stringify of a lone surrogate escapes it.
+-- script.js --
+const s = "👍".substring(0, 1);
+return JSON.stringify({s, t: "ok"});
+-- tools.json --
+{}
+-- divergence --
+Strings are UTF-8 internally: a lone surrogate becomes U+FFFD instead of a \ud83d escape.

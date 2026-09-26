@@ -1,0 +1,29 @@
+JSON.parse of bash stdout (ignoring the .json convenience field).
+-- script.js --
+const x = bash("jq -c '[.items[] | {id, score}]' /results/002-notes-list-scores.json");
+const arr = JSON.parse(x.stdout);
+return arr.filter(i => i.score > 0.5).map(i => i.id);
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -c '[.items[] | {id, score}]' /results/002-notes-list-scores.json": {
+    "stdout": "[{\"id\":\"a1\",\"score\":0.82},{\"id\":\"b2\",\"score\":0.45},{\"id\":\"c3\",\"score\":0.91}]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": [
+      {
+        "id": "a1",
+        "score": 0.82
+      },
+      {
+        "id": "b2",
+        "score": 0.45
+      },
+      {
+        "id": "c3",
+        "score": 0.91
+      }
+    ]
+  }
+}

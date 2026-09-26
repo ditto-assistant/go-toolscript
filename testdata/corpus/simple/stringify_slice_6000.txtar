@@ -1,0 +1,54 @@
+JSON.stringify(result).slice(0, 6000) - the most common truncation idiom.
+-- script.js --
+const r = mcp.github.search_issues({owner:"acme", repo:"widget-app", query:"composer focus", perPage:10});
+return JSON.stringify(r).slice(0, 6000);
+-- tools.json --
+{
+  "github.search_issues": {
+    "result": {
+      "incomplete_results": false,
+      "total_count": 3,
+      "items": [
+        {
+          "number": 42,
+          "title": "Composer loses focus on resize",
+          "state": "open",
+          "html_url": "https://git.example.com/acme/widget-app/issues/42",
+          "labels": [
+            {
+              "name": "bug"
+            }
+          ],
+          "comments": 4
+        },
+        {
+          "number": 57,
+          "title": "Add dark mode to settings page",
+          "state": "open",
+          "html_url": "https://git.example.com/acme/widget-app/issues/57",
+          "labels": [
+            {
+              "name": "feature"
+            }
+          ],
+          "comments": 1
+        },
+        {
+          "number": 12,
+          "title": "Crash when uploading empty file",
+          "state": "closed",
+          "html_url": "https://git.example.com/acme/widget-app/issues/12",
+          "labels": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "p1"
+            }
+          ],
+          "comments": 9
+        }
+      ]
+    }
+  }
+}

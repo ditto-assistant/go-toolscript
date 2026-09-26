@@ -1,0 +1,23 @@
+Grouping records by a field whose values collide with prototype names.
+-- script.js --
+const rows = mcp.db.rows({});
+const groups = {};
+for (const r of rows) { (groups[r.kind] ||= []).push(r.id); }
+return Object.keys(groups).map(k => k + ":" + groups[k].length);
+-- tools.json --
+{
+  "db.rows": [
+    {
+      "id": 1,
+      "kind": "toString"
+    },
+    {
+      "id": 2,
+      "kind": "task"
+    },
+    {
+      "id": 3,
+      "kind": "toString"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+Tool whose JSON result is a bare boolean.
+-- script.js --
+const ok = mcp.call("mcp__acme-tracker__ping", {});
+return ok ? "reachable" : "down";
+-- tools.json --
+{
+  "mcp__acme-tracker__ping": true
+}

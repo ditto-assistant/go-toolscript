@@ -1,0 +1,82 @@
+Reconcile sheet quantities vs system records, compute diffs, produce corrections, apply a bounded number of updates.
+-- script.js --
+const sheet = mcp.googlesheets.values_get({spreadsheetId: "inv", range: "A1:C10"}).values.slice(1);
+const sys = mcp.crm.list_inventory({warehouse: "w1"}).items;
+const want = {};
+for (const [sku, name, qty] of sheet) want[sku] = {name, qty: parseInt(qty, 10)};
+const have = Object.fromEntries(sys.map(i => [i.sku, i.qty]));
+const allSkus = [].concat(Object.keys(want), Object.keys(have)).filter((s, i, arr) => arr.indexOf(s) === i).sort();
+const diffs = [];
+for (const sku of allSkus) {
+  const w = want[sku] ? want[sku].qty : 0;
+  const h = have[sku] ?? 0;
+  if (Number.isNaN(w)) { diffs.push({sku, issue: "bad sheet qty"}); continue; }
+  if (w !== h) diffs.push({sku, name: want[sku]?.name ?? "(not in sheet)", sheet: w, system: h, delta: w - h});
+}
+const MAX_UPDATES = 2;
+const applied = [];
+for (const d of diffs.filter(d => d.delta !== undefined).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta) || (x.sku < y.sku ? -1 : 1)).slice(0, MAX_UPDATES)) {
+  const r = mcp.crm.update_inventory({warehouse: "w1", sku: d.sku, qty: d.sheet});
+  applied.push(`${d.sku}: ${d.system} -> ${d.sheet} (${r.ok ? "ok" : "failed"})`);
+}
+return {diffs, applied, remaining: diffs.length - applied.length};
+-- tools.json --
+{
+  "googlesheets.values_get": {
+    "values": [
+      [
+        "sku",
+        "name",
+        "qty"
+      ],
+      [
+        "A1",
+        "bolt",
+        "100"
+      ],
+      [
+        "B2",
+        "nut",
+        "40"
+      ],
+      [
+        "C3",
+        "washer",
+        "x"
+      ],
+      [
+        "D4",
+        "gear",
+        "7"
+      ],
+      [
+        "E5",
+        "spring",
+        "0"
+      ]
+    ]
+  },
+  "crm.list_inventory": {
+    "items": [
+      {
+        "sku": "A1",
+        "qty": 100
+      },
+      {
+        "sku": "B2",
+        "qty": 55
+      },
+      {
+        "sku": "D4",
+        "qty": 2
+      },
+      {
+        "sku": "F6",
+        "qty": 9
+      }
+    ]
+  },
+  "crm.update_inventory": {
+    "ok": true
+  }
+}

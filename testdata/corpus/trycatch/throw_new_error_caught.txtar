@@ -1,0 +1,20 @@
+throw new Error inside try is caught locally.
+-- script.js --
+const r = mcp.search_memories({queries:["nothing"]});
+try {
+  if (r.queries[0].results.length === 0) throw new Error("no results for query");
+  return r.queries[0].results[0];
+} catch (e) {
+  return {error: e.message};
+}
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "results": []
+      }
+    ]
+  }
+}

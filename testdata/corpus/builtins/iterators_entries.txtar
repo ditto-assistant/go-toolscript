@@ -1,0 +1,19 @@
+Array entries/keys/values iterators with for-of, spread and next().
+-- script.js --
+const r = mcp.notes.list({});
+const lines = [];
+for (const [i, n] of r.items.entries()) lines.push(`${i + 1}. ${n}`);
+const it = r.items.values();
+const first = it.next();
+const rest = [...it];
+return {lines, keys: [...r.items.keys()], first, rest, done: it.next(), str: String(r.items.keys()), json: JSON.stringify(r.items.entries())};
+-- tools.json --
+{
+  "notes.list": {
+    "items": [
+      "alpha",
+      "beta",
+      "gamma"
+    ]
+  }
+}

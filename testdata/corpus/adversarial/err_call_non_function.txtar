@@ -1,0 +1,14 @@
+Calling non-function values: numbers, strings, objects, undefined members.
+-- script.js --
+const out = [];
+const o = {n: 5, s: "str", obj: {}, arr: [1]};
+try { o.n(); } catch (e) { out.push(e.message); }
+try { o.s(); } catch (e) { out.push(e.message); }
+try { o.obj(); } catch (e) { out.push(e.message); }
+try { o.nope(); } catch (e) { out.push(e.message); }
+try { o.arr.nope(); } catch (e) { out.push(e.message); }
+try { "abc".nope(); } catch (e) { out.push(e.message); }
+try { (5).nope(); } catch (e) { out.push(e.message); }
+return out;
+-- tools.json --
+{}

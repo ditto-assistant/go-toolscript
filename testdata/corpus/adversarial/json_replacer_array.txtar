@@ -1,0 +1,6 @@
+JSON.stringify with replacer arrays (numbers, duplicates, nested).
+-- script.js --
+const o = {a: 1, b: {a: 2, c: 3}, 1: "one", c: [{a: 4, d: 5}]};
+return [JSON.stringify(o, ["a", "b"]), JSON.stringify(o, [1, "c", "a", "a"]), JSON.stringify(o, []), JSON.stringify([o.b], ["c"])];
+-- tools.json --
+{}

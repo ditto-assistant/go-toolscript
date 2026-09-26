@@ -1,0 +1,12 @@
+Math.max/min/round/floor/ceil/abs/sqrt/pow/trunc.
+-- script.js --
+const m = mcp.crm.get_metrics({id:"acct_9"});
+return [Math.round(m.x), Math.floor(m.x), Math.ceil(m.x), Math.abs(m.y), Math.sqrt(m.sq), Math.pow(2, 10), Math.trunc(-m.x), Math.round(-2.5), Math.round(2.5), Math.sign(m.y)];
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "x": 4.56,
+    "y": -3,
+    "sq": 81
+  }
+}

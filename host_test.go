@@ -39,9 +39,7 @@ func TestHostCompileBoundary(t *testing.T) {
 	for _, source := range []string{
 		`return bash();`, `return bash(42);`, `const s="echo";return bash(s);`,
 		`return bash("echo",1,2,3);`, `return bash.apply(null,["echo"]);`,
-		`const bash=1;return bash("echo");`, `return [1].map(bash=>bash("echo"));`,
-		`return bash("echo");var bash;`, `bash("echo"); while(true){}`, `return other("echo");`,
-		`return bash(...["echo"]);`,
+		`return other("echo");`, `return bash(...["echo"]);`, `return typeof bash.x;`,
 	} {
 		if _, err := Compile(source, hostOptions()); !errors.Is(err, ErrUnsupported) {
 			t.Fatalf("accepted %s: %v", source, err)
@@ -49,6 +47,17 @@ func TestHostCompileBoundary(t *testing.T) {
 	}
 	if _, err := Compile(`return bash("echo");`, CompileOptions{}); !errors.Is(err, ErrUnsupported) {
 		t.Fatal(err)
+	}
+	// A local binding named like a host function shadows it lexically.
+	for _, source := range []string{`const bash=1;return bash("echo");`, `return bash("echo");var bash;`} {
+		p, err := Compile(source, hostOptions())
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := p.Execute(t.Context(), ExecuteOptions{HostDispatch: func(context.Context, string, []any) (any, error) { t.Fatal("host called"); return nil, nil }})
+		if err == nil || r.HostCalls != 0 || !strings.Contains(err.Error(), "TypeError") {
+			t.Fatalf("%s: %+v %v", source, r, err)
+		}
 	}
 }
 func TestHostBudgetAndFailures(t *testing.T) {

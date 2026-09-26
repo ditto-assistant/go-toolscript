@@ -1,0 +1,20 @@
+Returns the whole bash result object (with undefined stdin arg).
+-- script.js --
+const out = bash("jq 'keys' /results/006-read-links.json", undefined); return out;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq 'keys' /results/006-read-links.json": {
+    "stdout": "[\n  \"results\"\n]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": [
+      "results"
+    ],
+    "shell": "bash",
+    "cwd": "/",
+    "timeout_ms": 2000,
+    "json_valid": true
+  }
+}

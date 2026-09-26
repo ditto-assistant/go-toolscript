@@ -1,0 +1,26 @@
+Transpose a 2D values array from a sheet.
+-- script.js --
+const v = mcp.googlesheets.values_get({spreadsheetId:"sheet_2", range:"A1:C3"}).values;
+return v[0].map((_, c) => v.map(row => row[c]));
+-- tools.json --
+{
+  "googlesheets.values_get": {
+    "values": [
+      [
+        "a",
+        "b",
+        "c"
+      ],
+      [
+        "1",
+        "2",
+        "3"
+      ],
+      [
+        "x",
+        "y",
+        "z"
+      ]
+    ]
+  }
+}

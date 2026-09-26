@@ -1,0 +1,33 @@
+Zip two parallel arrays by index.
+-- script.js --
+const v = mcp.googlesheets.values_get({spreadsheetId:"sheet_1", range:"A1:C4"}).values;
+const [head, ...rows] = v;
+return rows.map(row => Object.fromEntries(head.map((h, i) => [h, row[i] ?? null])));
+-- tools.json --
+{
+  "googlesheets.values_get": {
+    "range": "Sheet1!A1:C4",
+    "majorDimension": "ROWS",
+    "values": [
+      [
+        "name",
+        "qty",
+        "note"
+      ],
+      [
+        "bolt",
+        "10",
+        "ok"
+      ],
+      [
+        "nut",
+        "2"
+      ],
+      [
+        "washer",
+        "5",
+        "reorder"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+Stringified JSON embedded inside another stringify (double encoding).
+-- script.js --
+const r = mcp["team-backroom"].get_review({submissionId:"sub_77"});
+const inner = JSON.stringify(r.checks);
+const outer = JSON.stringify({id: r.submission_id, checks: inner});
+return {outer, back: JSON.parse(JSON.parse(outer).checks).length};
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

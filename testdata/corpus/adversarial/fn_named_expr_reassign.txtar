@@ -1,0 +1,7 @@
+Assigning to a named function expression's own name is ignored.
+-- script.js --
+const f = function g() { g = 5; return typeof g; };
+const h = function k(n) { return n <= 1 ? 1 : n * k(n - 1); };
+return [f(), h(5), typeof g === "undefined"];
+-- tools.json --
+{}

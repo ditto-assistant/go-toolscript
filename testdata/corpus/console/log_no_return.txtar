@@ -1,0 +1,24 @@
+console.log with no return statement.
+-- script.js --
+const sub = mcp["team-backroom"].get_review({submissionId:"sub_77"});
+console.log(JSON.stringify(sub).slice(0,4000));
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

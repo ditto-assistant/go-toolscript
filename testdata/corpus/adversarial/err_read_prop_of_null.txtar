@@ -1,0 +1,10 @@
+Reading a property of null reports null in the message.
+-- script.js --
+const r = mcp.crm.get({});
+try { return r.owner.name; } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{
+  "crm.get": {
+    "owner": null
+  }
+}

@@ -1,0 +1,16 @@
+Shared state read before an await in parallel callbacks.
+-- script.js --
+let done = 0;
+const rs = await Promise.all([1, 2, 3].map(async x => {
+  const before = done;
+  await mcp.crm.get({x});
+  done++;
+  return before;
+}));
+return {rs, done};
+-- tools.json --
+{
+  "crm.get": null
+}
+-- divergence --
+Async dialect: batch items run sequentially without microtask interleaving.

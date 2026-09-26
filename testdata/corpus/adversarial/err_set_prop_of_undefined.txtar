@@ -1,0 +1,10 @@
+Setting a property on undefined and null.
+-- script.js --
+const out = [];
+let u, n = null;
+try { u.x = 1; } catch (e) { out.push(e.message); }
+try { n.y = 2; } catch (e) { out.push(e.message); }
+try { n["z"] = 3; } catch (e) { out.push(e.message); }
+return out;
+-- tools.json --
+{}

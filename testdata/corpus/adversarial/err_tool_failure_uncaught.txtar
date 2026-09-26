@@ -1,0 +1,13 @@
+Uncaught tool failure error text.
+-- script.js --
+const a = mcp.crm.get({id: 1});
+return mcp.crm.update({id: a.id});
+-- tools.json --
+{
+  "crm.get": {
+    "id": 1
+  },
+  "crm.update": {
+    "$error": "HTTP 500: upstream exploded"
+  }
+}

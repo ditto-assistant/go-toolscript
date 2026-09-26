@@ -1,0 +1,8 @@
+console.log of an object containing NaN falls back to a string.
+-- script.js --
+console.log({a: NaN});
+console.log([1, NaN, Infinity]);
+console.log({x: [Infinity]});
+return "ok";
+-- tools.json --
+{}

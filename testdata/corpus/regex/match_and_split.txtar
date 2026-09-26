@@ -1,0 +1,25 @@
+String.match (global and not), split by regex with captures and limits, search.
+-- script.js --
+const r = mcp.logs.tail({n: 3});
+const text = r.lines.join("\n");
+return {
+  words: text.match(/\b[a-z]{4,}\b/g),
+  first: text.match(/(\d+)ms/),
+  none: text.match(/zzz/g),
+  parts: text.split(/\s*[;,]\s*/),
+  withCaps: "a1b22c".split(/(\d+)/),
+  limited: text.split(/\n/, 2),
+  lines: text.split(/^/m).length,
+  pos: text.search(/error/i),
+  multi: text.match(/^\w+/gm),
+};
+-- tools.json --
+{
+  "logs.tail": {
+    "lines": [
+      "GET /a 200 12ms; retry, cache",
+      "POST /b 500 340ms Error upstream",
+      "GET /c 200 8ms"
+    ]
+  }
+}

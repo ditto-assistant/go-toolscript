@@ -1,0 +1,18 @@
+Tool results enumerate keys sorted; new keys append after.
+-- script.js --
+const r = mcp.crm.get({});
+r.aaa = 1;
+r["10"] = "ten";
+return {keys: Object.keys(r), json: JSON.stringify(r)};
+-- tools.json --
+{
+  "crm.get": {
+    "zeta": 1,
+    "alpha": 2,
+    "5": "five",
+    "mid": {
+      "b": 1,
+      "a": 2
+    }
+  }
+}

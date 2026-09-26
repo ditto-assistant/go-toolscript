@@ -1,0 +1,63 @@
+toFixed and Math.round for percentage formatting.
+-- script.js --
+const r = mcp.linear.list_issues({team:"ENG"});
+const done = r.nodes.filter(n => n.state.name === "Done").length;
+const pct = done / r.nodes.length * 100;
+return [pct.toFixed(1) + "%", (2/3).toFixed(3), Math.round(pct * 10) / 10, (1234.56).toFixed(0), (0.000123).toFixed(5)];
+-- tools.json --
+{
+  "linear.list_issues": {
+    "nodes": [
+      {
+        "identifier": "ENG-12",
+        "title": "Migrate cron jobs",
+        "state": {
+          "name": "In Progress"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Alice"
+        },
+        "estimate": 3
+      },
+      {
+        "identifier": "ENG-15",
+        "title": "Rate limit webhooks",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 1,
+        "assignee": null,
+        "estimate": 5
+      },
+      {
+        "identifier": "ENG-19",
+        "title": "Docs for SDK",
+        "state": {
+          "name": "Done"
+        },
+        "priority": 4,
+        "assignee": {
+          "name": "Bob"
+        },
+        "estimate": 1
+      },
+      {
+        "identifier": "ENG-21",
+        "title": "Alert on queue depth",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Carol"
+        },
+        "estimate": 2
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": null
+    }
+  }
+}

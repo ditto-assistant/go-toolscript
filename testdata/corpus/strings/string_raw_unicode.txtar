@@ -1,0 +1,10 @@
+Unicode code points and length of non-BMP strings.
+-- script.js --
+const n = mcp.notes.get({id:"emoji"});
+return {len: n.body.length, cp0: n.body.codePointAt(0), cc: n.body.charCodeAt(1), from: String.fromCharCode(72, 105)};
+-- tools.json --
+{
+  "notes.get": {
+    "body": "😀 ok"
+  }
+}

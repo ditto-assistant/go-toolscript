@@ -1,0 +1,11 @@
+Strings with escapes built and stringified.
+-- script.js --
+const n = mcp.notes.get({id:"n"});
+const s = 'He said "hi"\\n' + "it's " + n.body + '\t\u00e9';
+return [s, s.length, JSON.stringify(s)];
+-- tools.json --
+{
+  "notes.get": {
+    "body": "C:\\path\\to\\file"
+  }
+}

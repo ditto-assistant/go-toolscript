@@ -1,0 +1,20 @@
+Manual CSV-to-objects conversion.
+-- script.js --
+const text = mcp.googledrive.download_file({fileId:"file_csv"}).content;
+const lines = text.trim().split("\n");
+const head = lines[0].split(",");
+const rows = lines.slice(1).map(l => {
+  const cells = l.split(",");
+  const o = {};
+  head.forEach((h, i) => { o[h] = isNaN(Number(cells[i])) ? cells[i] : Number(cells[i]); });
+  return o;
+});
+return rows.filter(r => r.qty > 2);
+-- tools.json --
+{
+  "googledrive.download_file": {
+    "fileId": "file_csv",
+    "mimeType": "text/csv",
+    "content": "sku,name,qty,price\nA1,bolt,10,0.25\nB2,nut,2,0.10\nC3,washer,5,0.05\n"
+  }
+}

@@ -1,0 +1,5 @@
+padStart/padEnd with multi-character and astral fill strings.
+-- script.js --
+return ["5".padStart(4, "ab"), "5".padEnd(6, "xyz"), "abc".padStart(2, "-"), "x".padStart(5, ""), "7".padStart(3, 0), "é".padEnd(3, "é"), "a".padStart(4, "😀").length];
+-- tools.json --
+{}

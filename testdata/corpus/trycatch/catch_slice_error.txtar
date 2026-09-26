@@ -1,0 +1,12 @@
+Error string sliced to a fixed length in a let fallback.
+-- script.js --
+let ath;
+try { ath = mcp["team-backroom"].get_review({submissionId:"sub_404"}); }
+catch(e){ ath = "ERR: "+String(e).slice(0,300); }
+return ath;
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "$error": "submission sub_404 not found"
+  }
+}

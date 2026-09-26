@@ -1,0 +1,29 @@
+else-if chain classifying a score.
+-- script.js --
+const r = mcp["team-backroom"].get_review({submissionId:"sub_77"});
+let band;
+if (r.score >= 0.9) band = "excellent";
+else if (r.score >= 0.7) band = "good";
+else if (r.score >= 0.5) band = "fair";
+else band = "poor";
+return band;
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

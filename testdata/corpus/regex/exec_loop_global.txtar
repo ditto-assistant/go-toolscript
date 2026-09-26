@@ -1,0 +1,16 @@
+Classic while-exec loop over a global regex; lastIndex advances.
+-- script.js --
+const doc = mcp.docs.get({id: "d1"});
+const re = /#(\w+)/g;
+const tags = [];
+let m;
+while ((m = re.exec(doc.body)) !== null) {
+  tags.push(m[1] + "@" + m.index + ":" + re.lastIndex);
+}
+return {tags, after: re.lastIndex};
+-- tools.json --
+{
+  "docs.get": {
+    "body": "Ship #alpha then #beta_2, skip # and #gamma."
+  }
+}

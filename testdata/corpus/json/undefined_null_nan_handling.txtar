@@ -1,0 +1,12 @@
+stringify of undefined, null, NaN, Infinity, functions, and -0.
+-- script.js --
+const m = mcp.crm.get_metrics({id:"acct_9"});
+const obj = {u: undefined, n: null, nan: m.a / m.zero - m.a / m.zero, inf: m.a / m.zero, fn: () => 1, negz: -0, arr: [undefined, () => 1, NaN]};
+return [JSON.stringify(obj), JSON.stringify(undefined), JSON.stringify(null), JSON.stringify(NaN), JSON.stringify("s")];
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "a": 1,
+    "zero": 0
+  }
+}

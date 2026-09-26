@@ -1,0 +1,35 @@
+Plain success inside try returns the value directly.
+-- script.js --
+try {
+  const r = mcp.googledrive.find_file({q:"name contains 'budget'"});
+  return r.files.map(f => f.name);
+} catch (e) {
+  return [];
+}
+-- tools.json --
+{
+  "googledrive.find_file": {
+    "files": [
+      {
+        "id": "file_001",
+        "name": "budget.xlsx",
+        "mimeType": "application/vnd.ms-excel",
+        "modifiedTime": "2026-09-10T08:00:00Z",
+        "size": "20480"
+      },
+      {
+        "id": "file_002",
+        "name": "Roadmap",
+        "mimeType": "application/vnd.google-apps.document",
+        "modifiedTime": "2026-09-12T13:20:00Z"
+      },
+      {
+        "id": "fold_001",
+        "name": "Archive",
+        "mimeType": "application/vnd.google-apps.folder",
+        "modifiedTime": "2026-06-01T00:00:00Z"
+      }
+    ],
+    "nextPageToken": ""
+  }
+}

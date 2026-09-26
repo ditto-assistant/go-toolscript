@@ -1,0 +1,58 @@
+ISO timestamp strings manipulated without Date.
+-- script.js --
+const ev = mcp.googlecalendar.events_list({calendarId:"primary"}).items;
+return ev.map(e => {
+  const iso = e.start.dateTime || (e.start.date + "T00:00:00Z");
+  const [day, time] = iso.split("T");
+  return {day, hhmm: time.slice(0, 5), month: Number(day.split("-")[1])};
+});
+-- tools.json --
+{
+  "googlecalendar.events_list": {
+    "items": [
+      {
+        "id": "ev_1",
+        "summary": "Team sync",
+        "start": {
+          "dateTime": "2026-09-25T15:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T15:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "alice@example.com"
+          },
+          {
+            "email": "bob@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_2",
+        "summary": "1:1 with Carol",
+        "start": {
+          "dateTime": "2026-09-25T17:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T17:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "carol@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_3",
+        "summary": "Focus block",
+        "start": {
+          "date": "2026-09-26"
+        },
+        "end": {
+          "date": "2026-09-27"
+        }
+      }
+    ]
+  }
+}

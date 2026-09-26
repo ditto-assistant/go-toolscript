@@ -1,0 +1,10 @@
+Half an emoji keeps its surrogate code unit.
+-- script.js --
+const s = "😀x";
+const hi = s.slice(0, 1);
+const lo = s[1];
+return [hi.charCodeAt(0), lo.charCodeAt(0), (hi + lo) === "😀", (hi + lo).length, s.charAt(0).charCodeAt(0), String.fromCharCode(0xD83D).charCodeAt(0)];
+-- tools.json --
+{}
+-- divergence --
+Strings are UTF-8 internally: a lone UTF-16 surrogate produced by slicing becomes U+FFFD (Goja keeps it until export, where it also becomes U+FFFD).

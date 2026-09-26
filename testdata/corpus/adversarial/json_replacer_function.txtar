@@ -1,0 +1,10 @@
+JSON.stringify with a replacer function (key, value, filtering).
+-- script.js --
+const o = {a: 1, b: "two", c: [1, 2], d: {e: null}};
+const keys = [];
+const s = JSON.stringify(o, (k, v) => { keys.push(k); return typeof v === "number" ? v * 10 : v; });
+const t = JSON.stringify(o, (k, v) => k === "b" ? undefined : v);
+const u = JSON.stringify(5, (k, v) => k === "" ? {wrapped: v, key: k} : v);
+return {s, t, u, keys};
+-- tools.json --
+{}

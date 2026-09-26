@@ -1,0 +1,9 @@
+console.log of nested objects, arrays with undefined and empty containers.
+-- script.js --
+console.log({a: {b: {c: [1, {d: null}]}}, e: [], f: {}});
+console.log([undefined, null, [undefined]]);
+console.log({u: undefined, n: null});
+console.log([[], {}], []);
+return 1;
+-- tools.json --
+{}

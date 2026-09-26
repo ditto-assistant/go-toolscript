@@ -1,0 +1,24 @@
+Pretty stringify with 2-space indent, then slice.
+-- script.js --
+const a = mcp.call("mcp__team-backroom__get_review", {submissionId: "sub_77"});
+return JSON.stringify(a, null, 2).slice(0, 6000);
+-- tools.json --
+{
+  "mcp__team-backroom__get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  }
+}

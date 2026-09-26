@@ -1,0 +1,27 @@
+Count keys at two levels of a nested response.
+-- script.js --
+const r = mcp.notion.fetch_data({id:"db_1"});
+const out = {};
+for (const [k, v] of Object.entries(r.properties)) out[k] = typeof v === "object" && v !== null ? Object.keys(v).length : 0;
+return out;
+-- tools.json --
+{
+  "notion.fetch_data": {
+    "id": "db_1",
+    "properties": {
+      "Name": {
+        "type": "title",
+        "id": "title"
+      },
+      "Status": {
+        "type": "select",
+        "id": "s1",
+        "options": [
+          "a",
+          "b"
+        ]
+      },
+      "Count": 3
+    }
+  }
+}

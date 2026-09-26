@@ -1,0 +1,23 @@
+Object literal with method shorthand and arrow properties.
+-- script.js --
+const fmt = {
+  money(n) { return "$" + n.toFixed(2); },
+  pct: n => (n * 100).toFixed(0) + "%",
+  line(a) { return a.name + " " + fmt.money(a.arr); }
+};
+const a = mcp.crm.get_account({id:"acct_9"});
+return [fmt.line(a), fmt.pct(0.256)];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

@@ -1,0 +1,12 @@
+Assigning a named property to an array after a tool call.
+-- script.js --
+const rows = mcp.db.rows({});
+rows.total = rows.length;
+return [rows.total, JSON.stringify(rows), Object.keys(rows)];
+-- tools.json --
+{
+  "db.rows": [
+    1,
+    2
+  ]
+}

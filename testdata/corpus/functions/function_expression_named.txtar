@@ -1,0 +1,11 @@
+Named function expression with recursion (factorial-like pagination depth).
+-- script.js --
+const r = mcp.crm.get_metrics({id:"acct_9"});
+const fact = function f(n) { return n <= 1 ? 1 : n * f(n - 1); };
+return fact(r.n);
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "n": 6
+  }
+}

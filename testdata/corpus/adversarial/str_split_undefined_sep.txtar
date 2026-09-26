@@ -1,0 +1,5 @@
+split(undefined) returns the whole string.
+-- script.js --
+return ["a,b".split(undefined), "xundefinedy".split(undefined)];
+-- tools.json --
+{}

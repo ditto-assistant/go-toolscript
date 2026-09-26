@@ -1,0 +1,37 @@
+Throwing a string literal and catching it.
+-- script.js --
+try {
+  const t = mcp.call("mcp__acme-tracker__list_tickets", {});
+  if (!t.tickets.some(x => x.status === "urgent")) throw "no urgent tickets";
+  return "urgent found";
+} catch (e) {
+  return typeof e + ": " + e;
+}
+-- tools.json --
+{
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  }
+}

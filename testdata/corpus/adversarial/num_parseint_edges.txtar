@@ -1,0 +1,5 @@
+parseInt edge inputs and radixes.
+-- script.js --
+return [parseInt("  42px"), parseInt("0x1f"), parseInt("0x1f", 16), parseInt("0x1f", 10), parseInt("1e3"), parseInt("-0"), parseInt(""), parseInt("12", 1), parseInt("12", 37), parseInt("z", 36), parseInt("101", 2), parseInt(0.0000005), parseInt("9007199254740993"), parseInt("-0x10"), parseInt("  +7"), parseInt("0b11"), parseInt(null, 36)];
+-- tools.json --
+{}

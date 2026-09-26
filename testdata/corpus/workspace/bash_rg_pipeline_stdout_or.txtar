@@ -1,0 +1,14 @@
+jq | rg | head pipeline with the x.stdout||x idiom.
+-- script.js --
+const x=bash("jq -r '.plain_text' /results/004-googledocs-get-document-plaintext.json | rg -n 'Risks|Owner|Timeline' | head -50"); return x.stdout||x;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "jq -r '.plain_text' /results/004-googledocs-get-document-plaintext.json | rg -n 'Risks|Owner|Timeline' | head -50": {
+    "stdout": "3:Owner: Alice\n9:Timeline: Q4\n14:Risks\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  }
+}

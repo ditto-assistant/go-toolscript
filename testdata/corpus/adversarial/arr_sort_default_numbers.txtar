@@ -1,0 +1,6 @@
+Default sort compares numbers as strings and moves undefined last.
+-- script.js --
+const xs = [10, 9, 1, 100, -1, undefined, 2, null, "b", "B", NaN, 0.5];
+return xs.sort().map(String);
+-- tools.json --
+{}

@@ -1,0 +1,19 @@
+Sloppy-mode `this` inside plain functions and methods.
+-- script.js --
+function who() { return typeof this; }
+const obj = {name: mcp.crm.get_account({id: "acct_9"}).name, hello() { return "hi " + this.name; }};
+return [who(), obj.hello()];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

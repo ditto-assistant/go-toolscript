@@ -1,0 +1,57 @@
+Build an inverted index over fetched document texts and answer multi-term queries with scoring.
+-- script.js --
+const docs = mcp.googledocs.search_documents({query: "mimeType = 'document'"}).documents;
+const texts = {};
+for (const d of docs) texts[d.id] = mcp.googledocs.get_document_plaintext({document_id: d.id}).plain_text;
+const stop = ["the", "a", "and", "of", "to", "in", "is", "for", "on"];
+const tokenize = s => s.toLowerCase().split(" ").join("\n").split("\n").map(w => w.split(".").join("").split(",").join("").split(":").join("")).filter(w => w && !stop.includes(w));
+const index = {};
+for (const [id, t] of Object.entries(texts)) {
+  tokenize(t).forEach((w, pos) => {
+    const posting = index[w] || (index[w] = {});
+    (posting[id] = posting[id] || []).push(pos);
+  });
+}
+function query(q) {
+  const terms = tokenize(q);
+  const scores = {};
+  for (const term of terms) {
+    const posting = index[term] || {};
+    const idf = Math.log(1 + docs.length / (1 + Object.keys(posting).length));
+    for (const [id, ps] of Object.entries(posting)) scores[id] = (scores[id] || 0) + ps.length * idf;
+  }
+  return Object.entries(scores).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(([id, s]) => `${docs.find(d => d.id === id).name} (${s.toFixed(3)})`);
+}
+return {vocab: Object.keys(index).length, launch: query("launch risks"), hiring: query("hiring plan"), none: query("zebra")};
+-- tools.json --
+{
+  "googledocs.search_documents": {
+    "documents": [
+      {
+        "id": "doc_1",
+        "name": "Plan"
+      },
+      {
+        "id": "doc_2",
+        "name": "Retro"
+      },
+      {
+        "id": "doc_3",
+        "name": "Hiring"
+      }
+    ]
+  },
+  "googledocs.get_document_plaintext": {
+    "$sequence": [
+      {
+        "plain_text": "Launch plan for October.\nRisks: vendor delay, hiring."
+      },
+      {
+        "plain_text": "Retro: the launch slipped. Risks were known. Risks: scope."
+      },
+      {
+        "plain_text": "Hiring plan: two engineers and a designer.\nHiring starts in Q4."
+      }
+    ]
+  }
+}

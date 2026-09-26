@@ -1,0 +1,6 @@
+JSON.stringify with indentation and nested empty arrays/objects.
+-- script.js --
+const o = {a: [], b: {}, c: [[]], d: [{}], e: {f: []}, g: [1, [], 2], h: {i: {}, j: 1}};
+return JSON.stringify(o, null, 2);
+-- tools.json --
+{}

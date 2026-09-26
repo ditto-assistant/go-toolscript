@@ -1,0 +1,106 @@
+Nested try blocks with an inner fallback to a different tool.
+-- script.js --
+let doc;
+try {
+  try {
+    doc = mcp.googledocs.get_document_by_id({id: "doc_old"});
+  } catch (inner) {
+    console.log("primary failed:", inner.message);
+    doc = mcp.googledrive.export_document({fileId: "doc_abc", mimeType: "application/json"});
+  }
+  return doc.title;
+} catch (outer) {
+  return "both failed: " + String(outer);
+}
+-- tools.json --
+{
+  "googledocs.get_document_by_id": {
+    "$error": "document doc_old was deleted"
+  },
+  "googledrive.export_document": {
+    "documentId": "doc_abc",
+    "title": "Q3 Planning",
+    "tabs": [
+      {
+        "tabProperties": {
+          "tabId": "t.0",
+          "title": "Main"
+        },
+        "documentTab": {
+          "body": {
+            "content": [
+              {
+                "startIndex": 1,
+                "endIndex": 13,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Q3 Planning\n"
+                      }
+                    }
+                  ],
+                  "paragraphStyle": {
+                    "namedStyleType": "HEADING_1"
+                  }
+                }
+              },
+              {
+                "startIndex": 13,
+                "endIndex": 40,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Goals: ship "
+                      }
+                    },
+                    {
+                      "textRun": {
+                        "content": "widget v2.\n"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "startIndex": 40,
+                "endIndex": 52,
+                "sectionBreak": {}
+              },
+              {
+                "startIndex": 52,
+                "endIndex": 70,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Risks\n"
+                      }
+                    }
+                  ],
+                  "paragraphStyle": {
+                    "namedStyleType": "HEADING_2"
+                  }
+                }
+              },
+              {
+                "startIndex": 70,
+                "endIndex": 110,
+                "paragraph": {
+                  "elements": [
+                    {
+                      "textRun": {
+                        "content": "Hiring may slip by two weeks.\n"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

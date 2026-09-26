@@ -1,0 +1,14 @@
+String concatenation mixing numbers in log lines.
+-- script.js --
+const m = mcp.crm.get_metrics({id:"acct_9"});
+console.log("total: " + m.a + m.b);
+console.log("sum: " + (m.a + m.b));
+console.log(m.a + m.b + " units");
+return m.a * m.b;
+-- tools.json --
+{
+  "crm.get_metrics": {
+    "a": 7,
+    "b": 5
+  }
+}

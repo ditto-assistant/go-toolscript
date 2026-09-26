@@ -1,0 +1,11 @@
+A tool call without await in the async dialect yields a promise, not the value.
+-- script.js --
+const first = await mcp.crm.get({id: 1});
+const second = mcp.crm.get({id: 2});
+try { return [first.args.id, second.args === undefined, typeof second]; } catch (e) { return e.message; }
+-- tools.json --
+{
+  "crm.get": null
+}
+-- divergence --
+Async dialect: tool calls return values, so a call without await is already the result rather than a Promise.

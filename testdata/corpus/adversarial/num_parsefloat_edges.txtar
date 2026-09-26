@@ -1,0 +1,5 @@
+parseFloat edge inputs.
+-- script.js --
+return [parseFloat("3.14abc"), parseFloat(".5"), parseFloat("-.5e2x"), parseFloat("Infinityx"), parseFloat("-Infinity"), parseFloat("1e"), parseFloat("1e+"), parseFloat("0x10"), parseFloat("  \n 7"), parseFloat("+"), parseFloat("1.2.3"), parseFloat("1e400"), parseFloat("-0")].map(String);
+-- tools.json --
+{}

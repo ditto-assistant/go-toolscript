@@ -1,0 +1,57 @@
+Partition into two arrays with a single reduce.
+-- script.js --
+const r = mcp.notes.list_scores({});
+const [pass, fail] = r.items.reduce(([p, f], i) => i.score >= 0.6 ? [[...p, i.name], f] : [p, [...f, i.name]], [[], []]);
+return {pass, fail};
+-- tools.json --
+{
+  "notes.list_scores": {
+    "items": [
+      {
+        "id": "a1",
+        "name": "alpha",
+        "score": 0.82,
+        "team": "red",
+        "tags": [
+          "x",
+          "y"
+        ]
+      },
+      {
+        "id": "b2",
+        "name": "bravo",
+        "score": 0.45,
+        "team": "blue",
+        "tags": [
+          "y"
+        ]
+      },
+      {
+        "id": "c3",
+        "name": "charlie",
+        "score": 0.91,
+        "team": "red",
+        "tags": []
+      },
+      {
+        "id": "d4",
+        "name": "delta",
+        "score": 0.63,
+        "team": "green",
+        "tags": [
+          "x",
+          "z"
+        ]
+      },
+      {
+        "id": "e5",
+        "name": "echo",
+        "score": 0.27,
+        "team": "blue",
+        "tags": [
+          "z"
+        ]
+      }
+    ]
+  }
+}

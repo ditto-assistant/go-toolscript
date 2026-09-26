@@ -1,0 +1,12 @@
+Deeply nested args with arrays of objects.
+-- script.js --
+return mcp.googlesheets.batch_update({spreadsheetId:"sheet_1", requests:[{updateCells:{range:{sheetId:0,startRowIndex:0,endRowIndex:1},rows:[{values:[{userEnteredValue:{stringValue:"Name"}},{userEnteredValue:{numberValue:3}}]}],fields:"userEnteredValue"}}]});
+-- tools.json --
+{
+  "googlesheets.batch_update": {
+    "spreadsheetId": "sheet_1",
+    "replies": [
+      {}
+    ]
+  }
+}

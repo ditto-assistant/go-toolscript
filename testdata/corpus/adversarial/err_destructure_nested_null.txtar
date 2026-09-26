@@ -1,0 +1,10 @@
+Nested destructuring of a null field from a tool result.
+-- script.js --
+const r = mcp.crm.get({});
+try { const {owner: {name}} = r; return name; } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{
+  "crm.get": {
+    "owner": null
+  }
+}

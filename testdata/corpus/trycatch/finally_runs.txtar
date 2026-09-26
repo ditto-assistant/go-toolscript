@@ -1,0 +1,19 @@
+finally block runs after the catch and mutates a log.
+-- script.js --
+const log = [];
+try {
+  log.push("before");
+  mcp.notes.delete({id:"note_5"});
+  log.push("after");
+} catch (e) {
+  log.push("caught");
+} finally {
+  log.push("finally");
+}
+return log;
+-- tools.json --
+{
+  "notes.delete": {
+    "$error": "permission denied"
+  }
+}

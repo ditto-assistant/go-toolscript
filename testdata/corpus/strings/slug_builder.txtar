@@ -1,0 +1,24 @@
+Build URL slugs with split/join and lowercase (no regex).
+-- script.js --
+const r = mcp.googledocs.search_documents({query:"*"});
+return r.documents.map(d => d.name.toLowerCase().split(" ").filter(Boolean).join("-"));
+-- tools.json --
+{
+  "googledocs.search_documents": {
+    "documents": [
+      {
+        "id": "doc_abc",
+        "name": "Q3 Planning",
+        "modifiedTime": "2026-09-01T10:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_abc"
+      },
+      {
+        "id": "doc_def",
+        "name": "Onboarding Checklist",
+        "modifiedTime": "2026-08-15T09:00:00Z",
+        "webViewLink": "https://docs.example.com/d/doc_def"
+      }
+    ],
+    "nextPageToken": null
+  }
+}

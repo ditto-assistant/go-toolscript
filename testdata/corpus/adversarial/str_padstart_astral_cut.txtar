@@ -1,0 +1,8 @@
+padStart that cuts an astral fill string in half.
+-- script.js --
+const p = "a".padStart(4, "😀");
+return [p.length, p.charCodeAt(2), JSON.stringify(p)];
+-- tools.json --
+{}
+-- divergence --
+Strings are UTF-8 internally: a lone surrogate becomes U+FFFD instead of a \ud83d escape.

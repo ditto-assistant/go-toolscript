@@ -1,0 +1,9 @@
+for-of over non-iterables.
+-- script.js --
+const out = [];
+for (const v of [null, undefined, 5, {a: 1}]) {
+  try { for (const x of v) {} } catch (e) { out.push(e.name + ": " + e.message); }
+}
+return out;
+-- tools.json --
+{}

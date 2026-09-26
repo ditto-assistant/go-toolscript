@@ -1,0 +1,6 @@
+JSON.parse of edge values: big numbers, exponents, unicode escapes, duplicate keys.
+-- script.js --
+const vals = ["1e999", "-1e999", "12345678901234567890", "1E2", "-0", "0.1e-400", "\"\\ud83d\\ude00\"", "\"\\u00e9\"", "{\"a\":1,\"a\":2,\"b\":3}", " [ ] ", "true", "{\"__proto__\":1}"];
+return vals.map(s => { try { const v = JSON.parse(s); return typeof v + ":" + JSON.stringify(v); } catch (e) { return "E " + e.message; } });
+-- tools.json --
+{}

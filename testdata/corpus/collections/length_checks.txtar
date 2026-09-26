@@ -1,0 +1,18 @@
+length checks on arrays and strings, empty handling.
+-- script.js --
+const r = mcp.notes.search({query:"x"});
+return {
+  n: r.notes.length, empty: r.notes.length === 0,
+  firstLen: r.notes.length ? r.notes[0].title.length : 0,
+  arrLen: new Array(3).length, trunc: (() => { const a = [1,2,3,4]; a.length = 2; return a; })()
+};
+-- tools.json --
+{
+  "notes.search": {
+    "notes": [
+      {
+        "title": "hello world"
+      }
+    ]
+  }
+}

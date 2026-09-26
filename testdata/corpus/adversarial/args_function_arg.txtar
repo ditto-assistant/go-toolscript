@@ -1,0 +1,7 @@
+Passing a function as the whole tool argument.
+-- script.js --
+try { return mcp.search.run(() => 1); } catch (e) { return [e.name, e.message]; }
+-- tools.json --
+{
+  "search.run": null
+}

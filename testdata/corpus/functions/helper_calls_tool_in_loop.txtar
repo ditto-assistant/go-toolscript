@@ -1,0 +1,47 @@
+Helper declared as a function that calls a tool, used in a loop.
+-- script.js --
+function reviewSummary(id) {
+  const r = mcp["team-backroom"].get_review({submissionId: id});
+  const failed = r.checks.filter(c => !c.passed).map(c => c.name);
+  return `${id}: ${r.status} (${failed.length ? "failing " + failed.join(",") : "all green"})`;
+}
+const out = [];
+for (const id of ["sub_1", "sub_2", "sub_3"]) out.push(reviewSummary(id));
+return out;
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "$sequence": [
+      {
+        "submission_id": "sub_77",
+        "status": "open",
+        "score": 0.72,
+        "reviewer": "reviewer-3",
+        "checks": [
+          {
+            "name": "lint",
+            "passed": true
+          },
+          {
+            "name": "tests",
+            "passed": false,
+            "detail": "2 failing"
+          }
+        ]
+      },
+      {
+        "status": "closed",
+        "checks": [
+          {
+            "name": "lint",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "status": "open",
+        "checks": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+Branches on the error text with includes().
+-- script.js --
+try {
+  return mcp.github.get_file_contents({owner:"acme", repo:"widget-service", path:"README.md"});
+} catch (e) {
+  const msg = String(e);
+  if (msg.includes("rate")) return "retry later";
+  if (msg.includes("404")) return "missing";
+  return msg;
+}
+-- tools.json --
+{
+  "github.get_file_contents": {
+    "$error": "rate limit exceeded"
+  }
+}

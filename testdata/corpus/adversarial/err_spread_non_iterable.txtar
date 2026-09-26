@@ -1,0 +1,10 @@
+Spreading non-iterables into arrays and calls.
+-- script.js --
+const out = [];
+for (const v of [null, undefined, 5, {}, true]) {
+  try { [...v]; } catch (e) { out.push(e.message); }
+}
+try { Math.max(...{a: 1}); } catch (e) { out.push(e.message); }
+return out;
+-- tools.json --
+{}

@@ -1,0 +1,904 @@
+~20KB payload: filter, rank, group, and emit a report capped by a character budget.
+-- script.js --
+const r = mcp.notes.export_all({format: "json"});
+const items = r.items;
+const MAX = 2500;
+const ranked = items.filter(i => i.score >= 0.5).sort((a, b) => b.score - a.score || (a.id < b.id ? -1 : 1));
+const perOwner = {};
+for (const i of ranked) {
+  const o = perOwner[i.owner] || (perOwner[i.owner] = {count: 0, top: []});
+  o.count++;
+  if (o.top.length < 3) o.top.push(i.id);
+}
+let out = `total=${items.length} kept=${ranked.length}\n`;
+for (const owner of Object.keys(perOwner).sort()) out += `${owner}: ${perOwner[owner].count} (top ${perOwner[owner].top.join(", ")})\n`;
+out += "---\n";
+for (const i of ranked) {
+  const line = `${i.id} ${i.score.toFixed(2)} ${i.title.slice(0, 40).trim()}${i.tags.length ? " #" + i.tags.join(" #") : ""}\n`;
+  if (out.length + line.length > MAX) { out += `…and ${ranked.length - ranked.indexOf(i)} more`; break; }
+  out += line;
+}
+console.log("bytes in:", JSON.stringify(r).length);
+return out;
+-- tools.json --
+{
+  "notes.export_all": {
+    "items": [
+      {
+        "id": "rec_0000",
+        "title": "Record 0 lorem ipsum dolor ",
+        "score": 0.0,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0001",
+        "title": "Record 1 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.37,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0002",
+        "title": "Record 2 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.74,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0003",
+        "title": "Record 3 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.1,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0004",
+        "title": "Record 4 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.47,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0005",
+        "title": "Record 5 lorem ipsum dolor ",
+        "score": 0.84,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0006",
+        "title": "Record 6 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.2,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0007",
+        "title": "Record 7 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.57,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0008",
+        "title": "Record 8 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.94,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0009",
+        "title": "Record 9 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.3,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0010",
+        "title": "Record 10 lorem ipsum dolor ",
+        "score": 0.67,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0011",
+        "title": "Record 11 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.03,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0012",
+        "title": "Record 12 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.4,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0013",
+        "title": "Record 13 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.77,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0014",
+        "title": "Record 14 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.13,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0015",
+        "title": "Record 15 lorem ipsum dolor ",
+        "score": 0.5,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0016",
+        "title": "Record 16 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.87,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0017",
+        "title": "Record 17 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.23,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0018",
+        "title": "Record 18 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.6,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0019",
+        "title": "Record 19 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.97,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0020",
+        "title": "Record 20 lorem ipsum dolor ",
+        "score": 0.33,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0021",
+        "title": "Record 21 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.7,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0022",
+        "title": "Record 22 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.06,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0023",
+        "title": "Record 23 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.43,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0024",
+        "title": "Record 24 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.8,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0025",
+        "title": "Record 25 lorem ipsum dolor ",
+        "score": 0.16,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0026",
+        "title": "Record 26 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.53,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0027",
+        "title": "Record 27 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.9,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0028",
+        "title": "Record 28 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.26,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0029",
+        "title": "Record 29 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.63,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0030",
+        "title": "Record 30 lorem ipsum dolor ",
+        "score": 1.0,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0031",
+        "title": "Record 31 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.36,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0032",
+        "title": "Record 32 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.73,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0033",
+        "title": "Record 33 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.09,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0034",
+        "title": "Record 34 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.46,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0035",
+        "title": "Record 35 lorem ipsum dolor ",
+        "score": 0.83,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0036",
+        "title": "Record 36 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.19,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0037",
+        "title": "Record 37 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.56,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0038",
+        "title": "Record 38 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.93,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0039",
+        "title": "Record 39 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.29,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0040",
+        "title": "Record 40 lorem ipsum dolor ",
+        "score": 0.66,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0041",
+        "title": "Record 41 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.02,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0042",
+        "title": "Record 42 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.39,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0043",
+        "title": "Record 43 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.76,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0044",
+        "title": "Record 44 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.12,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0045",
+        "title": "Record 45 lorem ipsum dolor ",
+        "score": 0.49,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0046",
+        "title": "Record 46 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.86,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0047",
+        "title": "Record 47 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.22,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0048",
+        "title": "Record 48 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.59,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0049",
+        "title": "Record 49 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.96,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0050",
+        "title": "Record 50 lorem ipsum dolor ",
+        "score": 0.32,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0051",
+        "title": "Record 51 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.69,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0052",
+        "title": "Record 52 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.05,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0053",
+        "title": "Record 53 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.42,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0054",
+        "title": "Record 54 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.79,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0055",
+        "title": "Record 55 lorem ipsum dolor ",
+        "score": 0.15,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0056",
+        "title": "Record 56 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.52,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0057",
+        "title": "Record 57 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.89,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0058",
+        "title": "Record 58 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.25,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0059",
+        "title": "Record 59 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.62,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0060",
+        "title": "Record 60 lorem ipsum dolor ",
+        "score": 0.99,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0061",
+        "title": "Record 61 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.35,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0062",
+        "title": "Record 62 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.72,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0063",
+        "title": "Record 63 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.08,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0064",
+        "title": "Record 64 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.45,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0065",
+        "title": "Record 65 lorem ipsum dolor ",
+        "score": 0.82,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0066",
+        "title": "Record 66 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.18,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0067",
+        "title": "Record 67 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.55,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0068",
+        "title": "Record 68 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.92,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0069",
+        "title": "Record 69 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.28,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0070",
+        "title": "Record 70 lorem ipsum dolor ",
+        "score": 0.65,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0071",
+        "title": "Record 71 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.01,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0072",
+        "title": "Record 72 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.38,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0073",
+        "title": "Record 73 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.75,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0074",
+        "title": "Record 74 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.11,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0075",
+        "title": "Record 75 lorem ipsum dolor ",
+        "score": 0.48,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0076",
+        "title": "Record 76 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.85,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0077",
+        "title": "Record 77 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.21,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0078",
+        "title": "Record 78 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.58,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0079",
+        "title": "Record 79 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.95,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0080",
+        "title": "Record 80 lorem ipsum dolor ",
+        "score": 0.31,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0081",
+        "title": "Record 81 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.68,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0082",
+        "title": "Record 82 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.04,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0083",
+        "title": "Record 83 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.41,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0084",
+        "title": "Record 84 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.78,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0085",
+        "title": "Record 85 lorem ipsum dolor ",
+        "score": 0.14,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0086",
+        "title": "Record 86 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.51,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0087",
+        "title": "Record 87 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.88,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0088",
+        "title": "Record 88 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.24,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0089",
+        "title": "Record 89 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.61,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0090",
+        "title": "Record 90 lorem ipsum dolor ",
+        "score": 0.98,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0091",
+        "title": "Record 91 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.34,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0092",
+        "title": "Record 92 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.71,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0093",
+        "title": "Record 93 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.07,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0094",
+        "title": "Record 94 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.44,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0095",
+        "title": "Record 95 lorem ipsum dolor ",
+        "score": 0.81,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      },
+      {
+        "id": "rec_0096",
+        "title": "Record 96 lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.17,
+        "owner": "alice",
+        "tags": [
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0097",
+        "title": "Record 97 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.54,
+        "owner": "bob",
+        "tags": [
+          "blue",
+          "red"
+        ]
+      },
+      {
+        "id": "rec_0098",
+        "title": "Record 98 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.91,
+        "owner": "carol",
+        "tags": []
+      },
+      {
+        "id": "rec_0099",
+        "title": "Record 99 lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor ",
+        "score": 0.27,
+        "owner": "dan",
+        "tags": [
+          "green"
+        ]
+      }
+    ]
+  }
+}

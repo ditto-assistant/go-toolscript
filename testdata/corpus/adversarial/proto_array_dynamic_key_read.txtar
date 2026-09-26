@@ -1,0 +1,6 @@
+Reading array/string prototype members through a dynamic key.
+-- script.js --
+const a = [1, 2];
+return ["length", "map", "constructor", "toString", "0", "5"].map(k => typeof a[k]).concat(["length", "slice", "constructor"].map(k => typeof "ab"[k]));
+-- tools.json --
+{}

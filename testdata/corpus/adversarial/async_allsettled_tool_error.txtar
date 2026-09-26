@@ -1,0 +1,13 @@
+allSettled with a failing tool exposes the error text as reason.
+-- script.js --
+const rs = await Promise.allSettled([mcp.a.ok({}), mcp.a.fail({})]);
+return rs.map(r => [r.status, typeof r.reason, String(r.reason)]);
+-- tools.json --
+{
+  "a.ok": {
+    "v": 1
+  },
+  "a.fail": {
+    "$error": "nope"
+  }
+}

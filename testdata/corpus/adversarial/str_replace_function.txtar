@@ -1,0 +1,9 @@
+replace/replaceAll with a callback receiving match, offset and string.
+-- script.js --
+const s = "a-b-c";
+const log = [];
+const out = s.replaceAll("-", (m, off, str) => { log.push(`${m}@${off}/${str.length}`); return "+"; });
+const one = s.replace("-", (m, off) => off * 10);
+return {out, one, log};
+-- tools.json --
+{}

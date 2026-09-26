@@ -1,0 +1,188 @@
+Uses every binding style in one script (flat, server.tool, bracket, tools alias, mcp.call) with bash and console.
+-- script.js --
+const report = {};
+const mem = mcp.search_memories({queries: ["status"], limit: 3});
+report.memory = mem.queries[0].results.length;
+const cal = mcp.googlecalendar.events_list({calendarId: "primary"});
+report.events = cal.items.length;
+const rev = mcp["team-backroom"].get_review({submissionId: "sub_77"});
+report.review = rev.status;
+const alias = tools.fetch_memories({ids: mem.queries[0].results.map(r => r.id)});
+report.fetched = alias.memories.length;
+const raw = mcp.call("mcp__acme-tracker__list_tickets", {status: "open"});
+report.tickets = raw.tickets.length;
+const aliasServer = tools.crm.get_account({id: "acct_9"});
+report.account = aliasServer.name;
+const shaped = bash("jq -c '{n: (.tickets | length), open: [.tickets[] | select(.status == \"open\") | .id]}'", raw);
+report.shaped = shaped.json;
+console.log("report keys:", Object.keys(report).join(","));
+return JSON.stringify(report, null, 2).slice(0, 6000);
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "query": "project kickoff notes",
+        "results": [
+          {
+            "id": "mem_001",
+            "summary": "Alice prefers async standups on Tuesdays.",
+            "score": 0.91,
+            "created_at": "2026-08-02T14:10:00Z",
+            "charLen": 212
+          },
+          {
+            "id": "mem_002",
+            "summary": "Widget-service launch moved to the second week of October.",
+            "score": 0.84,
+            "created_at": "2026-08-11T09:30:00Z",
+            "charLen": 344
+          },
+          {
+            "id": "mem_003",
+            "summary": "Bob owns the billing migration and wants weekly check-ins.",
+            "score": 0.77,
+            "created_at": "2026-07-28T16:45:00Z",
+            "charLen": 198
+          }
+        ]
+      }
+    ]
+  },
+  "googlecalendar.events_list": {
+    "items": [
+      {
+        "id": "ev_1",
+        "summary": "Team sync",
+        "start": {
+          "dateTime": "2026-09-25T15:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T15:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "alice@example.com"
+          },
+          {
+            "email": "bob@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_2",
+        "summary": "1:1 with Carol",
+        "start": {
+          "dateTime": "2026-09-25T17:00:00Z"
+        },
+        "end": {
+          "dateTime": "2026-09-25T17:30:00Z"
+        },
+        "attendees": [
+          {
+            "email": "carol@example.com"
+          }
+        ]
+      },
+      {
+        "id": "ev_3",
+        "summary": "Focus block",
+        "start": {
+          "date": "2026-09-26"
+        },
+        "end": {
+          "date": "2026-09-27"
+        }
+      }
+    ]
+  },
+  "team-backroom.get_review": {
+    "submission_id": "sub_77",
+    "status": "open",
+    "score": 0.72,
+    "reviewer": "reviewer-3",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true
+      },
+      {
+        "name": "tests",
+        "passed": false,
+        "detail": "2 failing"
+      }
+    ]
+  },
+  "fetch_memories": {
+    "memories": [
+      {
+        "id": "mem_001",
+        "content": "Alice prefers async standups on Tuesdays and a written agenda the day before.",
+        "created_at": "2026-08-02T14:10:00Z",
+        "tags": [
+          "team",
+          "process"
+        ]
+      },
+      {
+        "id": "mem_002",
+        "content": "Widget-service launch moved to the second week of October after the load test.",
+        "created_at": "2026-08-11T09:30:00Z",
+        "tags": [
+          "launch"
+        ]
+      }
+    ]
+  },
+  "mcp__acme-tracker__list_tickets": {
+    "tickets": [
+      {
+        "id": "T-1",
+        "subject": "Cannot log in",
+        "status": "open",
+        "priority": "high",
+        "customer": "acme"
+      },
+      {
+        "id": "T-2",
+        "subject": "Export is slow",
+        "status": "pending",
+        "priority": "normal",
+        "customer": "globex"
+      },
+      {
+        "id": "T-3",
+        "subject": "Typo on invoice",
+        "status": "closed",
+        "priority": "low",
+        "customer": "acme"
+      }
+    ]
+  },
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}
+-- bash.json --
+{
+  "jq -c '{n: (.tickets | length), open: [.tickets[] | select(.status == \"open\") | .id]}'": {
+    "stdout": "{\"n\":3,\"open\":[\"T-1\"]}\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": {
+      "n": 3,
+      "open": [
+        "T-1"
+      ]
+    }
+  }
+}

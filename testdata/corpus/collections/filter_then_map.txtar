@@ -1,0 +1,56 @@
+filter then map chain.
+-- script.js --
+const r = mcp.notes.list_scores({});
+return r.items.filter(i => i.score > 0.5).map(i => i.name);
+-- tools.json --
+{
+  "notes.list_scores": {
+    "items": [
+      {
+        "id": "a1",
+        "name": "alpha",
+        "score": 0.82,
+        "team": "red",
+        "tags": [
+          "x",
+          "y"
+        ]
+      },
+      {
+        "id": "b2",
+        "name": "bravo",
+        "score": 0.45,
+        "team": "blue",
+        "tags": [
+          "y"
+        ]
+      },
+      {
+        "id": "c3",
+        "name": "charlie",
+        "score": 0.91,
+        "team": "red",
+        "tags": []
+      },
+      {
+        "id": "d4",
+        "name": "delta",
+        "score": 0.63,
+        "team": "green",
+        "tags": [
+          "x",
+          "z"
+        ]
+      },
+      {
+        "id": "e5",
+        "name": "echo",
+        "score": 0.27,
+        "team": "blue",
+        "tags": [
+          "z"
+        ]
+      }
+    ]
+  }
+}

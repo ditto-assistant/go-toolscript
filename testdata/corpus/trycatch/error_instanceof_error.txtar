@@ -1,0 +1,14 @@
+Checks e instanceof Error for tool failures.
+-- script.js --
+try {
+  mcp.notes.delete({id:"note_1"});
+  return "deleted";
+} catch (e) {
+  return [e instanceof Error, typeof e.message, e.message.length > 0];
+}
+-- tools.json --
+{
+  "notes.delete": {
+    "$error": "note is locked"
+  }
+}

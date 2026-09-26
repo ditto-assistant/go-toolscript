@@ -1,0 +1,5 @@
+toFixed on large values, 1e21 and precision 20.
+-- script.js --
+return [(1e21).toFixed(2), (1e20).toFixed(2), (123.456).toFixed(20), (0.1).toFixed(20), (-1.5e-7).toFixed(10), (2**53).toFixed(1)];
+-- tools.json --
+{}

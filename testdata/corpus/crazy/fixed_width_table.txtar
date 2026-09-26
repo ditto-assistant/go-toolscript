@@ -1,0 +1,37 @@
+Compute column widths across rows and render an aligned ASCII table with totals.
+-- script.js --
+const acc = mcp.crm.list_accounts({limit: 100}).accounts;
+const rows = acc.map(a => [a.name, a.tier, a.seats, (a.arr / 1000).toFixed(1) + "k"]);
+const header = ["Name", "Tier", "Seats", "ARR"];
+const totals = ["TOTAL", "", acc.reduce((s, a) => s + a.seats, 0), (acc.reduce((s, a) => s + a.arr, 0) / 1000).toFixed(1) + "k"];
+const all = [header, ...rows, totals].map(r => r.map(String));
+const widths = header.map((_, c) => Math.max(...all.map(r => r[c].length)));
+const numeric = [false, false, true, true];
+const fmtRow = r => "| " + r.map((cell, c) => numeric[c] ? cell.padStart(widths[c]) : cell.padEnd(widths[c])).join(" | ") + " |";
+const sep = "+" + widths.map(w => "-".repeat(w + 2)).join("+") + "+";
+return [sep, fmtRow(all[0]), sep, ...all.slice(1, -1).map(fmtRow), sep, fmtRow(all[all.length - 1]), sep].join("\n");
+-- tools.json --
+{
+  "crm.list_accounts": {
+    "accounts": [
+      {
+        "name": "Acme",
+        "tier": "pro",
+        "seats": 20,
+        "arr": 24000
+      },
+      {
+        "name": "Globex Corporation",
+        "tier": "enterprise",
+        "seats": 350,
+        "arr": 412500
+      },
+      {
+        "name": "Initech",
+        "tier": "free",
+        "seats": 3,
+        "arr": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+Walk an arbitrary JSON value collecting all strings under a key.
+-- script.js --
+const r = mcp.notion.fetch_data({id:"page_1"});
+const found = [];
+const walk = (o) => {
+  if (!o || typeof o !== "object") return;
+  if (Array.isArray(o)) { o.forEach(walk); return; }
+  for (const k of Object.keys(o)) {
+    if (k === "text" && typeof o[k] === "string") found.push(o[k]);
+    else walk(o[k]);
+  }
+};
+walk(r);
+return found;
+-- tools.json --
+{
+  "notion.fetch_data": {
+    "id": "page_1",
+    "blocks": [
+      {
+        "type": "heading",
+        "rich": [
+          {
+            "text": "Plan"
+          }
+        ]
+      },
+      {
+        "type": "list",
+        "items": [
+          {
+            "text": "one"
+          },
+          {
+            "nested": {
+              "text": "two"
+            }
+          }
+        ]
+      },
+      {
+        "type": "divider"
+      }
+    ],
+    "meta": {
+      "text": 5
+    }
+  }
+}

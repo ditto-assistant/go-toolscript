@@ -1,0 +1,37 @@
+Direct call returned as-is (the most common real shape).
+-- script.js --
+return mcp.search_memories({queries:["project kickoff notes"], limit:10});
+-- tools.json --
+{
+  "search_memories": {
+    "queries": [
+      {
+        "query_index": 0,
+        "query": "project kickoff notes",
+        "results": [
+          {
+            "id": "mem_001",
+            "summary": "Alice prefers async standups on Tuesdays.",
+            "score": 0.91,
+            "created_at": "2026-08-02T14:10:00Z",
+            "charLen": 212
+          },
+          {
+            "id": "mem_002",
+            "summary": "Widget-service launch moved to the second week of October.",
+            "score": 0.84,
+            "created_at": "2026-08-11T09:30:00Z",
+            "charLen": 344
+          },
+          {
+            "id": "mem_003",
+            "summary": "Bob owns the billing migration and wants weekly check-ins.",
+            "score": 0.77,
+            "created_at": "2026-07-28T16:45:00Z",
+            "charLen": 198
+          }
+        ]
+      }
+    ]
+  }
+}

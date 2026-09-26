@@ -1,0 +1,18 @@
+Replacer function dropping and transforming values.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+return JSON.stringify(a, (k, v) => k === "email" ? undefined : (typeof v === "number" ? v * 2 : v));
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

@@ -1,0 +1,8 @@
+Error cause option only copies an own cause property.
+-- script.js --
+const a = new Error("a", {cause: "why"});
+const b = new Error("b", {});
+const c = new Error("c", {cause: undefined});
+return [a.cause, "cause" in b, "cause" in c, String(c.cause), JSON.stringify(a)];
+-- tools.json --
+{}

@@ -1,0 +1,6 @@
+bash script not listed in bash.json gets the default empty result.
+-- script.js --
+const x = bash("ls /results");
+return {out: x.stdout, code: x.exit_code, json: x.json};
+-- tools.json --
+{}

@@ -1,0 +1,16 @@
+finally block after a successful call.
+-- script.js --
+let status = "pending";
+try {
+  mcp.notes.append({id:"note_5", text:"x"});
+  status = "ok";
+} finally {
+  status += "+cleanup";
+}
+return status;
+-- tools.json --
+{
+  "notes.append": {
+    "ok": true
+  }
+}

@@ -1,0 +1,38 @@
+Join two tool results by a shared id.
+-- script.js --
+const users = mcp.crm.list_users({}).users;
+const tix = mcp.call("mcp__acme-tracker__list_assignments", {}).assignments;
+const byId = {};
+users.forEach(u => { byId[u.id] = u; });
+return tix.map(t => ({ticket: t.ticket, owner: (byId[t.user_id] || {name: "unknown"}).name}));
+-- tools.json --
+{
+  "crm.list_users": {
+    "users": [
+      {
+        "id": "u1",
+        "name": "Alice"
+      },
+      {
+        "id": "u2",
+        "name": "Bob"
+      }
+    ]
+  },
+  "mcp__acme-tracker__list_assignments": {
+    "assignments": [
+      {
+        "ticket": "T-1",
+        "user_id": "u2"
+      },
+      {
+        "ticket": "T-2",
+        "user_id": "u1"
+      },
+      {
+        "ticket": "T-3",
+        "user_id": "u9"
+      }
+    ]
+  }
+}

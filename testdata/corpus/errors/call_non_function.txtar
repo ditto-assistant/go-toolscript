@@ -1,0 +1,18 @@
+Calling a non-function value from a tool result.
+-- script.js --
+const r = mcp.crm.get_account({id: "acct_9"});
+return r.name();
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

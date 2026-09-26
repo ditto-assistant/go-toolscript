@@ -1,0 +1,12 @@
+== vs === on tool values.
+-- script.js --
+const v = mcp.crm.get_flags({});
+return [v.n == "5", v.n === "5", v.z == false, v.z === false, v.nul == undefined, v.nul === undefined];
+-- tools.json --
+{
+  "crm.get_flags": {
+    "n": 5,
+    "z": 0,
+    "nul": null
+  }
+}

@@ -1,0 +1,25 @@
+Higher-order function wrapping tool calls with error capture.
+-- script.js --
+const safe = (fn) => (...args) => {
+  try { return {ok: true, value: fn(...args)}; } catch (e) { return {ok: false, error: e.message}; }
+};
+const getAccount = safe(id => mcp.crm.get_account({id}));
+const getTicket = safe(id => mcp.call("mcp__acme-tracker__get_ticket", {id}));
+return [getAccount("acct_9"), getTicket("T-404")];
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  },
+  "mcp__acme-tracker__get_ticket": {
+    "$error": "ticket T-404 not found"
+  }
+}

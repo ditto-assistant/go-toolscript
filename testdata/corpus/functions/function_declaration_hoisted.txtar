@@ -1,0 +1,65 @@
+Function declaration used before it is defined (hoisting).
+-- script.js --
+const r = mcp.linear.list_issues({team:"ENG"});
+return r.nodes.map(fmt);
+
+function fmt(n) {
+  return n.identifier + " [" + n.state.name + "]";
+}
+-- tools.json --
+{
+  "linear.list_issues": {
+    "nodes": [
+      {
+        "identifier": "ENG-12",
+        "title": "Migrate cron jobs",
+        "state": {
+          "name": "In Progress"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Alice"
+        },
+        "estimate": 3
+      },
+      {
+        "identifier": "ENG-15",
+        "title": "Rate limit webhooks",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 1,
+        "assignee": null,
+        "estimate": 5
+      },
+      {
+        "identifier": "ENG-19",
+        "title": "Docs for SDK",
+        "state": {
+          "name": "Done"
+        },
+        "priority": 4,
+        "assignee": {
+          "name": "Bob"
+        },
+        "estimate": 1
+      },
+      {
+        "identifier": "ENG-21",
+        "title": "Alert on queue depth",
+        "state": {
+          "name": "Todo"
+        },
+        "priority": 2,
+        "assignee": {
+          "name": "Carol"
+        },
+        "estimate": 2
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": null
+    }
+  }
+}

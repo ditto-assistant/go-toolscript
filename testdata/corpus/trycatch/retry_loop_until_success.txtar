@@ -1,0 +1,26 @@
+Manual retry loop using $sequence; the error comes from payload status.
+-- script.js --
+let attempt = 0, r;
+while (attempt < 5) {
+  attempt++;
+  r = mcp.call("mcp__acme-tracker__poll_job", {id: "job_9"});
+  if (r.state === "done") break;
+}
+return {attempt, state: r.state, output: r.output};
+-- tools.json --
+{
+  "mcp__acme-tracker__poll_job": {
+    "$sequence": [
+      {
+        "state": "queued"
+      },
+      {
+        "state": "running"
+      },
+      {
+        "state": "done",
+        "output": "42 rows"
+      }
+    ]
+  }
+}

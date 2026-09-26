@@ -1,0 +1,25 @@
+for-in over object keys of a tool response.
+-- script.js --
+const q = mcp.crm.get_quota({id:"acct_9"});
+const over = [];
+for (const k in q) {
+  if (q[k].used > q[k].limit) over.push(k);
+}
+return over;
+-- tools.json --
+{
+  "crm.get_quota": {
+    "seats": {
+      "used": 12,
+      "limit": 10
+    },
+    "storage": {
+      "used": 3,
+      "limit": 50
+    },
+    "api": {
+      "used": 1001,
+      "limit": 1000
+    }
+  }
+}

@@ -1,0 +1,6 @@
+toJSON methods on nested objects receive the key.
+-- script.js --
+const o = {a: {toJSON(k) { return "A:" + k; }}, b: [{toJSON(k) { return {k}; }}], c: {toJSON() { return undefined; }}};
+return JSON.stringify(o);
+-- tools.json --
+{}

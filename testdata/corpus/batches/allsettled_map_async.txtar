@@ -1,0 +1,16 @@
+Promise.allSettled(xs.map(async x => ...)) with per-item failure.
+-- script.js --
+const ids = ["sub_1", "sub_2"];
+const res = await Promise.allSettled(ids.map(async id => {
+  const r = await mcp["team-backroom"].get_review({submissionId: id});
+  return {id, status: r.status};
+}));
+const ok = res.filter(r => r.status === "fulfilled").map(r => r.value);
+const bad = res.filter(r => r.status === "rejected").length;
+return {ok, bad};
+-- tools.json --
+{
+  "team-backroom.get_review": {
+    "$error": "review service unavailable"
+  }
+}

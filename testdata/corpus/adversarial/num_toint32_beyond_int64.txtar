@@ -1,0 +1,7 @@
+ToInt32 of values beyond int64 range (1e21 | 0 is -559939584 per spec).
+-- script.js --
+return [1e21 | 0, 1e21 >>> 0, 2**70 | 0, -(2**70) | 0, (2**64 + 2**33) | 0, ~1e21];
+-- tools.json --
+{}
+-- divergence --
+Goja bug: ToInt32 of values beyond int64 relies on Go's platform-dependent float-to-int conversion (-1 on arm64). The native engine follows the spec.

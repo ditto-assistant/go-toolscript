@@ -1,0 +1,21 @@
+Multi-line template literal report.
+-- script.js --
+const a = mcp.crm.get_account({id:"acct_9"});
+return `Account: ${a.name}
+Tier: ${a.tier.toUpperCase()}
+ARR: $${a.arr}
+Owner: ${a.owner.name} <${a.owner.email}>`;
+-- tools.json --
+{
+  "crm.get_account": {
+    "id": "acct_9",
+    "name": "Globex",
+    "tier": "enterprise",
+    "arr": 125000,
+    "owner": {
+      "name": "Dana",
+      "email": "dana@example.com"
+    },
+    "contacts": 14
+  }
+}

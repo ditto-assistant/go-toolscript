@@ -1,0 +1,9 @@
+formatToParts used to compute a zone-local ISO-like timestamp.
+-- script.js --
+const {items} = mcp.list_events({});
+const parts = (d, timeZone) => Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false}).formatToParts(d).filter((p) => p.type !== "literal").map((p) => [p.type, p.value]));
+return items.map((e) => { const p = parts(new Date(e.at), "America/New_York"); return `${e.name} ${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`; });
+-- tools.json --
+{"list_events": {"items": [{"name": "a", "at": "2026-03-08T06:59:59Z"}, {"name": "b", "at": "2026-03-08T07:00:00Z"}, {"name": "c", "at": "2026-11-01T05:30:00Z"}, {"name": "d", "at": "2026-11-01T06:30:00Z"}]}}
+-- divergence --
+Goja has no Intl (ReferenceError: Intl is not defined). Native output matches Node/ICU.

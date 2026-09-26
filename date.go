@@ -471,13 +471,24 @@ func init() {
 		"toTimeString": func(r *rt, d *dateValue, _ []any) (any, error) {
 			return r.dateString(d, timeLayout, false), nil
 		},
-		"toLocaleString": func(r *rt, d *dateValue, _ []any) (any, error) {
+		// Without arguments these keep Goja's fixed layouts; locales or
+		// options format through Intl.DateTimeFormat as ECMA-402 specifies.
+		"toLocaleString": func(r *rt, d *dateValue, args []any) (any, error) {
+			if intlArgs(args) {
+				return r.dateToLocale(d, args, dtfRequiredAny, dtfDefaultsAll, "Date.prototype.toLocaleString")
+			}
 			return r.dateString(d, datetimeLayout_en_GB, false), nil
 		},
-		"toLocaleDateString": func(r *rt, d *dateValue, _ []any) (any, error) {
+		"toLocaleDateString": func(r *rt, d *dateValue, args []any) (any, error) {
+			if intlArgs(args) {
+				return r.dateToLocale(d, args, dtfRequiredDate, dtfDefaultsDate, "Date.prototype.toLocaleDateString")
+			}
 			return r.dateString(d, dateLayout_en_GB, false), nil
 		},
-		"toLocaleTimeString": func(r *rt, d *dateValue, _ []any) (any, error) {
+		"toLocaleTimeString": func(r *rt, d *dateValue, args []any) (any, error) {
+			if intlArgs(args) {
+				return r.dateToLocale(d, args, dtfRequiredTime, dtfDefaultsTime, "Date.prototype.toLocaleTimeString")
+			}
 			return r.dateString(d, timeLayout_en_GB, false), nil
 		},
 	}

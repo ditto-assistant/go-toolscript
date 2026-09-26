@@ -1,0 +1,8 @@
+The production script that failed with "Intl is not defined": dateStyle and
+timeStyle combined with timeZoneName. ECMA-402 forbids the combination.
+-- script.js --
+const t=new Date("2026-09-24T10:00:00-07:00"); return {timestamp:t.toISOString(),LA:new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",dateStyle:"medium",timeStyle:"short",timeZoneName:"longOffset"}).format(t),Toronto:new Intl.DateTimeFormat("en-US",{timeZone:"America/Toronto",dateStyle:"medium",timeStyle:"short",timeZoneName:"longOffset"}).format(t)};
+-- tools.json --
+{}
+-- divergence --
+Goja has no Intl (ReferenceError: Intl is not defined); the native engine implements it and throws V8's TypeError "Invalid option : option", as ECMA-402 requires for styles combined with timeZoneName.

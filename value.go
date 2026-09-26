@@ -348,7 +348,7 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 			return float64(t.msec), nil
 		}
 		return r.dateString(t, dateTimeLayout, false), nil
-	case *array, *function, *hostObject, *regexpValue, *collection, *iterator:
+	case *array, *function, *hostObject, *regexpValue, *collection, *iterator, *intlObject:
 		s, err := r.toString(v)
 		return s, err
 	}
@@ -407,6 +407,8 @@ func (r *rt) toString(v any) (string, error) {
 		return "[object Set]", nil
 	case *iterator:
 		return "[object " + v.name + " Iterator]", nil
+	case *intlObject:
+		return "[object Intl." + v.kind.name + "]", nil
 	case *dateValue:
 		return r.dateString(v, dateTimeLayout, false), nil
 	case *function:
@@ -552,7 +554,7 @@ func sameValueZero(a, b any) bool {
 
 func isObjectValue(v any) bool {
 	switch v.(type) {
-	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator, *dateValue:
+	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator, *dateValue, *intlObject:
 		return true
 	}
 	return false
@@ -703,6 +705,14 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			return p, err
 		}
 		return Undefined, nil
+	case *intlObject:
+		if p, ok := r.intlMember(v, key); ok {
+			return p, nil
+		}
+		if p, ok, err := inherited(key, "Object"); ok {
+			return p, err
+		}
+		return Undefined, nil
 	case *iterator:
 		if f := protoFn("Iterator", key); f != nil {
 			return f, nil
@@ -834,6 +844,12 @@ func (r *rt) setProp(target any, key string, v any) error {
 		}
 		t.props.set(key, v)
 		return nil
+	case *intlObject:
+		if t.props == nil {
+			t.props = newObject(1)
+		}
+		t.props.set(key, v)
+		return nil
 	case *hostObject:
 		t.dirty = true
 		t.view.set(key, v)
@@ -935,6 +951,9 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 		return ok || own || objectProtoMember(key), nil
 	case *iterator:
 		return key == "next" || objectProtoMember(key), nil
+	case *intlObject:
+		_, ok := r.intlMember(t, key)
+		return ok || objectProtoMember(key), nil
 	case *dateValue:
 		if t.props != nil {
 			if _, ok := t.props.own(key); ok {
@@ -980,6 +999,11 @@ func ownEnumerableKeys(v any) []string {
 		}
 		return nil
 	case *regexpValue:
+		if v.props != nil {
+			return v.props.ownKeys()
+		}
+		return nil
+	case *intlObject:
 		if v.props != nil {
 			return v.props.ownKeys()
 		}

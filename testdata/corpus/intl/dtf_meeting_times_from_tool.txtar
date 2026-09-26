@@ -1,0 +1,12 @@
+Format a meeting time from a calendar tool in several time zones.
+-- script.js --
+const ev = mcp.calendar.get_event({id: "evt_42"});
+const when = new Date(ev.start);
+const fmt = (timeZone) => new Intl.DateTimeFormat("en-US", {timeZone, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"}).format(when);
+const rows = ev.attendees.map((a) => `${a.name}: ${fmt(a.timeZone)}`);
+console.log(rows.join("\n"));
+return {title: ev.title, rows, utc: when.toISOString()};
+-- tools.json --
+{"calendar.get_event": {"title": "Launch review", "start": "2026-10-02T15:30:00Z", "attendees": [{"name": "Ana", "timeZone": "America/Los_Angeles"}, {"name": "Bo", "timeZone": "Europe/London"}, {"name": "Chen", "timeZone": "Asia/Shanghai"}, {"name": "Dev", "timeZone": "Asia/Kolkata"}]}}
+-- divergence --
+Goja has no Intl (ReferenceError: Intl is not defined). Native output matches Node/ICU (testdata/intl/datetime.json).

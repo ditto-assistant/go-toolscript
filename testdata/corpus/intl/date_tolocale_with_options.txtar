@@ -1,0 +1,9 @@
+toLocale*String with locales/options formats through Intl; without
+arguments it keeps Goja's fixed layout.
+-- script.js --
+const d = new Date(Date.UTC(2026, 8, 26, 3, 0));
+return [d.toLocaleString(), d.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}), d.toLocaleDateString("en-US", {timeZone: "Asia/Tokyo", weekday: "long", month: "long", day: "numeric"}), d.toLocaleTimeString("en-US", {timeZone: "UTC", hour: "2-digit", minute: "2-digit"})];
+-- tools.json --
+{}
+-- divergence --
+Goja ignores toLocale*String arguments (its output silently stays in the host zone); the native engine applies them as ECMA-402 specifies, matching Node/ICU.

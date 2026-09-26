@@ -709,6 +709,11 @@ func (x *exporter) export(v any, depth int) (any, error) {
 		return nil, nil // Goja exports a missing element as nil
 	case *regexpValue, *iterator:
 		return map[string]any{}, nil
+	case *intlObject:
+		if t.props != nil {
+			return x.export(t.props, depth)
+		}
+		return map[string]any{}, nil
 	case *dateValue:
 		// Goja exports a Date as time.Time (nil when invalid).
 		if !t.isSet() {

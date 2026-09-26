@@ -173,7 +173,7 @@ func TestIntlNumberGolden(t *testing.T) {
 	t.Logf("intl golden: %d cases, %d match Node, %d declined %v", total, passed, declined, reasons)
 }
 
-func runIntlScript(t *testing.T, code string) (any, error) {
+func runNumberScript(t *testing.T, code string) (any, error) {
 	t.Helper()
 	p, err := Compile(code, options())
 	if err != nil {
@@ -192,7 +192,7 @@ func TestNumberToLocaleStringWithoutArguments(t *testing.T) {
 		`return (1234567.891).toLocaleString("en-US")`:               "1,234,567.891",
 		`return (0.5).toLocaleString(undefined, {style: "percent"})`: "50%",
 	} {
-		got, err := runIntlScript(t, code)
+		got, err := runNumberScript(t, code)
 		if err != nil || got != want {
 			t.Errorf("%s = %v, %v; want %q", code, got, err, want)
 		}
@@ -206,19 +206,19 @@ func TestIntlNumberDeclinesOtherNumberingSystems(t *testing.T) {
 		`return (1).toLocaleString("en", {numberingSystem: "deva"})`,
 		`return new Intl.RelativeTimeFormat("en-u-nu-beng").format(1, "day")`,
 	} {
-		if _, err := runIntlScript(t, code); !errors.Is(err, ErrRuntimeUnsupported) {
+		if _, err := runNumberScript(t, code); !errors.Is(err, ErrRuntimeUnsupported) {
 			t.Errorf("%s: %v, want ErrRuntimeUnsupported", code, err)
 		}
 	}
 	// Unknown (but well-formed) numbering systems fall back to Latin digits.
-	got, err := runIntlScript(t, `return new Intl.NumberFormat("en-u-nu-abcd", {numberingSystem: "wxyz"}).format(1234)`)
+	got, err := runNumberScript(t, `return new Intl.NumberFormat("en-u-nu-abcd", {numberingSystem: "wxyz"}).format(1234)`)
 	if err != nil || got != "1,234" {
 		t.Fatalf("got %v, %v", got, err)
 	}
 }
 
 func TestIntlNumberFormatBoundFormat(t *testing.T) {
-	got, err := runIntlScript(t, `const nf = new Intl.NumberFormat("en", {maximumFractionDigits: 1}); const f = nf.format; return [f === nf.format, [1.25, 1000.05].map(nf.format).join("|"), f.length]`)
+	got, err := runNumberScript(t, `const nf = new Intl.NumberFormat("en", {maximumFractionDigits: 1}); const f = nf.format; return [f === nf.format, [1.25, 1000.05].map(nf.format).join("|"), f.length]`)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -30,3 +30,5 @@ return rows.map(r => [
     ]
   }
 }
+-- divergence --
+Goja reads toLocaleString's first argument as a radix and throws "RangeError: toString() radix argument must be between 2 and 36"; the native engine formats through Intl.NumberFormat as ECMA-402 specifies (English data only: "de-DE" resolves to "en-US"), matching Node/ICU for English locales. Without arguments both return Goja's plain number string.

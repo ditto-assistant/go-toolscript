@@ -1,4 +1,4 @@
-Intl.NumberFormat for percent/currency (not available in the runner).
+Intl.NumberFormat for percent after a tool call.
 -- script.js --
 const r = mcp.stats.get({});
 const pct = new Intl.NumberFormat("en-US", {style: "percent", maximumFractionDigits: 1});
@@ -9,3 +9,5 @@ return pct.format(r.ratio);
     "ratio": 0.1234
   }
 }
+-- divergence --
+Goja has no Intl (ReferenceError: Intl is not defined); the native engine formats "12.3%" as Node/ICU does.

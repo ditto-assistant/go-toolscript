@@ -64,12 +64,19 @@ lacks entirely) or fail in Goja too (syntax errors, typos).
   `dateStyle`/`timeStyle`, hour cycles, IANA and offset time zones with ICU's
   English zone names, `format`, `formatToParts`, `resolvedOptions`) and
   `toLocale{,Date,Time}String` when given locales or options (without
-  arguments they keep Goja's fixed layouts), plus `Intl.getCanonicalLocales`,
-  `Intl.supportedValuesOf` and `supportedLocalesOf`. The engine carries the
+  arguments they keep Goja's fixed layouts); `Intl.NumberFormat` (decimal,
+  percent, currency and unit styles including `-per-` compounds, compact,
+  scientific and engineering notation, every rounding and sign option, exact
+  decimal handling of numeric strings, `formatRange`) and
+  `Number.prototype.toLocaleString` with arguments; `Intl.PluralRules`,
+  `Intl.ListFormat` and `Intl.RelativeTimeFormat`; plus
+  `Intl.getCanonicalLocales`, `Intl.supportedValuesOf` and
+  `supportedLocalesOf`. The engine carries the
   English (`en`, `en-US`) locale data only: other locales resolve through
   ECMA-402's lookup matcher to `en` or the default `en-US`, and
   `resolvedOptions().locale` says so. Non-Gregorian calendars, other
-  numbering systems and `formatRange` raise `ErrRuntimeUnsupported`. Time zone
+  numbering systems and `DateTimeFormat.formatRange` raise
+  `ErrRuntimeUnsupported`. Time zone
   data comes from Go's `time` package; import `time/tzdata` in hosts without a
   system zoneinfo database.
 - **Tools and host functions:** `mcp.x(...)`, `tools.x(...)`,

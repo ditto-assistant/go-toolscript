@@ -1,0 +1,25 @@
+encodeURIComponent/decodeURIComponent/encodeURI, localeCompare sorting, toPrecision/toLocaleString.
+-- script.js --
+const r = mcp.search.params({});
+const qs = Object.entries(r.params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+const names = r.names.slice().sort((a, b) => a.localeCompare(b));
+let bad = null;
+try { decodeURIComponent("%E0%A4%A"); } catch (e) { bad = String(e); }
+return {qs, url: encodeURI("https://example.com/a b?q=" + r.params.q), back: decodeURIComponent(qs.split("&")[0].split("=")[1]), names, bad, p: [(1234.5678).toPrecision(6), (0.000123).toPrecision(2), (5).toPrecision()], loc: [(1234567.5).toLocaleString(), [1, 2.5].toLocaleString()]};
+-- tools.json --
+{
+  "search.params": {
+    "params": {
+      "q": "caf\u00e9 & cr\u00e8me/100%",
+      "page": 2,
+      "tags[]": "a b"
+    },
+    "names": [
+      "\u00e9clair",
+      "Zebra",
+      "apple",
+      "\u00c4pfel",
+      "banana"
+    ]
+  }
+}

@@ -272,7 +272,7 @@ func (c *compiler) template(n *ast.TemplateLiteral) (evalFn, error) {
 var globalFunctionValues = map[string]*function{}
 
 func init() {
-	for _, name := range []string{"String", "Number", "Boolean", "parseInt", "parseFloat", "isNaN", "isFinite"} {
+	for _, name := range []string{"String", "Number", "Boolean", "parseInt", "parseFloat", "isNaN", "isFinite", "encodeURIComponent", "encodeURI", "decodeURIComponent", "decodeURI"} {
 		name := name
 		globalFunctionValues[name] = &function{name: name, native: func(r *rt, _ any, args []any) (any, error) {
 			return r.callGlobal(name, args)
@@ -642,7 +642,7 @@ func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
 		return nil, unsupported(n)
 	}
 	name := id.Name.String()
-	if v, _ := c.lookup(name); v != nil || !(isErrorConstructor(name) || name == "RegExp") {
+	if v, _ := c.lookup(name); v != nil || !(isErrorConstructor(name) || name == "RegExp" || name == "Set" || name == "Map" || name == "Array") {
 		return nil, unsupported(n)
 	}
 	args, err := c.arguments(n.ArgumentList)
@@ -654,8 +654,13 @@ func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
 		if err != nil {
 			return nil, err
 		}
-		if name == "RegExp" {
+		switch name {
+		case "RegExp":
 			return r.newRegExp(a)
+		case "Set", "Map":
+			return r.newCollectionFrom(name == "Map", a)
+		case "Array":
+			return r.newArrayFromArgs(a)
 		}
 		return r.makeError(name, a)
 	}, nil
@@ -697,7 +702,7 @@ func (c *compiler) unary(n *ast.UnaryExpression) (evalFn, error) {
 				case name == "Promise":
 					// Hosts differ on whether a Promise global exists.
 					return nil, fmt.Errorf("typeof Promise")
-				case name == "String" || name == "Number" || name == "Object" || name == "Array" || name == "Boolean" || name == "RegExp":
+				case name == "String" || name == "Number" || name == "Object" || name == "Array" || name == "Boolean" || name == "RegExp" || name == "Set" || name == "Map":
 					return constant("function"), nil
 				case name == "mcp" || name == "tools" || isGlobalNamespace(name):
 					return constant("object"), nil
@@ -1067,6 +1072,9 @@ func (c *compiler) instanceOf(n *ast.BinaryExpression) (evalFn, error) {
 		test = isObjectValue
 	case name == "RegExp":
 		test = func(v any) bool { _, ok := v.(*regexpValue); return ok }
+	case name == "Set" || name == "Map":
+		isMap := name == "Map"
+		test = func(v any) bool { c, ok := v.(*collection); return ok && c.isMap == isMap }
 	default:
 		return nil, unsupported(n)
 	}

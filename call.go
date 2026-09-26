@@ -73,10 +73,8 @@ func (c *compiler) arguments(list []ast.Expression) (argsFn, error) {
 // Methods that exist on Goja's prototypes but are outside the subset. Calls
 // to these names decline compilation instead of diverging at run time.
 var declinedMethods = map[string]bool{
-	"copyWithin": true, "entries": true, "keys": true, "values": true,
-	"matchAll": true, "normalize": true,
+	"copyWithin": true, "matchAll": true, "normalize": true,
 	"toExponential": true, "isPrototypeOf": true, "propertyIsEnumerable": true,
-	"apply": true, "bind": true, "call": true,
 }
 
 // call compiles a call expression. optional is set for a?.() callees.
@@ -246,10 +244,17 @@ func (c *compiler) toolCall(path []string, n *ast.CallExpression) (evalFn, error
 // JSON/Object/Array/Math/Number/String helpers, Promise batches and errors.
 func (c *compiler) globalCall(callee ast.Expression, n *ast.CallExpression) (evalFn, bool, error) {
 	path, ok := staticPath(callee)
-	if !ok || len(path) > 2 {
+	if !ok {
 		return nil, false, nil
 	}
 	if v, _ := c.lookup(path[0]); v != nil {
+		return nil, false, nil
+	}
+	if len(path) == 4 && path[1] == "prototype" && path[3] == "call" {
+		f, err := c.prototypeCall(path[0], path[2], n)
+		return f, true, err
+	}
+	if len(path) > 2 {
 		return nil, false, nil
 	}
 	if len(path) == 1 {
@@ -257,6 +262,19 @@ func (c *compiler) globalCall(callee ast.Expression, n *ast.CallExpression) (eva
 		if spec, ok := c.opts.HostFunctions[name]; ok {
 			f, err := c.hostCall(name, spec, n)
 			return f, true, err
+		}
+		if name == "Array" {
+			args, err := c.arguments(n.ArgumentList)
+			if err != nil {
+				return nil, true, err
+			}
+			return func(r *rt, s *scope) (any, error) {
+				a, err := args(r, s)
+				if err != nil {
+					return nil, err
+				}
+				return r.newArrayFromArgs(a)
+			}, true, nil
 		}
 		if name == "RegExp" {
 			args, err := c.arguments(n.ArgumentList)
@@ -593,7 +611,7 @@ func (r *rt) runBatch(size int, settled, isolated bool, eval func(w *rt, i int) 
 // Mutating array methods; batch items calling them run sequentially.
 var mutatingMethods = map[string]bool{
 	"push": true, "pop": true, "shift": true, "unshift": true, "splice": true, "sort": true,
-	"reverse": true, "fill": true, "copyWithin": true,
+	"reverse": true, "fill": true, "copyWithin": true, "add": true, "set": true, "delete": true, "clear": true,
 }
 
 // isolated reports whether batch items cannot observe each other's effects:
@@ -677,4 +695,98 @@ func collectNames(target ast.Expression, into map[string]bool) {
 		}
 		return true
 	})
+}
+
+// prototypeCall compiles Ctor.prototype.method.call(receiver, ...args), the
+// pre-ES2015 way to borrow a built-in (e.g. Object.prototype.hasOwnProperty).
+func (c *compiler) prototypeCall(ctor, method string, n *ast.CallExpression) (evalFn, error) {
+	switch ctor {
+	case "Object":
+		switch method {
+		case "hasOwnProperty", "toString":
+		default:
+			return nil, fmt.Errorf("unsupported Object.prototype.%s.call", method)
+		}
+	case "Array":
+		if arrayMethods[method] == nil {
+			return nil, fmt.Errorf("unsupported Array.prototype.%s.call", method)
+		}
+	case "String":
+		if stringMethods[method] == nil {
+			return nil, fmt.Errorf("unsupported String.prototype.%s.call", method)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported %s.prototype.%s.call", ctor, method)
+	}
+	args, err := c.arguments(n.ArgumentList)
+	if err != nil {
+		return nil, err
+	}
+	return func(r *rt, s *scope) (any, error) {
+		a, err := args(r, s)
+		if err != nil {
+			return nil, err
+		}
+		recv := arg(a, 0)
+		var rest []any
+		if len(a) > 1 {
+			rest = a[1:]
+		}
+		switch ctor {
+		case "Object":
+			if method == "toString" {
+				return classString(recv), nil
+			}
+			if isNullish(recv) {
+				return nil, r.typeError("Cannot convert undefined or null to object")
+			}
+			return r.callBuiltinMethodOwn(recv, arg(rest, 0))
+		case "Array":
+			arr, ok := recv.(*array)
+			if !ok {
+				return nil, errRuntimeUnsupported("Array.prototype." + method + " on a non-array")
+			}
+			return arrayMethods[method](r, arr, rest)
+		}
+		str, err := r.toString(recv)
+		if isNullish(recv) {
+			return nil, r.typeError("String.prototype." + method + " called on null or undefined")
+		}
+		if err != nil {
+			return nil, err
+		}
+		return stringMethods[method](r, str, rest)
+	}, nil
+}
+
+// classString implements Object.prototype.toString.
+func classString(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return "[object Null]"
+	case undefined:
+		return "[object Undefined]"
+	case string:
+		return "[object String]"
+	case float64:
+		return "[object Number]"
+	case bool:
+		return "[object Boolean]"
+	case *array:
+		return "[object Array]"
+	case *function:
+		return "[object Function]"
+	case *regexpValue:
+		return "[object RegExp]"
+	case *collection:
+		if t.isMap {
+			return "[object Map]"
+		}
+		return "[object Set]"
+	case *object:
+		if t.errName != "" {
+			return "[object Error]"
+		}
+	}
+	return "[object Object]"
 }

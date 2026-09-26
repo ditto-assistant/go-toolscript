@@ -34,6 +34,7 @@ type function struct {
 	native func(r *rt, this any, args []any) (any, error)
 	props  *object // own properties assigned by the script (fn.state = ...)
 	name   string
+	length int // .length of native functions (bound functions)
 }
 
 // hostObject exposes a host Object's property view while preserving its
@@ -280,7 +281,7 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 			return nil, r.typeError("Cannot convert object to primitive value")
 		}
 		return r.defaultObjectString(t), nil
-	case *array, *function, *hostObject, *regexpValue:
+	case *array, *function, *hostObject, *regexpValue, *collection, *iterator:
 		s, err := r.toString(v)
 		return s, err
 	}
@@ -330,6 +331,13 @@ func (r *rt) toString(v any) (string, error) {
 		return "[object Object]", nil
 	case *regexpValue:
 		return "/" + v.pat.source + "/" + v.pat.flags, nil
+	case *collection:
+		if v.isMap {
+			return "[object Map]", nil
+		}
+		return "[object Set]", nil
+	case *iterator:
+		return "[object " + v.name + " Iterator]", nil
 	case *function:
 		if v.native != nil {
 			return "function " + v.name + "() { [native code] }", nil
@@ -473,7 +481,7 @@ func sameValueZero(a, b any) bool {
 
 func isObjectValue(v any) bool {
 	switch v.(type) {
-	case *object, *array, *function, *hostObject, *regexpValue:
+	case *object, *array, *function, *hostObject, *regexpValue, *collection, *iterator:
 		return true
 	}
 	return false
@@ -603,6 +611,22 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			return p, err
 		}
 		return Undefined, nil
+	case *collection:
+		if p, ok := collectionMember(v, key); ok {
+			return p, nil
+		}
+		if p, ok, err := inherited(key, "Object"); ok {
+			return p, err
+		}
+		return Undefined, nil
+	case *iterator:
+		if key == "next" || key == "toString" {
+			return boundMethod(v, key), nil
+		}
+		if p, ok, err := inherited(key, "Object"); ok {
+			return p, err
+		}
+		return Undefined, nil
 	case *regexpValue:
 		if p, ok := v.get(key); ok {
 			return p, nil
@@ -666,7 +690,7 @@ func (r *rt) getProp(v any, key string) (any, error) {
 			if v.code != nil {
 				return float64(v.code.length), nil
 			}
-			return float64(0), nil
+			return float64(v.length), nil
 		}
 		return Undefined, nil
 	case nil, undefined:
@@ -802,6 +826,11 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 	case *regexpValue:
 		_, ok := t.get(key)
 		return ok, nil
+	case *collection:
+		_, ok := collectionMember(t, key)
+		return ok || objectProtoMember(key), nil
+	case *iterator:
+		return key == "next" || objectProtoMember(key), nil
 	case *function:
 		if t.props != nil {
 			if _, ok := t.props.props[key]; ok {
@@ -908,7 +937,7 @@ func inherited(key, ctor string) (any, bool, error) {
 // Prototype members Goja has but the engine does not implement: readable as
 // function values (typeof, feature checks); calling them is unsupported.
 var (
-	declinedArrayMembers  = map[string]bool{"copyWithin": true, "entries": true, "keys": true, "values": true}
+	declinedArrayMembers  = map[string]bool{"copyWithin": true}
 	declinedStringMembers = map[string]bool{"matchAll": true, "normalize": true}
 	declinedNumberMembers = map[string]bool{"toExponential": true}
 )

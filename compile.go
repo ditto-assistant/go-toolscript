@@ -168,6 +168,7 @@ type cfunc struct {
 }
 
 type compiler struct {
+	pendingLabels []string // labels for the loop being compiled next
 	opts          CompileOptions
 	namespaceUsed bool
 	fn            *cfunc
@@ -541,7 +542,7 @@ func (c *compiler) hoistVarStmt(sc *cscope, st ast.Statement) error {
 			}
 		}
 	case *ast.LabelledStatement:
-		return unsupported(n)
+		return c.hoistVarStmt(sc, n.Statement)
 	}
 	return nil
 }
@@ -734,9 +735,16 @@ func (c *compiler) statement(node ast.Statement) (stmtFn, error) {
 		}, nil
 	case *ast.TryStatement:
 		return c.tryStatement(n)
+	case *ast.LabelledStatement:
+		return c.labelled(n)
 	case *ast.BranchStatement:
 		if n.Label != nil {
-			return nil, unsupported(n)
+			label := n.Label.Name.String()
+			k := ctlBreak
+			if n.Token == token.CONTINUE {
+				k = ctlContinue
+			}
+			return func(r *rt, _ *scope) (ctl, any, error) { r.label = label; return k, nil, nil }, nil
 		}
 		if n.Token == token.BREAK {
 			if c.breakable == 0 {
@@ -961,6 +969,7 @@ func (c *compiler) loopBody(st ast.Statement) (stmtFn, error) {
 }
 
 func (c *compiler) whileStatement(testExpr ast.Expression, bodyStmt ast.Statement, do bool) (stmtFn, error) {
+	labels := c.takeLabels()
 	test, err := c.expression(testExpr)
 	if err != nil {
 		return nil, err
@@ -987,17 +996,15 @@ func (c *compiler) whileStatement(testExpr ast.Expression, bodyStmt ast.Statemen
 			if err != nil {
 				return 0, nil, err
 			}
-			switch k {
-			case ctlBreak:
-				return ctlNormal, nil, nil
-			case ctlReturn:
-				return k, v, nil
+			if stop, res := r.loopControl(k, labels); stop {
+				return res, v, nil
 			}
 		}
 	}, nil
 }
 
 func (c *compiler) forStatement(n *ast.ForStatement) (stmtFn, error) {
+	labels := c.takeLabels()
 	var sc *cscope
 	var initFn stmtFn
 	var err error
@@ -1077,17 +1084,15 @@ func (c *compiler) forStatement(n *ast.ForStatement) (stmtFn, error) {
 			if err != nil {
 				return 0, nil, err
 			}
-			switch k {
-			case ctlBreak:
-				return ctlNormal, nil, nil
-			case ctlReturn:
-				return k, v, nil
+			if stop, res := r.loopControl(k, labels); stop {
+				return res, v, nil
 			}
 		}
 	}, nil
 }
 
 func (c *compiler) forInOf(into ast.ForInto, source ast.Expression, bodyStmt ast.Statement, of bool) (stmtFn, error) {
+	labels := c.takeLabels()
 	src, err := c.expression(source)
 	if err != nil {
 		return nil, err
@@ -1145,7 +1150,18 @@ func (c *compiler) forInOf(into ast.ForInto, source ast.Expression, bodyStmt ast
 			if err := bind(r, iter, item); err != nil {
 				return 0, nil, err
 			}
-			return body(r, iter)
+			k, rv, err := body(r, iter)
+			if err != nil {
+				return 0, nil, err
+			}
+			// Own labels resolve here; foreign labeled jumps propagate.
+			if (k == ctlBreak || k == ctlContinue) && r.label != "" && hasLabel(labels, r.label) {
+				r.label = ""
+			}
+			if k == ctlContinue && r.label == "" {
+				return ctlNormal, nil, nil
+			}
+			return k, rv, nil
 		}
 		if of {
 			return r.iterate(v, step)
@@ -1163,10 +1179,10 @@ func (c *compiler) forInOf(into ast.ForInto, source ast.Expression, bodyStmt ast
 			if err != nil {
 				return 0, nil, err
 			}
-			if k == ctlBreak {
+			if k == ctlBreak && r.label == "" {
 				break
 			}
-			if k == ctlReturn {
+			if k != ctlNormal {
 				return k, rv, nil
 			}
 		}
@@ -1183,10 +1199,10 @@ func (r *rt) iterate(v any, step func(any) (ctl, any, error)) (ctl, any, error) 
 			if err != nil {
 				return 0, nil, err
 			}
-			if k == ctlBreak {
+			if k == ctlBreak && r.label == "" {
 				break
 			}
-			if k == ctlReturn {
+			if k != ctlNormal {
 				return k, rv, nil
 			}
 		}
@@ -1197,14 +1213,32 @@ func (r *rt) iterate(v any, step func(any) (ctl, any, error)) (ctl, any, error) 
 			if err != nil {
 				return 0, nil, err
 			}
-			if k == ctlBreak {
+			if k == ctlBreak && r.label == "" {
 				break
 			}
-			if k == ctlReturn {
+			if k != ctlNormal {
 				return k, rv, nil
 			}
 		}
 		return ctlNormal, nil, nil
+	}
+	if it, ok := defaultIterator(v); ok {
+		for {
+			item, more := it.next()
+			if !more {
+				return ctlNormal, nil, nil
+			}
+			k, rv, err := step(item)
+			if err != nil {
+				return 0, nil, err
+			}
+			if k == ctlBreak && r.label == "" {
+				return ctlNormal, nil, nil
+			}
+			if k != ctlNormal {
+				return k, rv, nil
+			}
+		}
 	}
 	return 0, nil, r.notIterable(v)
 }
@@ -1287,7 +1321,7 @@ func (c *compiler) switchStatement(n *ast.SwitchStatement) (stmtFn, error) {
 			if err != nil {
 				return 0, nil, err
 			}
-			if k == ctlBreak {
+			if k == ctlBreak && r.label == "" {
 				return ctlNormal, nil, nil
 			}
 			if k != ctlNormal {
@@ -1378,4 +1412,77 @@ func containsFunction(n ast.Node) bool {
 		return !found
 	})
 	return found
+}
+
+func hasLabel(labels []string, l string) bool {
+	for _, x := range labels {
+		if x == l {
+			return true
+		}
+	}
+	return false
+}
+
+// loopControl resolves a loop body's completion. stop reports leaving the
+// loop with result; unlabeled or own-labeled break/continue act here.
+func (r *rt) loopControl(k ctl, labels []string) (bool, ctl) {
+	switch k {
+	case ctlBreak:
+		if r.label == "" || hasLabel(labels, r.label) {
+			r.label = ""
+			return true, ctlNormal
+		}
+		return true, ctlBreak
+	case ctlContinue:
+		if r.label == "" || hasLabel(labels, r.label) {
+			r.label = ""
+			return false, ctlNormal
+		}
+		return true, ctlContinue
+	case ctlReturn:
+		return true, ctlReturn
+	}
+	return false, ctlNormal
+}
+
+func (c *compiler) takeLabels() []string {
+	l := c.pendingLabels
+	c.pendingLabels = nil
+	return l
+}
+
+// labelled compiles `label: statement`. Loop labels go to the loop so that
+// `continue label` works; any labeled statement can be exited with break.
+func (c *compiler) labelled(n *ast.LabelledStatement) (stmtFn, error) {
+	labels := []string{n.Label.Name.String()}
+	st := n.Statement
+	for {
+		inner, ok := st.(*ast.LabelledStatement)
+		if !ok {
+			break
+		}
+		labels = append(labels, inner.Label.Name.String())
+		st = inner.Statement
+	}
+	switch st.(type) {
+	case *ast.ForStatement, *ast.ForOfStatement, *ast.ForInStatement, *ast.WhileStatement, *ast.DoWhileStatement:
+		c.pendingLabels = labels
+		return c.statement(st)
+	case *ast.LexicalDeclaration, *ast.FunctionDeclaration, *ast.ClassDeclaration:
+		return nil, unsupported(st)
+	}
+	c.breakable++
+	body, err := c.subStatement(st)
+	c.breakable--
+	if err != nil {
+		return nil, err
+	}
+	return func(r *rt, s *scope) (ctl, any, error) {
+		k, v, err := body(r, s)
+		if err == nil && k == ctlBreak && hasLabel(labels, r.label) {
+			r.label = ""
+			return ctlNormal, nil, nil
+		}
+		return k, v, err
+	}, nil
 }

@@ -113,7 +113,7 @@ func (ctx *stringifier) str(key string, holder any) (bool, error) {
 		}
 	case nil:
 		ctx.buf.WriteString("null")
-	case *object, *array, *hostObject, *regexpValue:
+	case *object, *array, *hostObject, *regexpValue, *collection, *iterator:
 		for _, o := range ctx.stack {
 			if o == value {
 				return false, r.typeError("Converting circular structure to JSON")

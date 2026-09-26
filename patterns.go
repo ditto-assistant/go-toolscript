@@ -179,6 +179,9 @@ func (r *rt) iterableItems(v any) ([]any, error) {
 		}
 		return out, nil
 	}
+	if it, ok := defaultIterator(v); ok {
+		return it.drain(r)
+	}
 	return nil, r.notIterable(v)
 }
 

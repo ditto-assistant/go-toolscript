@@ -3,6 +3,7 @@ package toolscript
 import (
 	"encoding/json"
 	"math"
+	"math/rand/v2"
 	"sort"
 	"strconv"
 	"strings"
@@ -63,11 +64,18 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 		return r.objectMethod(t, key, args)
 	case *regexpValue:
 		return r.regexpMethod(t, key, args)
+	case *collection:
+		return r.collectionMethod(t, key, args)
+	case *iterator:
+		return r.iteratorMethod(t, key)
 	case *function:
 		if t.props != nil {
 			if f, ok := t.props.get(key); ok {
 				return r.call(f, args)
 			}
+		}
+		if v, ok, err := r.functionMethod(t, key, args); ok {
+			return v, err
 		}
 		if key == "toString" {
 			return r.toString(t)
@@ -404,6 +412,9 @@ func init() {
 			return r.join(a, sep)
 		},
 		"toString": func(r *rt, a *array, args []any) (any, error) { return r.join(a, ",") },
+		"entries":  func(r *rt, a *array, args []any) (any, error) { return arrayIterator(a, "entries"), nil },
+		"keys":     func(r *rt, a *array, args []any) (any, error) { return arrayIterator(a, "keys"), nil },
+		"values":   func(r *rt, a *array, args []any) (any, error) { return arrayIterator(a, "values"), nil },
 		"toLocaleString": func(r *rt, a *array, args []any) (any, error) {
 			parts := make([]any, len(a.items))
 			for i, v := range a.items {
@@ -1106,6 +1117,7 @@ func init() {
 			}
 			return t
 		}),
+		"Math.random": func(r *rt, args []any) (any, error) { return rand.Float64(), nil },
 		"Math.pow": func(r *rt, args []any) (any, error) {
 			a, err := r.toNumber(arg(args, 0))
 			if err != nil {
@@ -1670,6 +1682,26 @@ func (r *rt) callGlobal(name string, args []any) (any, error) {
 	case "isFinite":
 		f, err := r.toNumber(arg(args, 0))
 		return !math.IsNaN(f) && !math.IsInf(f, 0), err
+	case "encodeURIComponent", "encodeURI":
+		s, err := r.toString(arg(args, 0))
+		if err != nil {
+			return nil, err
+		}
+		keep := ""
+		if name == "encodeURI" {
+			keep = uriReserved
+		}
+		return uriEncode(s, keep), nil
+	case "decodeURIComponent", "decodeURI":
+		s, err := r.toString(arg(args, 0))
+		if err != nil {
+			return nil, err
+		}
+		preserve := ""
+		if name == "decodeURI" {
+			preserve = uriReserved
+		}
+		return r.uriDecode(s, preserve)
 	}
 	return nil, errInternal
 }
@@ -1691,8 +1723,12 @@ func (r *rt) console(level string, args []any) error {
 }
 
 func (r *rt) consoleArg(v any) (string, error) {
+	if c, ok := v.(*collection); ok && c.isMap {
+		// Goja exports a Map as [][2]any, which its console prints via String().
+		return "[object Map]", nil
+	}
 	switch v.(type) {
-	case *object, *array, *regexpValue:
+	case *object, *array, *regexpValue, *collection, *iterator:
 		exported, err := exportConsole(v)
 		if err == nil {
 			if clean, err := MarshalExport(exported); err == nil {

@@ -94,6 +94,7 @@ type rt struct {
 	pending int // steps not yet published to x.steps
 	frames  []*scope8
 	coll    *collate.Collator
+	label   string // target of a labeled break/continue in flight
 }
 
 // Throw is an uncaught JavaScript exception. Tool and host failures surface
@@ -667,8 +668,26 @@ func (x *exporter) export(v any, depth int) (any, error) {
 		return Undefined, nil
 	case holeMarker:
 		return nil, nil // Goja exports a missing element as nil
-	case *regexpValue:
+	case *regexpValue, *iterator:
 		return map[string]any{}, nil
+	case *collection:
+		// Goja exports a Set as its values and a Map as [key, value] pairs.
+		out := make([]any, 0, t.live)
+		for i := range t.keys {
+			if t.dead[i] {
+				continue
+			}
+			var item any = t.keys[i]
+			if t.isMap {
+				item = &array{items: []any{t.keys[i], t.vals[i]}}
+			}
+			e, err := x.export(item, depth+1)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, e)
+		}
+		return out, nil
 	case float64:
 		if x.strict && (math.IsNaN(t) || math.IsInf(t, 0)) {
 			return nil, fmt.Errorf("json: unsupported value: %s", strconv.FormatFloat(t, 'g', -1, 64))

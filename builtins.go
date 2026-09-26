@@ -910,8 +910,14 @@ func init() {
 			return s, nil
 		},
 		"valueOf": func(r *rt, f float64, _ []any) (any, error) { return f, nil },
-		// Goja formats numbers for every locale like toString.
-		"toLocaleString": func(r *rt, f float64, _ []any) (any, error) { return numberToString(f), nil },
+		// Goja formats numbers for every locale like toString; with locales
+		// or options it is Intl.NumberFormat.
+		"toLocaleString": func(r *rt, f float64, args []any) (any, error) {
+			if isUndefined(arg(args, 0)) && isUndefined(arg(args, 1)) {
+				return numberToString(f), nil
+			}
+			return r.numberToLocaleString(f, arg(args, 0), arg(args, 1))
+		},
 		"toPrecision": func(r *rt, f float64, args []any) (any, error) {
 			if isUndefined(arg(args, 0)) {
 				return numberToString(f), nil

@@ -1,0 +1,39 @@
+Currency and percent formatting via toFixed/Math.round/padStart for a ledger report.
+-- script.js --
+const rows = mcp.ledger.entries({}).entries;
+const fmt = c => (c < 0 ? "-" : "") + "$" + (Math.abs(c) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+let running = 0;
+const lines = rows.map(r => {
+  running += r.cents;
+  const pct = r.cents / 12345 * 100;
+  return `${r.id.padEnd(8)}|${fmt(r.cents).padStart(14)}|${fmt(running).padStart(14)}|${pct.toFixed(1).padStart(7)}%|${(Math.round(pct * 100) / 100).toString().padStart(8)}`;
+});
+const odd = [1.005, 2.675, 1.45, -1.45, 8.345, 0.5, 1.5, 2.5, -0.5].map(x => [x.toFixed(2), x.toFixed(1), x.toFixed(0), Math.round(x * 100) / 100]);
+return {lines, odd};
+-- tools.json --
+{
+  "ledger.entries": {
+    "entries": [
+      {
+        "id": "e1",
+        "cents": 123456789
+      },
+      {
+        "id": "e2",
+        "cents": -5
+      },
+      {
+        "id": "e3",
+        "cents": 99
+      },
+      {
+        "id": "e4",
+        "cents": -123456790
+      },
+      {
+        "id": "e5",
+        "cents": 1000000
+      }
+    ]
+  }
+}

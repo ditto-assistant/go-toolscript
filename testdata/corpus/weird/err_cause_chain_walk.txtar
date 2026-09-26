@@ -1,0 +1,21 @@
+Walk an Error cause chain built by wrapping tool errors three times; stringify each level.
+-- script.js --
+function step(name) {
+  try { return mcp.pipeline.run({step: name}); }
+  catch (e) { throw new Error(`step ${name} failed`, {cause: e}); }
+}
+function stage() {
+  try { return step("extract"); }
+  catch (e) { throw new Error("stage 1 failed", {cause: e}); }
+}
+try { stage(); } catch (top) {
+  const chain = [];
+  for (let e = top; e; e = e.cause) chain.push(`${e.name}: ${e.message}`);
+  return {chain, depth: chain.length, keys: Object.keys(top), hasCause: "cause" in top, json: JSON.stringify(top)};
+}
+-- tools.json --
+{
+  "pipeline.run": {
+    "$error": "disk quota exceeded"
+  }
+}

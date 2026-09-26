@@ -1,0 +1,17 @@
+An async main() whose body never awaits; the script has no await/Promise text.
+-- script.js --
+async function main() {
+  const r = mcp.search_memories({q: "a"});
+  return r.hits.length;
+}
+const p = main();
+return {kind: typeof p, isObj: p !== null && typeof p === "object"};
+-- tools.json --
+{
+  "search_memories": {
+    "hits": [
+      1,
+      2
+    ]
+  }
+}

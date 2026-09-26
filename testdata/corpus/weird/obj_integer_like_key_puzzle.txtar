@@ -1,0 +1,51 @@
+Objects keyed by ids that look numeric; insertion order vs integer order after merges and deletes.
+-- script.js --
+const r = mcp.inventory.counts({});
+const counts = {};
+for (const row of r.rows) counts[row.sku] = (counts[row.sku] || 0) + row.qty;
+delete counts["7"];
+counts["7"] = 1;
+counts[-3] = 2;
+counts[1.5] = 3;
+counts["4294967294"] = 4;
+counts["4294967295"] = 5;
+counts[" 8"] = 6;
+counts["1e3"] = 7;
+counts[1e3] = 8;
+const merged = {...{z: 1, 9: "nine"}, ...counts, 0: "zero"};
+return {keys: Object.keys(counts), mergedKeys: Object.keys(merged), json: JSON.stringify(counts), entries: Object.entries(merged).slice(0, 4)};
+-- tools.json --
+{
+  "inventory.counts": {
+    "rows": [
+      {
+        "sku": "10",
+        "qty": 1
+      },
+      {
+        "sku": "abc",
+        "qty": 2
+      },
+      {
+        "sku": "2",
+        "qty": 3
+      },
+      {
+        "sku": "007",
+        "qty": 4
+      },
+      {
+        "sku": "7",
+        "qty": 5
+      },
+      {
+        "sku": "10",
+        "qty": 6
+      },
+      {
+        "sku": "-1",
+        "qty": 7
+      }
+    ]
+  }
+}

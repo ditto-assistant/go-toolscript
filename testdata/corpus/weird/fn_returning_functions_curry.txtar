@@ -1,0 +1,20 @@
+Curried helpers and function factories; returning a function from a helper and calling it later.
+-- script.js --
+const r = mcp.cfg.get({});
+const add = a => b => c => a + b + c;
+const makeFmt = (prefix, digits = 2) => n => prefix + n.toFixed(digits);
+const pipe = (...fs) => x => fs.reduce((v, f) => f(v), x);
+const compose = (...fs) => pipe(...fs.reverse());
+const usd = makeFmt("$");
+const pct = makeFmt("", 1);
+const clean = pipe(s => s.trim(), s => s.toLowerCase(), s => s.replace(/\s+/g, "-"));
+const once = f => { let done = false, v; return (...a) => done ? v : (done = true, v = f(...a)); };
+const init = once(() => mcp.cfg.get({phase: "init"}).n);
+return {curry: add(1)(2)(3), usd: usd(r.n), pct: pct(r.n * 100), slug: clean(r.title), comp: compose(x => x + 1, x => x * 2)(5), once: [init(), init(), init()]};
+-- tools.json --
+{
+  "cfg.get": {
+    "n": 0.4567,
+    "title": "  Hello Big   World  "
+  }
+}

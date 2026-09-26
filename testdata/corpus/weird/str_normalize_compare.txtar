@@ -1,0 +1,26 @@
+normalize() before comparing accented names from two tools.
+-- script.js --
+const a = mcp.crm.contacts({}).names;
+const b = mcp.hr.people({}).names;
+const norm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const matches = a.filter(x => b.some(y => norm(x) === norm(y)));
+return {matches, raw: a.filter(x => b.includes(x)), lens: a.map(x => [x.length, x.normalize("NFC").length, x.normalize("NFD").length])};
+-- tools.json --
+{
+  "crm.contacts": {
+    "names": [
+      "José",
+      "Zoë",
+      "Ана",
+      "Renée"
+    ]
+  },
+  "hr.people": {
+    "names": [
+      "José",
+      "zoe",
+      "Ана",
+      "Renee"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+Model logs the first line and line count of e.stack from a tool failure and a thrown Error.
+-- script.js --
+const out = [];
+try { mcp.docs.get({id: "doc_x"}); } catch (e) {
+  out.push(typeof e.stack, String(e.stack).split("\n")[0]);
+}
+try { throw new TypeError("bad shape"); } catch (e) {
+  out.push(e.stack.split("\n")[0], e.stack.includes("bad shape"));
+}
+return out;
+-- tools.json --
+{
+  "docs.get": {
+    "$error": "not found"
+  }
+}

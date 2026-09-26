@@ -1,0 +1,11 @@
+Tool args carry Date, Map, Set, RegExp, Error, sparse arrays, undefined in arrays and integer-like keys.
+-- script.js --
+const holes = [1, 2, 3]; delete holes[1];
+const r = mcp.log.write({when: new Date(Date.UTC(2026, 0, 2)), m: new Map([["a", 1]]), s: new Set([1]), re: /x/i, err: new Error("e"), holes, list: [undefined, null, NaN, -0, Infinity], 10: "ten", 2: "two", b: {z: 1, a: undefined}});
+return r.ok;
+-- tools.json --
+{
+  "log.write": {
+    "ok": true
+  }
+}

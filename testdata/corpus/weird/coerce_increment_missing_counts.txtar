@@ -1,0 +1,24 @@
+counts[k]++ on missing keys yields NaN (model bug) next to the correct idioms; ++ on strings and null.
+-- script.js --
+const words = mcp.text.words({}).words;
+const bad = {}, good = {}, good2 = {};
+for (const w of words) { bad[w]++; good[w] = (good[w] || 0) + 1; good2[w] = good2[w] + 1 || 1; }
+let s = "5"; s++;
+let t = "5"; t += 1;
+let n = null; n++;
+let u; u++;
+let arr = [1]; arr++;
+let obj = {}; obj.x += 1;
+return {bad: JSON.stringify(bad), good, good2, s, t, n, u: String(u), arr, objx: String(obj.x)};
+-- tools.json --
+{
+  "text.words": {
+    "words": [
+      "a",
+      "b",
+      "a",
+      "constructor",
+      "a"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+Spread merges where later sources carry undefined/null and arrays spread into objects.
+-- script.js --
+const defaults = mcp.cfg.defaults({});
+const user = mcp.cfg.user({});
+const opts = {timeout: undefined, retries: null};
+const merged = {...defaults, ...user, ...opts, ...null, ...undefined, ...[9, 8], ..."hi", ...123};
+const assigned = Object.assign({}, defaults, user, opts, "xy");
+return {merged, keys: Object.keys(merged), inTimeout: "timeout" in merged, json: JSON.stringify(merged), assigned: Object.keys(assigned), deepShared: merged.nested === user.nested};
+-- tools.json --
+{
+  "cfg.defaults": {
+    "timeout": 30,
+    "retries": 3,
+    "mode": "safe",
+    "nested": {
+      "a": 1
+    }
+  },
+  "cfg.user": {
+    "mode": "fast",
+    "nested": {
+      "b": 2
+    },
+    "0": "zero"
+  }
+}

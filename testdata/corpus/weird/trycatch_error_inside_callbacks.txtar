@@ -1,0 +1,30 @@
+Errors thrown from inside map/reduce/sort/find callbacks propagate out; index captured via closure.
+-- script.js --
+const rows = mcp.rows.get({}).rows;
+const out = [];
+let at = -1;
+try { rows.map((r, i) => { at = i; return r.value.toFixed(1); }); } catch (e) { out.push(`map@${at}: ${e.message}`); }
+try { rows.reduce((acc, r) => acc + r.value.length, 0); } catch (e) { out.push("reduce: " + e.message); }
+try { rows.find(r => r.value.x.y); } catch (e) { out.push("find: " + e.message); }
+try { rows.filter(r => { if (r.value === null) throw {code: "NULL_ROW", row: r}; return true; }); } catch (e) { out.push("filter: " + JSON.stringify(e)); }
+try { JSON.parse(rows[2].value); } catch (e) { out.push("json: " + e.name); }
+return out;
+-- tools.json --
+{
+  "rows.get": {
+    "rows": [
+      {
+        "value": 1.25
+      },
+      {
+        "value": 2
+      },
+      {
+        "value": null
+      },
+      {
+        "value": "3"
+      }
+    ]
+  }
+}

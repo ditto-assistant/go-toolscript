@@ -1,0 +1,30 @@
+Tool returns JSON embedded in text; model strips fences and parses, handling failures with messages.
+-- script.js --
+const blobs = mcp.llm.outputs({}).outputs;
+const out = blobs.map(b => {
+  const cleaned = b.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "").trim();
+  try { const v = JSON.parse(cleaned); return {ok: true, type: Array.isArray(v) ? "array" : typeof v, v}; }
+  catch (e) { return {ok: false, name: e.name, msg: e.message}; }
+});
+return out;
+-- tools.json --
+{
+  "llm.outputs": {
+    "outputs": [
+      "```json\n{\"a\": 1, \"a\": 2}\n```",
+      "[1, 2, 3,]",
+      "{'a': 1}",
+      "  \"just a string\"  ",
+      "1e400",
+      "-0",
+      "{\"__proto__\": {\"x\": 1}, \"b\": 2}",
+      "",
+      "nul",
+      "{\"big\": 12345678901234567890}",
+      "```\n[\"\\u00e9\", \"\\ud83d\\ude00\"]\n```",
+      "{\"n\": 1}{\"n\": 2}",
+      "﻿{\"bom\": true}",
+      "[\"tab\there\"]"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+Script returns a tool function and an object holding one (not serializable as data).
+-- script.js --
+const r = mcp.search_memories({q: "z"});
+console.log("hits", r.hits.length);
+return {fn: mcp.search_memories, hits: r.hits, arrow: x => x + 1};
+-- tools.json --
+{
+  "search_memories": {
+    "hits": [
+      {
+        "id": "m1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+Case mapping and case-insensitive dedupe over names with special casing.
+-- script.js --
+const names = mcp.people.list({}).names;
+const up = names.map(n => n.toUpperCase());
+const low = names.map(n => n.toLowerCase());
+const seen = new Set();
+const dedup = names.filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+return {up, low, lens: up.map(u => u.length), dedup};
+-- tools.json --
+{
+  "people.list": {
+    "names": [
+      "straße",
+      "STRASSE",
+      "İstanbul",
+      "istanbul",
+      "ǅemal",
+      "ﬁnance",
+      "ΣΟΦΟΣ",
+      "Ωmega",
+      "ὈΔΥΣΣΕΎΣ",
+      "ŉ"
+    ]
+  }
+}

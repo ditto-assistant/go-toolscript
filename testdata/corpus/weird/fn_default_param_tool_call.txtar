@@ -1,0 +1,30 @@
+Default parameter values that call tools, evaluated only when the argument is missing.
+-- script.js --
+function load(id, meta = mcp.meta.get({id}), tags = meta.tags ?? []) {
+  return {id, owner: meta.owner, tags};
+}
+const a = load("x1");
+const b = load("x2", {owner: "given"});
+const c = load("x3", undefined, ["t"]);
+const d = load("x4", null ?? undefined);
+return [a, b, c, d];
+-- tools.json --
+{
+  "meta.get": {
+    "$sequence": [
+      {
+        "owner": "alice@example.com",
+        "tags": [
+          "a"
+        ]
+      },
+      {
+        "owner": "bob@example.com"
+      },
+      {
+        "owner": "carol@example.com",
+        "tags": null
+      }
+    ]
+  }
+}

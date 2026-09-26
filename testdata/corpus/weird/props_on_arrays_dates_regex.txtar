@@ -1,0 +1,31 @@
+Model hangs metadata on arrays, dates, regexes and functions, then spreads/serializes/enumerates them.
+-- script.js --
+const r = mcp.list.get({});
+const rows = r.items.slice();
+rows.total = r.total;
+rows["next"] = r.next_cursor;
+const when = new Date(0);
+when.label = "epoch";
+const re = /id-(\d+)/;
+re.description = "id matcher";
+const fn = x => x;
+fn.meta = {v: 1};
+const out = {};
+out.arr = [Object.keys(rows), JSON.stringify(rows), rows.total, JSON.stringify({...rows}), rows.slice().total ?? "dropped", rows.concat([]).next ?? "dropped", rows.map(x => x).total ?? "dropped"];
+out.forIn = []; for (const k in rows) out.forIn.push(k);
+out.date = [Object.keys(when), JSON.stringify({...when}), when.label, JSON.stringify(when)];
+out.re = [re.description ?? "undef", Object.keys(re)];
+out.fn = [fn.meta.v, Object.keys(fn), JSON.stringify({...fn})];
+console.log(rows);
+return out;
+-- tools.json --
+{
+  "list.get": {
+    "items": [
+      "a",
+      "b"
+    ],
+    "total": 2,
+    "next_cursor": "c9"
+  }
+}

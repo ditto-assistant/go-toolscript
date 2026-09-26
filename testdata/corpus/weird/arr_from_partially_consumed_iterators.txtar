@@ -1,0 +1,29 @@
+Array.from over array/Map iterators after next() calls, with and without a map function.
+-- script.js --
+const r = mcp.kv.pairs({});
+const a = r.pairs.entries(); const fa = Array.from(a);
+const b = r.pairs.entries(); b.next(); const fb = Array.from(b);
+const c = r.pairs.entries(); const fc = Array.from(c, x => x[0]);
+const d = r.pairs.values(); d.next(); const fd = [...d];
+const m = new Map(r.pairs); const mi = m.entries(); mi.next(); const fm = Array.from(mi);
+const e = r.pairs.keys(); const fe = Array.from(e, k => k * 2);
+return {fa: fa.length, fb: fb.length, fc, fd: fd.length, fm: fm.length, fe};
+-- tools.json --
+{
+  "kv.pairs": {
+    "pairs": [
+      [
+        "a",
+        1
+      ],
+      [
+        "b",
+        2
+      ],
+      [
+        "c",
+        3
+      ]
+    ]
+  }
+}

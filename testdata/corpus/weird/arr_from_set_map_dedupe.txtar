@@ -1,0 +1,33 @@
+Array.from over Set/Map/Map.values()/keys() — the standard dedupe idioms over tool ids.
+-- script.js --
+const r = mcp.crm.contacts({});
+const ids = r.contacts.map(c => c.id);
+const uniq = Array.from(new Set(ids));
+const byId = new Map(r.contacts.map(c => [c.id, c]));
+const emails = Array.from(byId.values(), c => c.email ?? "(none)");
+const keys = Array.from(byId.keys());
+const pairs = Array.from(byId).map(([k, v]) => k + "=" + v.email);
+const sorted = Array.from(new Set(ids)).sort();
+return {uniq, emails, keys, pairs, sorted, n: Array.from(new Set(ids)).length};
+-- tools.json --
+{
+  "crm.contacts": {
+    "contacts": [
+      {
+        "id": "c2",
+        "email": "bob@example.com"
+      },
+      {
+        "id": "c1",
+        "email": "alice@example.com"
+      },
+      {
+        "id": "c2",
+        "email": "bob2@example.com"
+      },
+      {
+        "id": "c3"
+      }
+    ]
+  }
+}

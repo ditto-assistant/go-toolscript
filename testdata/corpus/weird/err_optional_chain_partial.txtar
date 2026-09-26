@@ -1,0 +1,34 @@
+Optional chaining that short-circuits the whole chain versus a parenthesized chain that throws.
+-- script.js --
+const r = mcp.docs.get({id: "doc_abc"});
+const out = {};
+out.a = r?.meta?.owner?.email?.toLowerCase?.() ?? "none";
+out.b = r.missing?.deep.deeper.deepest;
+out.c = r.blocks?.[5]?.text?.slice(0, 3);
+out.d = r.fmt?.();
+out.e = r.blocks?.map(b => b?.children?.length ?? -1);
+try { out.f = (r.missing?.deep).deeper; } catch (e) { out.f = e.message; }
+try { out.g = r.meta?.owner.email.length; } catch (e) { out.g = e.message; }
+try { out.h = r.blocks?.[0].text.missing.x; } catch (e) { out.h = e.message; }
+return out;
+-- tools.json --
+{
+  "docs.get": {
+    "meta": {
+      "owner": null
+    },
+    "blocks": [
+      {
+        "text": "hello",
+        "children": [
+          1,
+          2
+        ]
+      },
+      null,
+      {
+        "text": "x"
+      }
+    ]
+  }
+}

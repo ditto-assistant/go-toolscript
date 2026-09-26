@@ -1,0 +1,48 @@
+switch with strict matching on tool values of mixed types and deliberate fallthrough.
+-- script.js --
+const events = mcp.audit.events({}).events;
+const out = events.map(e => {
+  const tags = [];
+  switch (e.code) {
+    case 200: tags.push("ok");
+    case "200": tags.push("str200");
+      break;
+    case null: tags.push("null");
+    case undefined: tags.push("undef"); break;
+    case NaN: tags.push("nan"); break;
+    case 404: case 410: tags.push("gone"); break;
+    default: tags.push("other:" + typeof e.code);
+    case 500: tags.push("server");
+  }
+  return tags.join("+");
+});
+return out;
+-- tools.json --
+{
+  "audit.events": {
+    "events": [
+      {
+        "code": 200
+      },
+      {
+        "code": "200"
+      },
+      {
+        "code": null
+      },
+      {},
+      {
+        "code": 410
+      },
+      {
+        "code": 500
+      },
+      {
+        "code": "404"
+      },
+      {
+        "code": true
+      }
+    ]
+  }
+}

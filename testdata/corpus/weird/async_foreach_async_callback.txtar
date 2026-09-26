@@ -1,0 +1,19 @@
+arr.forEach(async ...) does not wait; results array is read before the callbacks' later halves run.
+-- script.js --
+const ids = ["a", "b", "c"];
+const results = [];
+ids.forEach(async id => {
+  results.push("start:" + id);
+  const r = await mcp.items.get({id});
+  results.push("end:" + id + ":" + r.v);
+});
+results.push("after-forEach");
+const snapshot = results.slice();
+await mcp.items.get({id: "flush"});
+return {snapshot, final: results};
+-- tools.json --
+{
+  "items.get": {
+    "v": 1
+  }
+}

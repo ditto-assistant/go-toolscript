@@ -1,0 +1,59 @@
+Cursor pagination state machine with $sequence, dedupe by id and a page budget.
+-- script.js --
+let cursor = null, page = 0, state = "fetch";
+const seen = new Map();
+const trail = [];
+while (state !== "done") {
+  switch (state) {
+    case "fetch": {
+      const r = await mcp.crm.list_contacts({cursor, limit: 2});
+      page++;
+      for (const c of r.contacts ?? []) if (!seen.has(c.id)) seen.set(c.id, c.email?.toLowerCase() ?? null);
+      trail.push(`${page}:${cursor ?? "-"}->${r.next_cursor ?? "∅"}`);
+      cursor = r.next_cursor;
+      state = !cursor ? "done" : page >= 5 ? "budget" : "fetch";
+      break;
+    }
+    case "budget":
+      trail.push("budget hit");
+      state = "done";
+      break;
+  }
+}
+return {count: seen.size, emails: [...seen.values()], trail};
+-- tools.json --
+{
+  "crm.list_contacts": {
+    "$sequence": [
+      {
+        "contacts": [
+          {
+            "id": "c1",
+            "email": "Alice@Example.com"
+          },
+          {
+            "id": "c2"
+          }
+        ],
+        "next_cursor": "cur_2"
+      },
+      {
+        "contacts": [
+          {
+            "id": "c2",
+            "email": "dup@example.com"
+          },
+          {
+            "id": "c3",
+            "email": "carol@example.com"
+          }
+        ],
+        "next_cursor": "cur_3"
+      },
+      {
+        "contacts": [],
+        "next_cursor": ""
+      }
+    ]
+  }
+}

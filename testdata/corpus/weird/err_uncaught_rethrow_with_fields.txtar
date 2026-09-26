@@ -1,0 +1,16 @@
+Uncaught rethrow of a tool error after mutating its message and adding fields.
+-- script.js --
+try {
+  mcp.billing.charge({amount: 9});
+} catch (e) {
+  e.message = "[billing] " + e.message;
+  e.retry = false;
+  console.log("about to rethrow", e.name, JSON.stringify(e));
+  throw e;
+}
+-- tools.json --
+{
+  "billing.charge": {
+    "$error": "insufficient funds"
+  }
+}

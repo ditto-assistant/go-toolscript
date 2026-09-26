@@ -1,0 +1,10 @@
+toString(radix) on negatives/fractions and exponent/unary precedence the model writes out.
+-- script.js --
+const n = mcp.num.get({}).n;
+return [(-255).toString(16), (255.5).toString(16), (0.5).toString(2), (0.1).toString(3).slice(0, 12), n.toString(36), (-n).toString(2), (2 ** 53).toString(7), (-2) ** 2, 2 ** -1, -(2 ** 2), 2 ** 3 ** 2, (1e21).toString(16).length, (123.456).toString(36)];
+-- tools.json --
+{
+  "num.get": {
+    "n": 123456789
+  }
+}

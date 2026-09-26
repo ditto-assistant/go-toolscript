@@ -1,0 +1,40 @@
+Currency and percent formatting with a hand-rolled thousands separator, toFixed and padStart.
+-- script.js --
+const rows = mcp.ledger.entries({}).entries;
+const commas = s => { const [i, f] = s.split("."); let out = ""; for (let k = 0; k < i.length; k++) { if (k > 0 && (i.length - k) % 3 === 0) out += ","; out += i[k]; } return f === undefined ? out : out + "." + f; };
+const fmt = c => (c < 0 ? "-" : "") + "$" + commas((Math.abs(c) / 100).toFixed(2));
+let running = 0;
+const lines = rows.map(r => {
+  running += r.cents;
+  const pct = r.cents / 12345 * 100;
+  return `${r.id.padEnd(8)}|${fmt(r.cents).padStart(16)}|${fmt(running).padStart(16)}|${pct.toFixed(1).padStart(9)}%|${(Math.round(pct * 100) / 100).toString().padStart(10)}`;
+});
+const odd = [1.005, 2.675, 1.45, -1.45, 8.345, 0.5, 1.5, 2.5, -0.5, 1e-7, 123456.785].map(x => [x.toFixed(2), x.toFixed(1), x.toFixed(0), Math.round(x * 100) / 100]);
+return {lines, odd};
+-- tools.json --
+{
+  "ledger.entries": {
+    "entries": [
+      {
+        "id": "e1",
+        "cents": 123456789
+      },
+      {
+        "id": "e2",
+        "cents": -5
+      },
+      {
+        "id": "e3",
+        "cents": 99
+      },
+      {
+        "id": "e4",
+        "cents": -123456790
+      },
+      {
+        "id": "e5",
+        "cents": 1000000
+      }
+    ]
+  }
+}

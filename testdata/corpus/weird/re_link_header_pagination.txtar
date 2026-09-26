@@ -1,0 +1,52 @@
+Parse an HTTP Link header with an exec loop and follow rel=next via $sequence pages.
+-- script.js --
+let url = "https://api.example.com/items?page=1";
+const all = [];
+let hops = 0;
+while (url && hops < 5) {
+  const r = mcp.http.get({url});
+  hops++;
+  all.push(...r.body.items);
+  const re = /<([^>]+)>;\s*rel="?([a-z]+)"?/g;
+  const links = {};
+  let m;
+  while ((m = re.exec(r.headers.link || "")) !== null) links[m[2]] = m[1];
+  url = links.next;
+}
+return {hops, all, lastUrl: url ?? null};
+-- tools.json --
+{
+  "http.get": {
+    "$sequence": [
+      {
+        "headers": {
+          "link": "<https://api.example.com/items?page=2>; rel=\"next\", <https://api.example.com/items?page=9>; rel=\"last\""
+        },
+        "body": {
+          "items": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "headers": {
+          "link": "<https://api.example.com/items?page=3>; rel=next"
+        },
+        "body": {
+          "items": [
+            3
+          ]
+        }
+      },
+      {
+        "headers": {},
+        "body": {
+          "items": [
+            4
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+Model chains .then on a synchronous tool result (no async dialect in the script).
+-- script.js --
+let out;
+try {
+  out = mcp.search_memories({q: "then"}).then(r => r.hits);
+} catch (e) {
+  out = {err: e.message, name: e.name};
+}
+return out;
+-- tools.json --
+{
+  "search_memories": {
+    "hits": [
+      1
+    ]
+  }
+}

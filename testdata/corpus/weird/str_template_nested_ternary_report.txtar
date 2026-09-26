@@ -1,0 +1,57 @@
+Huge template literal with nested ternaries, inline joins and default fallbacks.
+-- script.js --
+const r = mcp.ci.status({pr: 42});
+const icon = s => s === "success" ? "✅" : s === "failure" ? "❌" : s === "pending" ? "⏳" : s == null ? "❔" : "⚠️";
+const report = `# PR #${r.number ?? "?"} — ${r.title?.trim() || "(untitled)"}
+${r.draft ? "> Draft" : r.mergeable === false ? "> ⚠ Conflicts" : r.mergeable ? "> Ready" : "> Unknown mergeability"}
+
+## Checks (${r.checks?.length ?? 0})
+${(r.checks ?? []).length === 0 ? "_none_" : r.checks.map((c, i) => `${i + 1}. ${icon(c.state)} **${c.name}**${c.duration_s != null ? ` (${c.duration_s >= 60 ? `${Math.floor(c.duration_s / 60)}m${String(c.duration_s % 60).padStart(2, "0")}s` : `${c.duration_s}s`})` : ""}${c.state === "failure" ? `\n   - ${c.summary ?? "no summary"}` : ""}`).join("\n")}
+
+Reviewers: ${r.reviewers?.map(x => x.login + (x.approved ? "✓" : "")).join(", ") || "nobody"}
+Labels: ${[...new Set(r.labels)].sort().join(" · ")}
+Score: ${r.checks.filter(c => c.state === "success").length}/${r.checks.length} = ${(100 * r.checks.filter(c => c.state === "success").length / r.checks.length).toFixed(1)}%`;
+return report;
+-- tools.json --
+{
+  "ci.status": {
+    "number": 42,
+    "title": "  Speed up parser  ",
+    "draft": false,
+    "mergeable": null,
+    "checks": [
+      {
+        "name": "lint",
+        "state": "success",
+        "duration_s": 42
+      },
+      {
+        "name": "test",
+        "state": "failure",
+        "duration_s": 367,
+        "summary": "3 failed"
+      },
+      {
+        "name": "build",
+        "state": "pending"
+      },
+      {
+        "name": "docs",
+        "state": null,
+        "duration_s": 0
+      },
+      {
+        "name": "sec",
+        "state": "skipped",
+        "duration_s": 60
+      }
+    ],
+    "reviewers": [],
+    "labels": [
+      "perf",
+      "backend",
+      "perf",
+      "Backend"
+    ]
+  }
+}

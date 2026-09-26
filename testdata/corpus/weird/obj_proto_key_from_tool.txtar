@@ -1,0 +1,24 @@
+Tool JSON with a __proto__ key copied via spread, Object.assign and for...in.
+-- script.js --
+const r = mcp.kv.get({});
+const spread = {...r};
+const assigned = Object.assign({}, r);
+const viaLoop = {};
+for (const k in r) viaLoop[k] = r[k];
+const entries = Object.fromEntries(Object.entries(r));
+return {
+  own: Object.keys(r), spreadKeys: Object.keys(spread), assignedKeys: Object.keys(assigned), loopKeys: Object.keys(viaLoop), entriesKeys: Object.keys(entries),
+  polluted: [assigned.isAdmin === true, viaLoop.isAdmin === true, spread.isAdmin === true, ({}).isAdmin === true],
+  json: [JSON.stringify(spread), JSON.stringify(assigned), JSON.stringify(entries)]
+};
+-- tools.json --
+{
+  "kv.get": {
+    "__proto__": {
+      "isAdmin": true
+    },
+    "name": "x"
+  }
+}
+-- divergence --
+A __proto__ key copied with a computed-key assignment after a tool call is a runtime decline (ErrRuntimeUnsupported: __proto__ assignment) that cannot fall back once effects happened.

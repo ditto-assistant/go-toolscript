@@ -1,0 +1,11 @@
+Uncaught plain object that looks like an error (name + message fields).
+-- script.js --
+const r = mcp.http.fetch({url: "https://example.com/a"});
+if (r.status >= 400) throw {name: "HttpError", message: `status ${r.status}`, status: r.status};
+return r;
+-- tools.json --
+{
+  "http.fetch": {
+    "status": 503
+  }
+}

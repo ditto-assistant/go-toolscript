@@ -1,0 +1,20 @@
+Build and aggregate a large array in loops; length/join/Set/Math.max over 20k items.
+-- script.js --
+const seed = mcp.cfg.get({}).seed;
+const xs = [];
+for (let i = 0; i < 20000; i++) xs.push((i * seed) % 9973);
+const uniq = new Set(xs).size;
+const max = Math.max(...xs);
+const joinedLen = xs.join(",").length;
+const top = xs.slice().sort((a, b) => b - a).slice(0, 3);
+const lex = xs.slice(0, 2000).sort().slice(0, 5);
+let s = "";
+for (let i = 0; i < 5000; i++) s += String.fromCharCode(97 + (i % 26));
+const hist = xs.reduce((h, x) => { h[x % 7] = (h[x % 7] || 0) + 1; return h; }, {});
+return {uniq, max, joinedLen, top, lex, sLen: s.length, tail: s.slice(-5), hist};
+-- tools.json --
+{
+  "cfg.get": {
+    "seed": 7919
+  }
+}

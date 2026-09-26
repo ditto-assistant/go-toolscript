@@ -1,0 +1,63 @@
+Labeled loops: continue outer from a switch inside for...of, break from a labeled block.
+-- script.js --
+const repos = mcp.github.list_repos({}).repos;
+const hits = [];
+outer: for (const repo of repos) {
+  for (const f of repo.files) {
+    switch (true) {
+      case f.endsWith(".lock"): continue outer;
+      case f.startsWith("."): continue;
+      case f.includes("secret"): hits.push(repo.name + ":" + f); break outer;
+      default: if (f.length > 12) { hits.push("long:" + f); continue outer; }
+    }
+    hits.push(repo.name + "/" + f);
+  }
+}
+let status = "none";
+check: {
+  if (!hits.length) break check;
+  status = "some";
+  if (hits.some(h => h.startsWith("long:"))) { status = "has-long"; break check; }
+  status = "clean";
+}
+let n = 0;
+loop1: do { n++; while (true) { if (n < 3) continue loop1; break loop1; } } while (n < 10);
+return {hits, status, n};
+-- tools.json --
+{
+  "github.list_repos": {
+    "repos": [
+      {
+        "name": "api",
+        "files": [
+          ".env",
+          "main.go",
+          "go.sum",
+          "averyveryverylongname.go",
+          "x"
+        ]
+      },
+      {
+        "name": "web",
+        "files": [
+          "package.lock",
+          "index.ts"
+        ]
+      },
+      {
+        "name": "ops",
+        "files": [
+          "run.sh",
+          "secret.txt",
+          "after"
+        ]
+      },
+      {
+        "name": "never",
+        "files": [
+          "n"
+        ]
+      }
+    ]
+  }
+}

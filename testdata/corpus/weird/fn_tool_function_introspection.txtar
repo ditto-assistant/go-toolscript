@@ -1,0 +1,17 @@
+String/length/name of tool functions and built-ins (model prints what it can call).
+-- script.js --
+const fns = {tool: mcp.events.list, nested: mcp.github.get_issue, call: mcp.call};
+const out = {};
+for (const [k, f] of Object.entries(fns)) out[k] = [typeof f, f.length, typeof f.name, String(f).startsWith("function "), String(f).endsWith("{ [native code] }")];
+out.builtin = [String([].map), [].map.name, [].map.length, String("".trim).slice(0, 30)];
+out.list = mcp.events.list({}).n;
+return out;
+-- tools.json --
+{
+  "events.list": {
+    "n": 1
+  },
+  "github.get_issue": {
+    "n": 2
+  }
+}

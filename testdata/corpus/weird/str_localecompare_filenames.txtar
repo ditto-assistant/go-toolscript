@@ -1,0 +1,48 @@
+Sorting file names with localeCompare including numeric/sensitivity options a model assumes work.
+-- script.js --
+const files = mcp.drive.list({}).files.map(f => f.name);
+const plain = files.slice().sort((a, b) => a.localeCompare(b));
+const numeric = files.slice().sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: "base"}));
+const byCode = files.slice().sort();
+const cmp = [["a", "B"], ["a", "A"], ["é", "e"], ["file10", "file2"], ["", "a"], ["Z", "a"], ["ß", "ss"], ["a", "ä"]].map(([x, y]) => x.localeCompare(y));
+return {plain, numeric, byCode, cmp};
+-- tools.json --
+{
+  "drive.list": {
+    "files": [
+      {
+        "name": "file10.txt"
+      },
+      {
+        "name": "file2.txt"
+      },
+      {
+        "name": "File1.txt"
+      },
+      {
+        "name": "file1.txt"
+      },
+      {
+        "name": "_notes.md"
+      },
+      {
+        "name": "éclair.png"
+      },
+      {
+        "name": "Eclair.png"
+      },
+      {
+        "name": "zeta"
+      },
+      {
+        "name": "Ångström.csv"
+      },
+      {
+        "name": "10-report.pdf"
+      },
+      {
+        "name": "9-report.pdf"
+      }
+    ]
+  }
+}

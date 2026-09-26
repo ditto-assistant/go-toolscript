@@ -1,0 +1,21 @@
+tags.forEach(console.log) prints value, index and the whole array (console used as a value).
+-- script.js --
+const r = mcp.tags.list({});
+r.tags.forEach(console.log);
+return r.tags.map(JSON.stringify);
+-- tools.json --
+{
+  "tags.list": {
+    "tags": [
+      "alpha",
+      {
+        "k": 1
+      },
+      [
+        1,
+        2
+      ],
+      null
+    ]
+  }
+}

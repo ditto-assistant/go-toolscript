@@ -1,0 +1,13 @@
+Object.prototype.toString tags of iterators a debugging model prints.
+-- script.js --
+const r = mcp.dump.get({});
+const tag = v => Object.prototype.toString.call(v);
+return [tag(r.arr.entries()), tag(r.arr.values()), tag(new Map().keys()), tag(new Set().values()), tag(r.arr[Symbol.iterator] ? 1 : 2)];
+-- tools.json --
+{
+  "dump.get": {
+    "arr": [
+      1
+    ]
+  }
+}

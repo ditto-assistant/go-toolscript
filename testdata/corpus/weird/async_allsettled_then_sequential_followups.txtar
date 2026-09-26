@@ -1,0 +1,39 @@
+allSettled fan-out, then sequential follow-up calls only for fulfilled items, with per-item try/catch.
+-- script.js --
+const ids = ["doc_a", "doc_b", "doc_c"];
+const settled = await Promise.allSettled(ids.map(id => mcp.docs.get({id})));
+const report = [];
+for (const [i, s] of settled.entries()) {
+  if (s.status !== "fulfilled") { report.push({id: ids[i], err: String(s.reason)}); continue; }
+  try {
+    const c = await mcp.docs.comments({id: ids[i]});
+    report.push({id: ids[i], title: s.value.title, comments: c.items.length});
+  } catch (e) {
+    report.push({id: ids[i], title: s.value.title, commentErr: e.message});
+  }
+}
+return report;
+-- tools.json --
+{
+  "docs.get": {
+    "title": "Shared title"
+  },
+  "docs.comments": {
+    "$sequence": [
+      {
+        "items": [
+          1,
+          2
+        ]
+      },
+      {
+        "items": []
+      },
+      {
+        "items": [
+          3
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+A model's typeOf helper built from typeof, Array.isArray, instanceof and Object.prototype.toString over many values.
+-- script.js --
+const r = mcp.dump.get({});
+const vals = [r.n, r.s, r.b, r.nil, r.arr, r.obj, undefined, new Map(), new Set(), new Date(0), /x/, new Error("e"), () => 1, mcp.dump.get, NaN];
+const tag = v => Object.prototype.toString.call(v);
+return vals.map(v => [typeof v, Array.isArray(v), v instanceof Array, v instanceof Map, v instanceof Date, v instanceof RegExp, v instanceof Error, tag(v)].map(String).join(","));
+-- tools.json --
+{
+  "dump.get": {
+    "n": 1,
+    "s": "s",
+    "b": true,
+    "nil": null,
+    "arr": [
+      1
+    ],
+    "obj": {
+      "a": 1
+    }
+  }
+}

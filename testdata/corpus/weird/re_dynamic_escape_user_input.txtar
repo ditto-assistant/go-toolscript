@@ -1,0 +1,28 @@
+new RegExp from tool strings with and without escaping; invalid patterns caught.
+-- script.js --
+const terms = mcp.search.terms({}).terms;
+const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const text = "Use c++ or c# (maybe .NET) for $5 [deal]? a.b";
+const out = terms.map(t => {
+  const safe = new RegExp(esc(t), "g");
+  let raw;
+  try { raw = (text.match(new RegExp(t, "g")) || []).length; } catch (e) { raw = e.name + ": " + e.message; }
+  return {t, safe: (text.match(safe) || []).length, raw, src: safe.source};
+});
+return out;
+-- tools.json --
+{
+  "search.terms": {
+    "terms": [
+      "c++",
+      "c#",
+      "(maybe",
+      ".NET",
+      "$5",
+      "[deal]",
+      "a.b",
+      "?",
+      ""
+    ]
+  }
+}

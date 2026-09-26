@@ -1,0 +1,11 @@
+Intl.NumberFormat for percent/currency (not available in the runner).
+-- script.js --
+const r = mcp.stats.get({});
+const pct = new Intl.NumberFormat("en-US", {style: "percent", maximumFractionDigits: 1});
+return pct.format(r.ratio);
+-- tools.json --
+{
+  "stats.get": {
+    "ratio": 0.1234
+  }
+}

@@ -1,0 +1,19 @@
+Error whose name is reassigned and gets extra fields before being thrown uncaught.
+-- script.js --
+let err;
+try {
+  mcp.billing.charge({amount: 5});
+} catch (e) {
+  err = new Error("charge failed: " + e.message);
+  err.name = "BillingError";
+  err.code = "E_CHARGE";
+  err.cause = e;
+}
+console.log(err.name, err.code, String(err), Object.keys(err).join(","));
+throw err;
+-- tools.json --
+{
+  "billing.charge": {
+    "$error": "card declined"
+  }
+}

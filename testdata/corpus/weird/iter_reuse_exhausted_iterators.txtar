@@ -1,0 +1,33 @@
+Iterators from Map/Set/array consumed twice; next() by hand; entries destructuring.
+-- script.js --
+const r = mcp.kv.pairs({});
+const m = new Map(r.pairs);
+const it = m.values();
+const first = [...it];
+const second = [...it];
+const keys = m.keys();
+const k1 = keys.next(), k2 = keys.next(), k3 = keys.next(), k4 = keys.next();
+const arrIt = r.pairs.entries();
+const e0 = arrIt.next().value;
+const rest = Array.from(arrIt, ([i, [k]]) => i + ":" + k);
+const s = new Set("hello");
+return {first, second, k: [k1, k2, k3, k4].map(x => [x.value ?? null, x.done]), e0, rest, s: [...s].join(""), sizes: [m.size, s.size], fromLen: Array.from({length: 3}), concat: [].concat(null, undefined, [null, [1]], "ab")};
+-- tools.json --
+{
+  "kv.pairs": {
+    "pairs": [
+      [
+        "a",
+        1
+      ],
+      [
+        "b",
+        2
+      ],
+      [
+        "c",
+        3
+      ]
+    ]
+  }
+}

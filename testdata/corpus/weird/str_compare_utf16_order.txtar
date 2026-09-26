@@ -1,0 +1,24 @@
+Relational string comparison and default sort across BMP/astral/CJK/fullwidth (UTF-16 code unit order).
+-- script.js --
+const xs = mcp.words.get({}).words;
+const pairs = [["！", "😀"], ["😀", ""], ["z", "é"], ["Z", "a"], ["10", "9"], ["", "\u0000"], ["a\u0000", "a"]];
+return {sorted: xs.slice().sort(), rel: pairs.map(([a, b]) => [a < b, a > b, a.localeCompare(b) < 0])};
+-- tools.json --
+{
+  "words.get": {
+    "words": [
+      "😀",
+      "！",
+      "",
+      "中",
+      "z",
+      "Z",
+      "é",
+      "é",
+      "𝒜",
+      "~",
+      " ",
+      "a"
+    ]
+  }
+}

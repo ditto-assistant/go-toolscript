@@ -1,0 +1,21 @@
+Number() and unary plus over every weird value shape a tool could return.
+-- script.js --
+const vals = mcp.data.sample({}).vals;
+const extra = [[], [7], ["8"], [1, 2], {}, true, null, undefined, "  \n\t 42 \n", "-0", "+5", ".5", "5.", "1_000", "Infinity", "-Infinity", "infinity", "0b101", "0o17", "0x", "1e", "e5"];
+return vals.concat(extra).map(v => { const n = Number(v); return n === 0 && 1 / n < 0 ? "-0" : String(n); });
+-- tools.json --
+{
+  "data.sample": {
+    "vals": [
+      "12",
+      "12px",
+      "",
+      " ",
+      "0.1e2",
+      "-",
+      "00012",
+      "1e1000",
+      "-1e-1000"
+    ]
+  }
+}

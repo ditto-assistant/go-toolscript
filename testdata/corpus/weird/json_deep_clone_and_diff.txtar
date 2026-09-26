@@ -1,0 +1,61 @@
+Deep clone via JSON, mutate the copy, then compute a recursive diff (added/removed/changed paths).
+-- script.js --
+const before = mcp.config.get({version: 1});
+const after = mcp.config.get({version: 2});
+const diff = [];
+function cmp(a, b, path) {
+  if (a === b) return;
+  const ta = a === null ? "null" : Array.isArray(a) ? "array" : typeof a;
+  const tb = b === null ? "null" : Array.isArray(b) ? "array" : typeof b;
+  if (ta !== tb || (ta !== "object" && ta !== "array")) { diff.push(`~ ${path}: ${JSON.stringify(a)} -> ${JSON.stringify(b)}`); return; }
+  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
+  for (const k of keys) {
+    const p = ta === "array" ? `${path}[${k}]` : `${path}.${k}`;
+    if (!(k in b)) diff.push(`- ${p}`);
+    else if (!(k in a)) diff.push(`+ ${p} = ${JSON.stringify(b[k])}`);
+    else cmp(a[k], b[k], p);
+  }
+}
+const clone = JSON.parse(JSON.stringify(before));
+clone.limits.max = 99;
+cmp(before, after, "$");
+return {diff, cloneIndependent: before.limits.max !== clone.limits.max};
+-- tools.json --
+{
+  "config.get": {
+    "$sequence": [
+      {
+        "name": "svc",
+        "limits": {
+          "max": 10,
+          "min": 1
+        },
+        "tags": [
+          "a",
+          "b",
+          "c"
+        ],
+        "flags": {
+          "beta": true
+        },
+        "10": 1,
+        "9": 2
+      },
+      {
+        "name": "svc",
+        "limits": {
+          "max": 10,
+          "min": "1"
+        },
+        "tags": [
+          "a",
+          "c"
+        ],
+        "flags": null,
+        "owner": "alice@example.com",
+        "10": 1,
+        "9": 3
+      }
+    ]
+  }
+}

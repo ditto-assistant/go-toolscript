@@ -1,0 +1,17 @@
+Model wraps tools in a class with a cache and getters (engine may decline class syntax).
+-- script.js --
+class Client {
+  constructor(ns) { this.ns = ns; this.cache = new Map(); this.calls = 0; }
+  get hitRate() { return this.calls ? (this.calls - this.cache.size) / this.calls : 0; }
+  fetch(id) { this.calls++; if (!this.cache.has(id)) this.cache.set(id, this.ns.get({id})); return this.cache.get(id); }
+  static of(ns) { return new Client(ns); }
+}
+const c = Client.of(mcp.docs);
+const titles = ["d1", "d2", "d1", "d1"].map(id => c.fetch(id).title);
+return {titles, rate: c.hitRate, calls: c.calls};
+-- tools.json --
+{
+  "docs.get": {
+    "title": "T"
+  }
+}

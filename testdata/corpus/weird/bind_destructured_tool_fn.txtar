@@ -1,0 +1,32 @@
+Tool functions pulled off the root by destructuring, aliasing and a detached reference.
+-- script.js --
+const { search_memories } = mcp;
+const { github: { list_pull_requests: listPRs } } = mcp;
+const detached = tools.search_memories;
+const a = search_memories({q: "x"});
+const b = listPRs({repo: "acme/widgets"});
+const c = detached({q: "y"});
+return {a: a.hits.length, b: b.prs.map(p => p.number), c: typeof detached, same: detached === search_memories};
+-- tools.json --
+{
+  "search_memories": {
+    "hits": [
+      {
+        "id": "m1"
+      },
+      {
+        "id": "m2"
+      }
+    ]
+  },
+  "github.list_pull_requests": {
+    "prs": [
+      {
+        "number": 7
+      },
+      {
+        "number": 9
+      }
+    ]
+  }
+}

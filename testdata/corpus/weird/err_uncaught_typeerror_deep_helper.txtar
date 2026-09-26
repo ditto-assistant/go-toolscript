@@ -1,0 +1,26 @@
+Uncaught TypeError deep in a recursive helper over tool data.
+-- script.js --
+const tree = mcp.docs.tree({});
+function depth(n) { return 1 + Math.max(0, ...n.children.map(depth)); }
+console.log("root", tree.id);
+return depth(tree);
+-- tools.json --
+{
+  "docs.tree": {
+    "id": "root",
+    "children": [
+      {
+        "id": "a",
+        "children": []
+      },
+      {
+        "id": "b",
+        "children": [
+          {
+            "id": "c"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+Tool names are computed from strings at runtime, via bracket access and mcp.call.
+-- script.js --
+const names = ["search_memories", "fetch_" + "doc"];
+const out = [];
+for (const n of names) {
+  const fn = mcp[n];
+  out.push(typeof fn === "function" ? fn({id: n}).ok : "missing:" + n);
+}
+const docTool = "mcp__acme-docs__get_page";
+out.push(mcp.call(docTool, {page: 3}).title);
+const server = "github";
+out.push(mcp[server]["list_" + "pull_requests"]({}).count);
+return out;
+-- tools.json --
+{
+  "search_memories": {
+    "ok": "s"
+  },
+  "fetch_doc": {
+    "ok": "f"
+  },
+  "mcp__acme-docs__get_page": {
+    "title": "Page three"
+  },
+  "github.list_pull_requests": {
+    "count": 4
+  }
+}

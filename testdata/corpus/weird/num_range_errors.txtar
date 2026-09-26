@@ -1,0 +1,22 @@
+RangeError messages for bad toFixed/toPrecision/toString/repeat/Array arguments.
+-- script.js --
+const n = mcp.cfg.get({}).n;
+const out = [];
+const t = f => { try { out.push(String(f())); } catch (e) { out.push(e.name + ": " + e.message); } };
+t(() => n.toFixed(101));
+t(() => n.toFixed(-1));
+t(() => n.toPrecision(0));
+t(() => n.toPrecision(101));
+t(() => n.toString(1));
+t(() => n.toString(37));
+t(() => "ab".repeat(-1));
+t(() => "ab".repeat(Infinity));
+t(() => new Array(-1));
+t(() => new Array(1.5));
+return out;
+-- tools.json --
+{
+  "cfg.get": {
+    "n": 3.14159
+  }
+}

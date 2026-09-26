@@ -1,0 +1,14 @@
+`new` applied to a tool value that is a number, and to an arrow function.
+-- script.js --
+const r = mcp.crm.get({});
+const out = [];
+try { new r.count(); } catch (e) { out.push(e.name + ": " + e.message); }
+const mk = x => ({x});
+try { new mk(1); } catch (e) { out.push(e.name + ": " + e.message); }
+return out;
+-- tools.json --
+{
+  "crm.get": {
+    "count": 3
+  }
+}

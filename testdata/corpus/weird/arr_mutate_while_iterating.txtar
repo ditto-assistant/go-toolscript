@@ -1,0 +1,42 @@
+Removing items with splice inside for...of and forward index loops (skips elements), plus the reverse-loop fix.
+-- script.js --
+const items = mcp.tasks.list({}).items;
+const a = items.slice();
+for (const x of a) if (x.done) a.splice(a.indexOf(x), 1);
+const b = items.slice();
+for (let i = 0; i < b.length; i++) if (b[i].done) b.splice(i, 1);
+const c = items.slice();
+for (let i = c.length - 1; i >= 0; i--) if (c[i].done) c.splice(i, 1);
+const d = items.slice();
+d.forEach((x, i) => { if (x.done) d.splice(i, 1); });
+const e = items.slice();
+let guard = 0;
+for (const x of e) { if (!x.done && guard++ < 3) e.push({id: x.id + "'", done: true}); }
+return [a, b, c, d, e].map(l => l.map(x => x.id).join(","));
+-- tools.json --
+{
+  "tasks.list": {
+    "items": [
+      {
+        "id": "t1",
+        "done": true
+      },
+      {
+        "id": "t2",
+        "done": true
+      },
+      {
+        "id": "t3",
+        "done": false
+      },
+      {
+        "id": "t4",
+        "done": true
+      },
+      {
+        "id": "t5",
+        "done": false
+      }
+    ]
+  }
+}

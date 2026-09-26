@@ -1,0 +1,23 @@
+Backoff via new Promise + setTimeout between retries (plausible model code).
+-- script.js --
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+let r;
+for (let i = 0; i < 3; i++) {
+  r = await mcp.jobs.poll({id: "j"});
+  if (r.done) break;
+  await sleep(100 * 2 ** i);
+}
+return r;
+-- tools.json --
+{
+  "jobs.poll": {
+    "$sequence": [
+      {
+        "done": false
+      },
+      {
+        "done": true
+      }
+    ]
+  }
+}

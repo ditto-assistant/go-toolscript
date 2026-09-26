@@ -1,0 +1,21 @@
+Memoization via closure cache keyed by JSON args; counting lattice paths and a cache-hit counter.
+-- script.js --
+const cfg = mcp.cfg.get({});
+function memo(fn) {
+  const cache = {};
+  let hits = 0;
+  const wrapped = (...args) => { const k = JSON.stringify(args); if (k in cache) { hits++; return cache[k]; } return (cache[k] = fn(...args)); };
+  wrapped.stats = () => ({hits, size: Object.keys(cache).length});
+  return wrapped;
+}
+const paths = memo((r, c) => r === 0 || c === 0 ? 1 : paths(r - 1, c) + paths(r, c - 1));
+const fib = memo(n => n < 2 ? n : fib(n - 1) + fib(n - 2));
+return {p: paths(cfg.rows, cfg.cols), f: fib(cfg.n), f90: fib(90), ps: paths.stats(), fs: fib.stats(), toStr: String(fib(78))};
+-- tools.json --
+{
+  "cfg.get": {
+    "rows": 12,
+    "cols": 12,
+    "n": 70
+  }
+}

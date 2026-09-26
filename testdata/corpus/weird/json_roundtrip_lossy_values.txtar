@@ -1,0 +1,15 @@
+JSON round trip of a merged object holding undefined, NaN, -0, Infinity, nested functions and Map/Set.
+-- script.js --
+const r = mcp.metrics.summary({});
+const merged = {...r, ratio: r.hits / r.total, neg: -0, inf: 1 / 0, missing: undefined, fn() { return 1; }, arr: [undefined, NaN, -0, () => 1, null], m: new Map([["a", 1]]), s: new Set([1]), nested: {deep: {deeper: {undef: undefined, ok: 1}}}};
+const text = JSON.stringify(merged);
+const back = JSON.parse(text);
+return {text, keys: Object.keys(back), arr: back.arr, pretty: JSON.stringify(back.nested, null, "\t"), lens: [JSON.stringify(merged, null, 20).length, JSON.stringify(merged, null, "--->").split("\n")[1]]};
+-- tools.json --
+{
+  "metrics.summary": {
+    "hits": 0,
+    "total": 0,
+    "z": 1
+  }
+}

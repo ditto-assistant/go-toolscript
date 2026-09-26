@@ -1,0 +1,41 @@
+Model builds a bash command with quoted user text and passes JSON on stdin.
+-- script.js --
+const notes = mcp.notes.list({}).notes;
+const q = s => "'" + String(s).replace(/'/g, "'\\''") + "'";
+const script = `grep -c ${q(notes[0].title)} /results/notes.txt`;
+const r1 = bash(script);
+const r2 = bash("jq '[.[] | .id]'", notes);
+return {script, count: r1.stdout.trim(), ids: r2.json};
+-- tools.json --
+{
+  "notes.list": {
+    "notes": [
+      {
+        "id": "n1",
+        "title": "it's \"quoted\" $HOME `x`"
+      },
+      {
+        "id": "n2",
+        "title": "b"
+      }
+    ]
+  }
+}
+-- bash.json --
+{
+  "grep -c 'it'\\''s \"quoted\" $HOME `x`' /results/notes.txt": {
+    "stdout": "3\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": 3
+  },
+  "jq '[.[] | .id]'": {
+    "stdout": "[\"n1\",\"n2\"]\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": [
+      "n1",
+      "n2"
+    ]
+  }
+}

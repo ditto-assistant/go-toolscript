@@ -1,0 +1,20 @@
+Replacement strings with $&, $1, $10, $$, $` and $' from a template engine a model wrote.
+-- script.js --
+const t = mcp.tpl.get({}).text;
+return [
+  t.replace(/(\w)(\w)/, "[$2$1]"),
+  t.replace(/(o)/g, "$1$1"),
+  t.replace(/b/, "$10"),
+  t.replace(/b/, "$$&"),
+  t.replace(/b/, "<$`|$'>"),
+  t.replace(/(?:x)?b/, "[$1]"),
+  t.replace("o", "$&$&"),
+  t.replaceAll("o", "($`)"),
+  t.replace(/(?<first>f)/, "$<first>!$<nope>")
+];
+-- tools.json --
+{
+  "tpl.get": {
+    "text": "foo bar boo"
+  }
+}

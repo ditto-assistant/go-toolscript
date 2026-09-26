@@ -1,0 +1,24 @@
+Catch, wrap with extra fields, rethrow, catch again and inspect every field.
+-- script.js --
+function load(id) {
+  try {
+    return mcp.docs.get({id});
+  } catch (e) {
+    const wrapped = new Error(`load(${id}) -> ${e.message}`);
+    wrapped.id = id;
+    wrapped.retryable = /timeout|unavailable/.test(e.message);
+    throw wrapped;
+  }
+}
+const results = [];
+for (const id of ["doc_a", "doc_b"]) {
+  try { results.push(load(id).title); }
+  catch (e) { results.push({msg: e.message, id: e.id, retryable: e.retryable, json: JSON.stringify(e), spread: {...e}, str: `${e}`}); }
+}
+return results;
+-- tools.json --
+{
+  "docs.get": {
+    "$error": "service unavailable"
+  }
+}

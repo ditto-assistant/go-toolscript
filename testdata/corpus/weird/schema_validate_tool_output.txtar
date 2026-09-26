@@ -1,0 +1,60 @@
+Hand-written schema validator over tool output collecting errors with JSON paths.
+-- script.js --
+const data = mcp.api.list_orders({});
+const schema = {type: "object", required: ["orders", "next"], props: {orders: {type: "array", items: {type: "object", required: ["id", "total", "items"], props: {id: {type: "string", pattern: "ord_"}, total: {type: "number", min: 0}, items: {type: "array", items: {type: "object", required: ["sku", "qty"], props: {sku: {type: "string"}, qty: {type: "integer", min: 1}}}}, email: {type: "string", optional: true}}}}, next: {type: "string", nullable: true}}};
+const errors = [];
+const typeOf = v => v === null ? "null" : Array.isArray(v) ? "array" : Number.isInteger(v) ? "integer" : typeof v;
+function check(v, s, path) {
+  if (v === null && s.nullable) return;
+  if (v === undefined && s.optional) return;
+  const t = typeOf(v);
+  if (!(t === s.type || (s.type === "number" && t === "integer"))) { errors.push(`${path}: expected ${s.type}, got ${t}`); return; }
+  if (s.pattern && !v.startsWith(s.pattern)) errors.push(`${path}: bad prefix ${JSON.stringify(v)}`);
+  if (s.min != null && v < s.min) errors.push(`${path}: ${v} < ${s.min}`);
+  if (s.type === "object") {
+    for (const r of s.required || []) if (!(r in v)) errors.push(`${path}.${r}: missing`);
+    for (const [k, sub] of Object.entries(s.props || {})) if (k in v || sub.optional) check(v[k], sub, `${path}.${k}`);
+  }
+  if (s.type === "array") v.forEach((x, i) => check(x, s.items, `${path}[${i}]`));
+}
+check(data, schema, "$");
+return {ok: errors.length === 0, errors};
+-- tools.json --
+{
+  "api.list_orders": {
+    "orders": [
+      {
+        "id": "ord_1",
+        "total": 10.5,
+        "items": [
+          {
+            "sku": "a",
+            "qty": 1
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "total": -1,
+        "items": [
+          {
+            "sku": 5,
+            "qty": 0.5
+          },
+          {
+            "qty": 2
+          }
+        ]
+      },
+      {
+        "id": "ord_3",
+        "total": "12",
+        "items": null,
+        "email": null
+      },
+      null
+    ],
+    "next": null,
+    "extra": true
+  }
+}

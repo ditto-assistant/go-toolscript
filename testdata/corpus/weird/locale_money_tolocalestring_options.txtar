@@ -1,0 +1,32 @@
+Money formatting via toLocaleString with currency options (model assumes Intl-like behavior).
+-- script.js --
+const rows = mcp.ledger.totals({}).rows;
+return rows.map(r => [
+  r.amount.toLocaleString(),
+  r.amount.toLocaleString("en-US"),
+  r.amount.toLocaleString("en-US", {style: "currency", currency: "USD"}),
+  r.amount.toLocaleString(undefined, {maximumFractionDigits: 0}),
+  r.amount.toLocaleString("de-DE", {minimumFractionDigits: 2}),
+]);
+-- tools.json --
+{
+  "ledger.totals": {
+    "rows": [
+      {
+        "amount": 1234567.891
+      },
+      {
+        "amount": -0.5
+      },
+      {
+        "amount": 0
+      },
+      {
+        "amount": 1e+21
+      },
+      {
+        "amount": 12.3456
+      }
+    ]
+  }
+}

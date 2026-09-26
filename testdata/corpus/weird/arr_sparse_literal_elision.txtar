@@ -1,0 +1,14 @@
+Array literal with elisions from a model table template.
+-- script.js --
+const r = mcp.tags.list({});
+const row = [r.tags[0], , , r.tags[1], ];
+return {len: row.length, json: JSON.stringify(row), keys: Object.keys(row), joined: row.join("|"), mapped: row.map(x => typeof x)};
+-- tools.json --
+{
+  "tags.list": {
+    "tags": [
+      "alpha",
+      "beta"
+    ]
+  }
+}

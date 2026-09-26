@@ -1,0 +1,24 @@
+Object.freeze / defineProperty / create(null) helpers a model uses for 'safety'.
+-- script.js --
+const cfg = mcp.cfg.get({});
+const frozen = Object.freeze({...cfg, nested: {x: 1}});
+frozen.limit = 999;
+frozen.nested.x = 2;
+delete frozen.mode;
+const dict = Object.create(null);
+for (const w of cfg.words) dict[w] = (dict[w] || 0) + 1;
+return {limit: frozen.limit, nestedX: frozen.nested.x, mode: frozen.mode, isFrozen: Object.isFrozen(frozen), dict: JSON.stringify(dict), names: Object.getOwnPropertyNames(cfg)};
+-- tools.json --
+{
+  "cfg.get": {
+    "limit": 5,
+    "mode": "safe",
+    "words": [
+      "a",
+      "constructor",
+      "a",
+      "__proto__",
+      "toString"
+    ]
+  }
+}

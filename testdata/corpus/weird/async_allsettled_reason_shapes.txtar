@@ -1,0 +1,21 @@
+allSettled over async fns throwing Errors, strings, objects, and tool failures; model reads reason.message defensively.
+-- script.js --
+const jobs = [
+  async () => { throw new Error("err obj"); },
+  async () => { throw "str reason"; },
+  async () => { throw {code: 7}; },
+  async () => mcp.flaky.run({}),
+  async () => (await mcp.ok.run({})).v,
+  async () => { const r = await mcp.ok.run({}); return r.missing.deep; },
+];
+const res = await Promise.allSettled(jobs.map(j => j()));
+return res.map(r => r.status === "fulfilled" ? "ok:" + r.value : `no:${typeof r.reason}:${r.reason?.message ?? JSON.stringify(r.reason)}`);
+-- tools.json --
+{
+  "flaky.run": {
+    "$error": "flaky tool down"
+  },
+  "ok.run": {
+    "v": 1
+  }
+}

@@ -1,0 +1,40 @@
+Dispatch table of handlers; model logs handler.name/length and fn source for debugging.
+-- script.js --
+const r = mcp.events.list({});
+const handlers = {
+  created: (e) => "new " + e.id,
+  deleted: function (e, why = "n/a", ...rest) { return "gone " + e.id; },
+  ["up" + "dated"]: e => "upd " + e.id,
+  renamed: function renamedHandler(e) { return "ren " + e.id; },
+};
+const fallback = (e) => "??? " + e.type;
+const anon = [function () {}, () => {}][0];
+const out = r.events.map(e => { const h = handlers[e.type] || fallback; return `${h.name}/${h.length}: ${h(e)}`; });
+return {out, anonName: JSON.stringify(anon.name), toolName: typeof mcp.events.list.name, arrowSrc: String(handlers.created), fnSrcStart: handlers.deleted.toString().slice(0, 30)};
+-- tools.json --
+{
+  "events.list": {
+    "events": [
+      {
+        "type": "created",
+        "id": 1
+      },
+      {
+        "type": "deleted",
+        "id": 2
+      },
+      {
+        "type": "updated",
+        "id": 3
+      },
+      {
+        "type": "renamed",
+        "id": 4
+      },
+      {
+        "type": "exploded",
+        "id": 5
+      }
+    ]
+  }
+}

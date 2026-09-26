@@ -1,0 +1,12 @@
+instanceof Promise check on an un-awaited helper result.
+-- script.js --
+async function load() { const r = await mcp.items.get({}); return r.v; }
+const p = load();
+const isP = p instanceof Promise;
+return {isP, v: await p};
+-- tools.json --
+{
+  "items.get": {
+    "v": 7
+  }
+}

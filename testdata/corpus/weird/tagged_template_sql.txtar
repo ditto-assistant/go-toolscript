@@ -1,0 +1,15 @@
+Tagged template used to build a parameterized query string (engine may decline).
+-- script.js --
+const sql = (strings, ...vals) => strings.reduce((acc, s, i) => acc + s + (i < vals.length ? "$" + (i + 1) : ""), "");
+const r = mcp.cfg.get({});
+return sql`SELECT * FROM t WHERE a = ${r.a} AND b IN (${r.b})`;
+-- tools.json --
+{
+  "cfg.get": {
+    "a": 1,
+    "b": [
+      2,
+      3
+    ]
+  }
+}

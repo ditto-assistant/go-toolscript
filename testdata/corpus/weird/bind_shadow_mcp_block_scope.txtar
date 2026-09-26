@@ -1,0 +1,20 @@
+`const mcp` declared in an inner block shadows the tool root only inside that block.
+-- script.js --
+const before = mcp.search_memories({q: "a"}).hits.length;
+let inner;
+{
+  const mcp = {search_memories: () => ({hits: [1, 2, 3, 4, 5]})};
+  inner = mcp.search_memories({q: "b"}).hits.length;
+}
+const after = mcp.search_memories({q: "c"}).hits.length;
+return [before, inner, after];
+-- tools.json --
+{
+  "search_memories": {
+    "hits": [
+      {
+        "id": "m1"
+      }
+    ]
+  }
+}

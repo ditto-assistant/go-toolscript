@@ -1,0 +1,42 @@
+Model throws strings, numbers, arrays and booleans, then normalizes whatever was caught.
+-- script.js --
+const kinds = mcp.cfg.kinds({}).kinds;
+const norm = e => e instanceof Error ? `${e.name}:${e.message}` : typeof e === "object" && e !== null ? "obj:" + JSON.stringify(e) : typeof e + ":" + String(e);
+return kinds.map(k => {
+  try {
+    switch (k) {
+      case "str": throw "plain string";
+      case "num": throw 404;
+      case "arr": throw [1, "two"];
+      case "bool": throw false;
+      case "null": throw null;
+      case "undef": throw undefined;
+      case "obj": throw {status: 500, msg: "srv"};
+      case "err": throw new RangeError("out of range");
+      case "tool": return mcp.cfg.fail({});
+    }
+    return "no throw";
+  } catch (e) {
+    return norm(e) + " | " + (e?.message ?? "no message") + " | " + (e?.name ?? "no name");
+  }
+});
+-- tools.json --
+{
+  "cfg.kinds": {
+    "kinds": [
+      "str",
+      "num",
+      "arr",
+      "bool",
+      "null",
+      "undef",
+      "obj",
+      "err",
+      "tool",
+      "none"
+    ]
+  },
+  "cfg.fail": {
+    "$error": "tool refused"
+  }
+}

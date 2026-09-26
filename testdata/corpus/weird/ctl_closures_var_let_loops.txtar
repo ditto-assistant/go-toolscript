@@ -1,0 +1,22 @@
+Closures captured in var vs let loops, loop-body mutation of the let binding, and callbacks run later.
+-- script.js --
+const ids = mcp.jobs.ids({}).ids;
+const varFns = [], letFns = [], mutFns = [];
+for (var i = 0; i < ids.length; i++) varFns.push(() => ids[i] + "@" + i);
+for (let j = 0; j < ids.length; j++) letFns.push(() => ids[j] + "@" + j);
+for (let k = 0; k < ids.length; k++) { mutFns.push(() => k); k++; }
+const inOf = [];
+for (const id of ids) inOf.push(() => id);
+let w = 0; const whileFns = [];
+while (w < 3) { let copy = w; whileFns.push(() => copy + w); w++; }
+return {v: varFns.map(f => f()), l: letFns.map(f => f()), m: mutFns.map(f => f()), o: inOf.map(f => f()), w: whileFns.map(f => f()), iAfter: i};
+-- tools.json --
+{
+  "jobs.ids": {
+    "ids": [
+      "j1",
+      "j2",
+      "j3"
+    ]
+  }
+}

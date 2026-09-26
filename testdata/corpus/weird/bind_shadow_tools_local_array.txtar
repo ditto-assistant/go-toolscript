@@ -1,0 +1,25 @@
+A local named `tools` shadows the binding root inside a helper; the real root is still used outside.
+-- script.js --
+function summarize(tools) {
+  return tools.map(t => t.name.toUpperCase()).join("|") + ":" + tools.length;
+}
+const listed = mcp.registry.list_tools({});
+const s = summarize(listed.tools);
+const tools2 = tools;
+return {s, viaAlias: tools2.registry.list_tools({page: 2}).tools.length};
+-- tools.json --
+{
+  "registry.list_tools": {
+    "tools": [
+      {
+        "name": "search"
+      },
+      {
+        "name": "fetch"
+      },
+      {
+        "name": "zap"
+      }
+    ]
+  }
+}

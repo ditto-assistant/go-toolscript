@@ -1,0 +1,22 @@
+A shared /g regex used with .test inside filter alternates because of lastIndex (classic model bug).
+-- script.js --
+const r = mcp.mail.list({});
+const isUrgent = /urgent/gi;
+const flagged = r.subjects.filter(s => isUrgent.test(s));
+const idx = [];
+for (const s of r.subjects) { idx.push(isUrgent.lastIndex); isUrgent.test(s); }
+const fixed = r.subjects.filter(s => /urgent/i.test(s));
+return {flagged, idx, fixed, last: isUrgent.lastIndex};
+-- tools.json --
+{
+  "mail.list": {
+    "subjects": [
+      "URGENT: server down",
+      "urgent - reply",
+      "Urgent!!",
+      "not so",
+      "re: urgent",
+      "urgent urgent"
+    ]
+  }
+}

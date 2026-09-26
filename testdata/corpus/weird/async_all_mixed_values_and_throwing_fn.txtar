@@ -1,0 +1,11 @@
+Promise.all with plain values, nested arrays, an async fn that throws a string before awaiting.
+-- script.js --
+const bad = async () => { throw "plain string failure"; };
+const res = await Promise.allSettled([1, mcp.a.get({}), bad(), (async () => { const x = await mcp.a.get({n: 2}); return x.v * 2; })(), [mcp.a.get({})]]);
+return res.map(r => r.status === "fulfilled" ? ["ok", typeof r.value, Array.isArray(r.value)] : ["no", typeof r.reason, String(r.reason)]);
+-- tools.json --
+{
+  "a.get": {
+    "v": 21
+  }
+}

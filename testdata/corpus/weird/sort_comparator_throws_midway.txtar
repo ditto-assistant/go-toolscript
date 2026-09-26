@@ -1,0 +1,64 @@
+Comparator throws on a malformed row after some swaps; model catches and returns the partially sorted in-place array.
+-- script.js --
+const rows = mcp.board.list({}).rows;
+try {
+  rows.sort((a, b) => { if (a.score == null || b.score == null) throw new Error("bad row " + (a.score == null ? a.id : b.id)); return a.score - b.score; });
+} catch (e) {
+  return {err: e.message, order: rows.map(r => r.id)};
+}
+return {order: rows.map(r => r.id)};
+-- tools.json --
+{
+  "board.list": {
+    "rows": [
+      {
+        "id": "a",
+        "score": 5
+      },
+      {
+        "id": "b",
+        "score": 2
+      },
+      {
+        "id": "c",
+        "score": 9
+      },
+      {
+        "id": "d",
+        "score": 1
+      },
+      {
+        "id": "e",
+        "score": 7
+      },
+      {
+        "id": "f",
+        "score": 3
+      },
+      {
+        "id": "g",
+        "score": null
+      },
+      {
+        "id": "h",
+        "score": 4
+      },
+      {
+        "id": "i",
+        "score": 0
+      },
+      {
+        "id": "j",
+        "score": 8
+      },
+      {
+        "id": "k",
+        "score": 6
+      },
+      {
+        "id": "l",
+        "score": 2
+      }
+    ]
+  }
+}

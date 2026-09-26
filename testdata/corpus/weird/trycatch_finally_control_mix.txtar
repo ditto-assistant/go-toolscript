@@ -1,0 +1,40 @@
+try/catch/finally inside loops with break/continue/return in finally overriding pending throws and returns.
+-- script.js --
+const items = mcp.q.items({}).items;
+const log = [];
+function processAll() {
+  let n = 0;
+  for (const it of items) {
+    try {
+      if (it === "skip") continue;
+      if (it === "boom") throw new Error("boom at " + n);
+      if (it === "stop") return "stopped@" + n;
+      log.push("ok:" + it);
+    } catch (e) {
+      log.push("caught:" + e.message);
+      if (n > 3) throw e;
+    } finally {
+      n++;
+      log.push("fin" + n);
+      if (it === "swallow") break;
+    }
+  }
+  return "done@" + n;
+}
+function finallyWins() { try { throw new Error("lost"); } finally { return "finally-wins"; } }
+function finallyReturnOverride() { try { return "try"; } finally { log.push("cleanup"); } }
+function nested() { let x = 0; try { try { throw 1; } finally { x += 10; } } catch (v) { x += v; } finally { x *= 2; } return x; }
+return {res: processAll(), log, fw: finallyWins(), fr: finallyReturnOverride(), nested: nested()};
+-- tools.json --
+{
+  "q.items": {
+    "items": [
+      "a",
+      "skip",
+      "boom",
+      "b",
+      "swallow",
+      "never"
+    ]
+  }
+}

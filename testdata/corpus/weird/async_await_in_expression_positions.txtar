@@ -1,0 +1,27 @@
+await inside template literals, object/array literals, call args, ternaries and short-circuit operators.
+-- script.js --
+const cfg = await mcp.cfg.get({});
+const s = `title=${(await mcp.doc.get({id: 1})).title}; n=${(await mcp.cfg.get({})).n}`;
+const o = {a: await mcp.doc.get({id: 2}), b: [await mcp.doc.get({id: 3}), 5]};
+const pick = cfg.useCache ? await mcp.cache.get({}) : await mcp.doc.get({id: 4});
+const lazy = cfg.n > 0 || await mcp.never.called({});
+const lazy2 = cfg.missing && await mcp.never.called({});
+const lazy3 = cfg.n ?? await mcp.never.called({});
+const joined = [await mcp.doc.get({id: 5}), await mcp.doc.get({id: 6})].map(d => d.title).join("+");
+return {s, o, pick, lazy, lazy2: lazy2 ?? "undef", lazy3, joined};
+-- tools.json --
+{
+  "cfg.get": {
+    "n": 3,
+    "useCache": false
+  },
+  "doc.get": {
+    "title": "T"
+  },
+  "cache.get": {
+    "hit": true
+  },
+  "never.called": {
+    "x": 1
+  }
+}

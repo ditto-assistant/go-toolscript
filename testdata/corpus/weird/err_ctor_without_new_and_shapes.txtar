@@ -1,0 +1,20 @@
+Error constructors called without new, with non-string messages, and inspected via constructor/toString tags.
+-- script.js --
+const r = mcp.cfg.get({});
+const errs = [Error("no new"), TypeError("type no new"), new Error(undefined), new Error(null), new Error(r.obj), new Error(r.num), new RangeError(), new SyntaxError("syn")];
+const out = errs.map(e => [e.name, e.message, String(e), e instanceof Error, e.constructor === Error, Object.prototype.toString.call(e), "message" in e, e.hasOwnProperty("message")]);
+let tool;
+try { mcp.cfg.fail({}); } catch (e) { tool = [e.name, e instanceof Error, Object.prototype.toString.call(e), e.constructor === Error, typeof e.message]; }
+return {out, tool};
+-- tools.json --
+{
+  "cfg.get": {
+    "obj": {
+      "a": 1
+    },
+    "num": 123
+  },
+  "cfg.fail": {
+    "$error": "nope"
+  }
+}

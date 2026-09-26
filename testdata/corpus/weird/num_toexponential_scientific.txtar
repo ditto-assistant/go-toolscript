@@ -1,0 +1,19 @@
+toExponential for a scientific-notation column (engine may decline the method).
+-- script.js --
+const m = mcp.metrics.get({}).values;
+return m.map(v => [v.toExponential(), v.toExponential(2), v.toExponential(0)]);
+-- tools.json --
+{
+  "metrics.get": {
+    "values": [
+      0,
+      1,
+      0.1,
+      123.456,
+      1e+21,
+      1.5e-07,
+      -42.5,
+      5e-324
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+Passing a regex to includes/startsWith/endsWith and a non-global regex to replaceAll.
+-- script.js --
+const s = mcp.text.get({}).s;
+const out = [];
+const t = (k, f) => { try { out.push([k, f()]); } catch (e) { out.push([k, e.name + ": " + e.message]); } };
+t("includes", () => s.includes(/a/));
+t("startsWith", () => s.startsWith(/a/));
+t("endsWith", () => s.endsWith(/a/));
+t("replaceAllNonGlobal", () => s.replaceAll(/a/, "b"));
+t("replaceAllGlobal", () => s.replaceAll(/a/g, "b"));
+t("splitRegexLimit", () => s.split(/,\s*/, 2));
+t("indexOfRegex", () => s.indexOf(/a/));
+return out;
+-- tools.json --
+{
+  "text.get": {
+    "s": "a, b,  c, /a/"
+  }
+}

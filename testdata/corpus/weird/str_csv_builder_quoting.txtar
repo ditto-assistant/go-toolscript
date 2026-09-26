@@ -1,0 +1,54 @@
+CSV builder that quotes fields with commas, quotes and newlines; then re-parses its own output.
+-- script.js --
+const rows = mcp.crm.export({}).rows;
+const q = v => { const s = v == null ? "" : String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+const header = Object.keys(rows[0]);
+const csv = [header.join(","), ...rows.map(r => header.map(h => q(r[h])).join(","))].join("\r\n");
+function parse(text) {
+  const out = []; let row = [], field = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\r" && text[i + 1] === "\n") { row.push(field); out.push(row); row = []; field = ""; i++; }
+    else field += c;
+  }
+  row.push(field); out.push(row);
+  return out;
+}
+const parsed = parse(csv);
+return {csv, rows: parsed.length, cols: parsed.map(r => r.length), last: parsed[parsed.length - 1]};
+-- tools.json --
+{
+  "crm.export": {
+    "rows": [
+      {
+        "name": "Acme, Inc.",
+        "note": "said \"hi\"",
+        "amount": 12.5,
+        "tags": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "name": "Globex",
+        "note": "multi\nline",
+        "amount": null,
+        "tags": []
+      },
+      {
+        "name": "",
+        "note": "",
+        "amount": 0,
+        "tags": [
+          null
+        ]
+      }
+    ]
+  }
+}

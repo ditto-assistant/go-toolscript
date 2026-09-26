@@ -1,0 +1,29 @@
+Fuzzy matching with bigram Dice, Levenshtein and prefix bonus; ties broken by name.
+-- script.js --
+const q = "acme widgt";
+const cands = mcp.catalog.search({q}).names;
+const bigrams = s => { const out = new Map(); const t = s.toLowerCase().replace(/\s+/g, " "); for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); out.set(g, (out.get(g) || 0) + 1); } return out; };
+const dice = (a, b) => { const A = bigrams(a), B = bigrams(b); let inter = 0, na = 0, nb = 0; for (const [, v] of A) na += v; for (const [, v] of B) nb += v; for (const [g, v] of A) inter += Math.min(v, B.get(g) || 0); return na + nb === 0 ? 0 : 2 * inter / (na + nb); };
+const lev = (a, b) => { const d = Array.from({length: a.length + 1}, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+const scored = cands.map(name => {
+  const l = name.toLowerCase();
+  const score = dice(q, name) * 0.6 + (1 - lev(q, l) / Math.max(q.length, l.length)) * 0.3 + (l.startsWith(q.split(" ")[0]) ? 0.1 : 0);
+  return {name, score: Math.round(score * 1e4) / 1e4};
+});
+scored.sort((a, b) => b.score - a.score || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+return scored;
+-- tools.json --
+{
+  "catalog.search": {
+    "names": [
+      "Acme Widget",
+      "ACME widgets",
+      "Widget Acme",
+      "acme",
+      "Acne Widget",
+      "",
+      "Acme Gadget",
+      "acme  widget"
+    ]
+  }
+}

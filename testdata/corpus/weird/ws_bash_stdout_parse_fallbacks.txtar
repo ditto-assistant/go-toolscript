@@ -1,0 +1,45 @@
+Parse bash stdout as JSON, then NDJSON, then whitespace table, falling back on exit codes and stderr.
+-- script.js --
+const cmds = ["cat /results/a.json", "cat /results/b.ndjson", "ls -la /results", "false"];
+const out = {};
+for (const c of cmds) {
+  const r = bash(c);
+  if (r.exit_code !== 0) { out[c] = {err: (r.stderr || "exit " + r.exit_code).trim()}; continue; }
+  if (r.json != null) { out[c] = {kind: "json", keys: Object.keys(r.json)}; continue; }
+  const lines = r.stdout.split("\n").filter(l => l.trim());
+  try { out[c] = {kind: "ndjson", rows: lines.map(l => JSON.parse(l)).length}; }
+  catch (e) { out[c] = {kind: "table", cols: lines.map(l => l.trim().split(/\s+/).length), err: e.name}; }
+}
+return out;
+-- tools.json --
+{}
+-- bash.json --
+{
+  "cat /results/a.json": {
+    "stdout": "{\"b\":1,\"a\":2}\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": {
+      "b": 1,
+      "a": 2
+    }
+  },
+  "cat /results/b.ndjson": {
+    "stdout": "{\"x\":1}\n{\"x\":2}\n\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  },
+  "ls -la /results": {
+    "stdout": "total 8\ndrwxr-xr-x  2 u g 64 Sep 26 14:30 .\n-rw-r--r--  1 u g 12 Sep 26 14:30 a.json\n",
+    "stderr": "",
+    "exit_code": 0,
+    "json": null
+  },
+  "false": {
+    "stdout": "",
+    "stderr": "",
+    "exit_code": 1,
+    "json": null
+  }
+}

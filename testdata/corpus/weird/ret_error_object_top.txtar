@@ -1,0 +1,9 @@
+Script returns a caught tool error object directly (model wants to show it).
+-- script.js --
+try { return mcp.docs.get({id: "doc_missing"}); } catch (e) { return e; }
+-- tools.json --
+{
+  "docs.get": {
+    "$error": "document not found"
+  }
+}

@@ -1,0 +1,15 @@
+console.log of caught errors (tool + TypeError), regexes, dates and functions.
+-- script.js --
+try { mcp.docs.get({id: "x"}); } catch (e) { console.log("tool failed:", e); console.log(e.message, String(e), `${e}`, e.name); }
+try { null.x; } catch (e) { console.log(e); console.error("E", e.message); }
+console.log(/a+b/gi, [/x/], {re: /y/});
+console.log(new Date(0), [new Date(0)], {d: new Date(0)});
+console.log(function named(a, b) { return a + b; });
+console.log((x) => x * 2, [() => 1]);
+return null;
+-- tools.json --
+{
+  "docs.get": {
+    "$error": "404 not found"
+  }
+}

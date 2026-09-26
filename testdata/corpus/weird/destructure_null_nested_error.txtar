@@ -1,0 +1,26 @@
+Destructuring through a null nested field throws; model catches and reports the message.
+-- script.js --
+const r = mcp.user.get({});
+const out = [];
+try { const {prefs: {theme}} = r; out.push(theme); } catch (e) { out.push(e.message); }
+try { const [[inner]] = r.pairs; out.push(inner); } catch (e) { out.push(e.message); }
+try { const {a: {b: {c}}} = r; out.push(c); } catch (e) { out.push(e.message); }
+try { for (const [k, v] of r.entries) out.push(k + v); } catch (e) { out.push(e.message); }
+return out;
+-- tools.json --
+{
+  "user.get": {
+    "prefs": null,
+    "pairs": [
+      null
+    ],
+    "a": {},
+    "entries": [
+      [
+        "x",
+        1
+      ],
+      null
+    ]
+  }
+}

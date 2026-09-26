@@ -1,0 +1,21 @@
+User-supplied search term used raw in new RegExp after a tool call; the pattern is invalid JavaScript too.
+-- script.js --
+const q = mcp.search.query({});
+try {
+  const re = new RegExp(q.term, "i");
+  return {ok: true, src: re.source, hits: q.docs.filter(d => re.test(d))};
+} catch (e) {
+  return {ok: false, name: e.name, msg: e.message, isSyntax: e instanceof SyntaxError};
+}
+-- tools.json --
+{
+  "search.query": {
+    "term": "a{2,1}",
+    "docs": [
+      "c++ guide",
+      "(maybe) later",
+      "deal",
+      "xx"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+Model builds JS/JSON/markdown snippets and escapes quotes, backslashes and newlines by hand.
+-- script.js --
+const notes = mcp.notes.list({}).notes;
+const jsLit = s => "'" + s.split("\\").join("\\\\").split("'").join("\\'").split("\n").join("\\n") + "'";
+const mdCell = s => s.split("|").join("\\|").split("\n").join("<br>");
+const lines = notes.map(n => `const note_${n.id} = ${jsLit(n.body)};`);
+const table = ["| id | body |", "|---|---|", ...notes.map(n => `| ${n.id} | ${mdCell(n.body)} |`)].join("\n");
+const json = JSON.stringify(notes.map(n => n.body));
+const back = JSON.parse(json);
+return {lines, table, json, roundTrip: back.every((b, i) => b === notes[i].body), jsonLens: json.length};
+-- tools.json --
+{
+  "notes.list": {
+    "notes": [
+      {
+        "id": 1,
+        "body": "it's a \"test\""
+      },
+      {
+        "id": 2,
+        "body": "C:\\path\\to\\file"
+      },
+      {
+        "id": 3,
+        "body": "line1\nline2\r\n\ttabbed"
+      },
+      {
+        "id": 4,
+        "body": "pipe | char and `code`"
+      },
+      {
+        "id": 5,
+        "body": " sep  and \u0000 nul"
+      }
+    ]
+  }
+}

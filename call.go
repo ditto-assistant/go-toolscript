@@ -681,6 +681,11 @@ func (c *compiler) isolated(node ast.Node) bool {
 				if v, _ := c.lookup(cal.Name.String()); v != nil && !local[cal.Name.String()] {
 					ok = false
 				}
+				// Host functions (a shell, a filesystem) share host state, so
+				// batches that use them stay sequential and ordered.
+				if v, _ := c.lookup(cal.Name.String()); v == nil && hasHost(c.opts.HostFunctions, cal.Name.String()) {
+					ok = false
+				}
 			case *ast.DotExpression:
 				name := cal.Identifier.Name.String()
 				if mutatingMethods[name] || strings.HasPrefix(name, "set") {

@@ -305,3 +305,55 @@ func TestRawCallDoesNotCollideWithPropertyPath(t *testing.T) {
 		}
 	}
 }
+
+// Parallel batches: isolated items dispatch concurrently (race-checked),
+// host functions and shared mutation keep batches sequential.
+func TestParallelBatchesUnderRace(t *testing.T) {
+	opts := options()
+	opts.HostFunctions = map[string]HostFunction{"bash": {MinArgs: 1, MaxArgs: 1}}
+	for _, tc := range []struct {
+		code     string
+		parallel bool
+	}{
+		{`const re = /x/g; const ids = ["a","b","c","d","e","f"]; return await Promise.all(ids.map(async id => { const r = await mcp.get({id}); return {id, n: r.id.length, m: "xx".match(re), t: [1,2,3].map(x => x * 2).join("-"), d: new Date(0).toISOString()}; }));`, true},
+		{`return await Promise.all([mcp.get({id:"a"}), mcp.get({id:"b"}), mcp.get({id:"c"}), mcp.get({id:"d"})]);`, true},
+		{`const out = []; await Promise.all(["a","b","c"].map(async id => { out.push(await mcp.get({id})); })); return out;`, false},
+		{`return await Promise.all(["a","b","c"].map(async id => bash("echo " + id)));`, false},
+		{`let n = 0; return await Promise.all(["a","b"].map(async id => { n++; return mcp.get({id}); }));`, false},
+	} {
+		p, err := Compile(tc.code, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var active, peak atomic.Int64
+		r, err := p.Execute(context.Background(), ExecuteOptions{Parallelism: 4,
+			Dispatch: func(_ context.Context, _ string, a any) (any, error) {
+				v := active.Add(1)
+				for {
+					p := peak.Load()
+					if v <= p || peak.CompareAndSwap(p, v) {
+						break
+					}
+				}
+				time.Sleep(2 * time.Millisecond)
+				active.Add(-1)
+				return a, nil
+			},
+			HostDispatch: func(_ context.Context, _ string, args []any) (any, error) {
+				v := active.Add(1)
+				if v > peak.Load() {
+					peak.Store(v)
+				}
+				time.Sleep(2 * time.Millisecond)
+				active.Add(-1)
+				return args[0], nil
+			},
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", tc.code, err)
+		}
+		if got := peak.Load() > 1; got != tc.parallel {
+			t.Fatalf("%s: parallel=%v (peak %d) want %v; value %s", tc.code, got, peak.Load(), tc.parallel, encoded(t, r.Value))
+		}
+	}
+}

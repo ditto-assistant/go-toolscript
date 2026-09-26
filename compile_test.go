@@ -311,6 +311,7 @@ func TestRawCallDoesNotCollideWithPropertyPath(t *testing.T) {
 func TestParallelBatchesUnderRace(t *testing.T) {
 	opts := options()
 	opts.HostFunctions = map[string]HostFunction{"bash": {MinArgs: 1, MaxArgs: 1}}
+	opts.SequentialTools = func(name string) bool { return name == "artifacts" }
 	for _, tc := range []struct {
 		code     string
 		parallel bool
@@ -320,6 +321,8 @@ func TestParallelBatchesUnderRace(t *testing.T) {
 		{`const out = []; await Promise.all(["a","b","c"].map(async id => { out.push(await mcp.get({id})); })); return out;`, false},
 		{`return await Promise.all(["a","b","c"].map(async id => bash("echo " + id)));`, false},
 		{`let n = 0; return await Promise.all(["a","b"].map(async id => { n++; return mcp.get({id}); }));`, false},
+		{`return await Promise.all([mcp.get({id:"a"}), mcp.artifacts({op:"append"}), mcp.get({id:"b"})]);`, false},
+		{`return await Promise.all(["x","y"].map(async id => mcp.call("artifacts", {id})));`, false},
 	} {
 		p, err := Compile(tc.code, opts)
 		if err != nil {

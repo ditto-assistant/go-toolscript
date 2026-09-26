@@ -65,6 +65,10 @@ type CompileOptions struct {
 	// bindings compile to the runtime TypeError JavaScript would raise
 	// instead of declining. The list must be complete.
 	Bindings [][]string
+	// SequentialTools marks tools whose calls must never overlap or reorder
+	// (stateful documents, a live browser session). A batch that calls one
+	// runs its items one at a time in source order.
+	SequentialTools func(tool string) bool
 	// Batches admits await, async functions and Promise.all/allSettled.
 	// This is an explicit asynchronous-tool dialect, not arbitrary JS promises.
 	Batches bool

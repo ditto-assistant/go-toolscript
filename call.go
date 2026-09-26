@@ -676,6 +676,12 @@ func (c *compiler) isolated(node ast.Node) bool {
 				}
 			}
 		case *ast.CallExpression:
+			if c.opts.SequentialTools != nil {
+				if name, isTool := c.toolName(n); isTool && c.opts.SequentialTools(name) {
+					ok = false
+					return false
+				}
+			}
 			switch cal := n.Callee.(type) {
 			case *ast.Identifier:
 				if v, _ := c.lookup(cal.Name.String()); v != nil && !local[cal.Name.String()] {
@@ -814,4 +820,26 @@ func classString(v any) string {
 		}
 	}
 	return "[object Object]"
+}
+
+// toolName resolves the dispatcher name of a static tool call, if any.
+func (c *compiler) toolName(n *ast.CallExpression) (string, bool) {
+	path, ok := c.namespacePath(n.Callee)
+	if !ok {
+		return "", false
+	}
+	if len(path) == 2 && (path[0] == "mcp" || path[0] == "tools") && path[1] == "call" {
+		if c.opts.ResolveCall == nil || len(n.ArgumentList) == 0 {
+			return "", false
+		}
+		lit, isLit := n.ArgumentList[0].(*ast.StringLiteral)
+		if !isLit {
+			return "", false
+		}
+		return c.opts.ResolveCall(lit.Value.String())
+	}
+	if c.opts.Resolve == nil {
+		return "", false
+	}
+	return c.opts.Resolve(path)
 }

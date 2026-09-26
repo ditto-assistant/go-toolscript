@@ -169,6 +169,7 @@ type cfunc struct {
 
 type compiler struct {
 	pendingLabels []string // labels for the loop being compiled next
+	functions     int      // function literals compiled so far (closure detection)
 	opts          CompileOptions
 	namespaceUsed bool
 	fn            *cfunc
@@ -322,6 +323,8 @@ func (c *compiler) function(params *ast.ParameterList, body *ast.BlockStatement,
 	defer func() { c.fn, c.sc, c.loops, c.breakable = savedFn, savedSc, savedLoops, savedBreak }()
 	c.fn = &cfunc{parent: savedFn, async: async}
 	c.loops, c.breakable = 0, 0
+	c.functions++
+	functionsAtStart := c.functions
 	sc := c.pushScope(true)
 	code := &funcCode{async: async, source: source}
 
@@ -406,11 +409,6 @@ func (c *compiler) function(params *ast.ParameterList, body *ast.BlockStatement,
 			code.rest = b
 		}
 	}
-	if body != nil {
-		code.leaf = !containsFunction(body)
-	} else {
-		code.leaf = !containsFunction(exprBody)
-	}
 	bodyScope := sc
 	if hasExprs {
 		bodyScope = c.pushScope(false)
@@ -453,6 +451,7 @@ func (c *compiler) function(params *ast.ParameterList, body *ast.BlockStatement,
 		}
 		code.exprBody = e
 	}
+	code.leaf = c.functions == functionsAtStart
 	code.init = sc.init
 	if hasExprs {
 		code.bodyInit = bodyScope.init
@@ -877,6 +876,13 @@ func (c *compiler) namespaceAlias(b *ast.Binding) ([]string, bool) {
 // namespacePath returns the static tool path of an expression rooted at an
 // unshadowed mcp/tools global or at a namespace alias.
 func (c *compiler) namespacePath(e ast.Expression) ([]string, bool) {
+	root := rootName(e)
+	if root == "" {
+		return nil, false
+	}
+	if v, _ := c.lookup(root); (v == nil && root != "mcp" && root != "tools") || (v != nil && v.alias == nil) {
+		return nil, false // cheap rejection before building the path
+	}
 	path, ok := staticPath(e)
 	if !ok || len(path) == 0 {
 		return nil, false
@@ -1005,6 +1011,7 @@ func (c *compiler) whileStatement(testExpr ast.Expression, bodyStmt ast.Statemen
 
 func (c *compiler) forStatement(n *ast.ForStatement) (stmtFn, error) {
 	labels := c.takeLabels()
+	functionsAtStart := c.functions
 	var sc *cscope
 	var initFn stmtFn
 	var err error
@@ -1047,7 +1054,7 @@ func (c *compiler) forStatement(n *ast.ForStatement) (stmtFn, error) {
 	if err != nil {
 		return nil, err
 	}
-	perIteration := sc != nil && containsFunction(n)
+	perIteration := sc != nil && c.functions != functionsAtStart
 	return func(r *rt, s *scope) (ctl, any, error) {
 		loop := s
 		if sc != nil {
@@ -1171,7 +1178,7 @@ func (c *compiler) forInOf(into ast.ForInto, source ast.Expression, bodyStmt ast
 		}
 		for _, k := range ownEnumerableKeys(v) {
 			if o, ok := v.(*object); ok {
-				if _, still := o.props[k]; !still {
+				if _, still := o.own(k); !still {
 					continue // deleted during iteration
 				}
 			}
@@ -1401,19 +1408,6 @@ func (r *rt) finish(finally stmtFn, s *scope, k ctl, v any, err error) (ctl, any
 	return k, v, err
 }
 
-func containsFunction(n ast.Node) bool {
-	found := false
-	walkAST(n, func(x ast.Node) bool {
-		switch x.(type) {
-		case *ast.FunctionLiteral, *ast.ArrowFunctionLiteral:
-			found = true
-			return false
-		}
-		return !found
-	})
-	return found
-}
-
 func hasLabel(labels []string, l string) bool {
 	for _, x := range labels {
 		if x == l {
@@ -1485,4 +1479,20 @@ func (c *compiler) labelled(n *ast.LabelledStatement) (stmtFn, error) {
 		}
 		return k, v, err
 	}, nil
+}
+
+// rootName returns the identifier at the base of a member chain, or "".
+func rootName(e ast.Expression) string {
+	for {
+		switch n := e.(type) {
+		case *ast.Identifier:
+			return n.Name.String()
+		case *ast.DotExpression:
+			e = n.Left
+		case *ast.BracketExpression:
+			e = n.Left
+		default:
+			return ""
+		}
+	}
 }

@@ -99,10 +99,10 @@ func (r *rt) objectMethod(o any, key string, args []any) (any, error) {
 		}
 		switch t := o.(type) {
 		case *object:
-			_, ok := t.props[k]
+			_, ok := t.own(k)
 			return ok || t.hasOwnHidden(k), nil
 		case *hostObject:
-			_, ok := t.view.props[k]
+			_, ok := t.view.own(k)
 			return ok, nil
 		}
 	}
@@ -1038,7 +1038,8 @@ func init() {
 					return nil, err
 				}
 			case *object:
-				n, err := r.toNumber(t.props["length"])
+				lv, _ := t.own("length")
+				n, err := r.toNumber(lv)
 				if err != nil || math.IsNaN(n) || n <= 0 {
 					items = []any{}
 					break
@@ -1234,14 +1235,14 @@ func (r *rt) callBuiltinMethodOwn(o any, key any) (any, error) {
 	}
 	switch t := o.(type) {
 	case *object:
-		_, ok := t.props[k]
+		_, ok := t.own(k)
 		return ok || t.hasOwnHidden(k), nil
 	case *hostObject:
-		_, ok := t.view.props[k]
+		_, ok := t.view.own(k)
 		return ok, nil
 	case *function:
 		if t.props != nil {
-			if _, ok := t.props.props[k]; ok {
+			if _, ok := t.props.own(k); ok {
 				return true, nil
 			}
 		}

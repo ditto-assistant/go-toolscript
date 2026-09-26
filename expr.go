@@ -511,11 +511,13 @@ func (r *rt) copyProps(dst *object, src any) error {
 	switch t := src.(type) {
 	case *object:
 		for _, k := range t.ownKeys() {
-			dst.set(k, t.props[k])
+			v, _ := t.own(k)
+			dst.set(k, v)
 		}
 	case *hostObject:
 		for _, k := range t.view.ownKeys() {
-			dst.set(k, t.view.props[k])
+			v, _ := t.view.own(k)
+			dst.set(k, v)
 		}
 	case *array:
 		for i, v := range t.items {
@@ -525,7 +527,8 @@ func (r *rt) copyProps(dst *object, src any) error {
 		}
 		if t.props != nil {
 			for _, k := range t.props.ownKeys() {
-				dst.set(k, t.props.props[k])
+				v, _ := t.props.own(k)
+				dst.set(k, v)
 			}
 		}
 	case string:
@@ -682,7 +685,7 @@ func (r *rt) makeError(name string, args []any) (any, error) {
 	}
 	if len(args) > 1 {
 		if o, ok := args[1].(*object); ok {
-			if cause, ok := o.props["cause"]; ok {
+			if cause, ok := o.own("cause"); ok {
 				e.errCause = cause
 			}
 		}

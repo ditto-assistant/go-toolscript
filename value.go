@@ -14,8 +14,9 @@ import (
 // object is an ordinary JavaScript object: own data properties only, with the
 // ECMAScript enumeration order (array-index keys ascending, then insertion).
 type object struct {
-	props    map[string]any
-	keys     []string
+	index    map[string]int // key -> position, built past smallObject keys
+	keys     []string       // insertion order
+	vals     []any
 	errName  string // non-empty for Error objects
 	errMsg   any    // own non-enumerable message (Undefined when absent)
 	errCause any    // own non-enumerable cause (nil Go value when absent)
@@ -83,9 +84,38 @@ func denseItems(items []any) []any {
 // tdz marks a lexical binding that has not been initialized yet.
 var tdz any = tdzMarker{}
 
+// Objects keep parallel key/value slices; most script and tool objects are
+// small, where a linear scan beats hashing and allocates far less.
+const smallObject = 8
+
 func newObject(size int) *object {
-	return &object{props: make(map[string]any, size), keys: make([]string, 0, size)}
+	return &object{keys: make([]string, 0, size), vals: make([]any, 0, size)}
 }
+
+func (o *object) find(key string) int {
+	if o.index != nil {
+		if i, ok := o.index[key]; ok {
+			return i
+		}
+		return -1
+	}
+	for i, k := range o.keys {
+		if k == key {
+			return i
+		}
+	}
+	return -1
+}
+
+// own reads an own enumerable data property (no Error or prototype logic).
+func (o *object) own(key string) (any, bool) {
+	if i := o.find(key); i >= 0 {
+		return o.vals[i], true
+	}
+	return nil, false
+}
+
+func (o *object) size() int { return len(o.keys) }
 
 func newError(name, msg string) *object {
 	o := newObject(0)
@@ -94,7 +124,7 @@ func newError(name, msg string) *object {
 }
 
 func (o *object) get(key string) (any, bool) {
-	v, ok := o.props[key]
+	v, ok := o.own(key)
 	if !ok && o.errName != "" {
 		switch key {
 		case "message":
@@ -133,7 +163,7 @@ func (o *object) hasOwnHidden(key string) bool {
 
 func (o *object) set(key string, v any) {
 	if o.errName != "" && (key == "message" || key == "cause") {
-		if _, own := o.props[key]; !own {
+		if o.find(key) < 0 {
 			if key == "message" {
 				o.errMsg = v
 			} else {
@@ -142,24 +172,36 @@ func (o *object) set(key string, v any) {
 			return
 		}
 	}
-	if _, ok := o.props[key]; !ok {
-		o.keys = append(o.keys, key)
-		if !o.indexKey && isIndexKey(key) {
-			o.indexKey = true
+	if i := o.find(key); i >= 0 {
+		o.vals[i] = v
+		return
+	}
+	o.keys = append(o.keys, key)
+	o.vals = append(o.vals, v)
+	if o.index != nil {
+		o.index[key] = len(o.keys) - 1
+	} else if len(o.keys) > smallObject {
+		o.index = make(map[string]int, len(o.keys)*2)
+		for i, k := range o.keys {
+			o.index[k] = i
 		}
 	}
-	o.props[key] = v
+	if !o.indexKey && isIndexKey(key) {
+		o.indexKey = true
+	}
 }
 
 func (o *object) delete(key string) {
-	if _, ok := o.props[key]; !ok {
+	i := o.find(key)
+	if i < 0 {
 		return
 	}
-	delete(o.props, key)
-	for i, k := range o.keys {
-		if k == key {
-			o.keys = append(o.keys[:i:i], o.keys[i+1:]...)
-			break
+	o.keys = append(o.keys[:i:i], o.keys[i+1:]...)
+	o.vals = append(o.vals[:i:i], o.vals[i+1:]...)
+	if o.index != nil {
+		delete(o.index, key)
+		for j := i; j < len(o.keys); j++ {
+			o.index[o.keys[j]] = j
 		}
 	}
 }
@@ -263,7 +305,8 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 				order = [2]string{"toString", "valueOf"}
 			}
 			for _, m := range order {
-				f, own := t.props[m].(*function)
+				fv, _ := t.own(m)
+				f, own := fv.(*function)
 				if !own {
 					if m == "toString" {
 						return r.defaultObjectString(t), nil
@@ -289,8 +332,10 @@ func (r *rt) toPrimitiveHint(v any, hint string) (any, error) {
 }
 
 func userConversion(o *object) bool {
-	_, s := o.props["toString"].(*function)
-	_, v := o.props["valueOf"].(*function)
+	ts, _ := o.own("toString")
+	vo, _ := o.own("valueOf")
+	_, s := ts.(*function)
+	_, v := vo.(*function)
 	return s || v
 }
 
@@ -766,9 +811,16 @@ func (r *rt) setProp(target any, key string, v any) error {
 	return nil // primitives silently ignore writes in sloppy mode
 }
 
+// maxHoles bounds sparse growth: Goja stores huge sparse arrays lazily, so a
+// dense emulation of `a.length = 1e7` would cost what Goja does not.
+const maxHoles = 1 << 16
+
 func (r *rt) resize(a *array, n int) error {
 	if n > r.x.maxItems {
 		return r.rangeError("Invalid array length")
+	}
+	if n-len(a.items) > maxHoles {
+		return errRuntimeUnsupported("sparse array growth")
 	}
 	for len(a.items) < n {
 		a.items = append(a.items, hole)
@@ -817,7 +869,7 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 			return true, nil
 		}
 		if t.props != nil {
-			if _, ok := t.props.props[key]; ok {
+			if _, ok := t.props.own(key); ok {
 				return true, nil
 			}
 		}
@@ -833,7 +885,7 @@ func (r *rt) hasProperty(target any, key string) (bool, error) {
 		return key == "next" || objectProtoMember(key), nil
 	case *function:
 		if t.props != nil {
-			if _, ok := t.props.props[key]; ok {
+			if _, ok := t.props.own(key); ok {
 				return true, nil
 			}
 		}

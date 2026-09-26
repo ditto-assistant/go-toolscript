@@ -628,8 +628,9 @@ func (x *exporter) export(v any, depth int) (any, error) {
 			x.onStack[t] = true
 			defer delete(x.onStack, t)
 		}
-		out := make(map[string]any, len(t.props))
-		for k, p := range t.props {
+		out := make(map[string]any, len(t.keys))
+		for i, k := range t.keys {
+			p := t.vals[i]
 			e, err := x.export(p, depth+1)
 			if err != nil {
 				return nil, err
@@ -793,7 +794,8 @@ func (p *Program) buildNamespace() *object {
 		}}
 		parent := root
 		for _, k := range b.path[:len(b.path)-1] {
-			next, ok := parent.props[k].(*object)
+			nv, _ := parent.own(k)
+			next, ok := nv.(*object)
 			if !ok {
 				next = newObject(4)
 				parent.set(k, next)

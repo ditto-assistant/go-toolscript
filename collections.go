@@ -302,8 +302,8 @@ func (r *rt) newArrayFromArgs(args []any) (any, error) {
 			if f < 0 || f != math.Trunc(f) || f > math.MaxUint32 {
 				return nil, r.rangeError("Invalid array length")
 			}
-			if int(f) > r.x.maxItems {
-				return nil, r.rangeError("Invalid array length")
+			if int(f) > maxHoles {
+				return nil, errRuntimeUnsupported("large sparse Array(n)")
 			}
 			items := make([]any, int(f))
 			for i := range items {

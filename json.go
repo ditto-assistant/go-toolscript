@@ -82,7 +82,8 @@ func (ctx *stringifier) str(key string, holder any) (bool, error) {
 		return false, err
 	}
 	if o, ok := value.(*object); ok {
-		if f, ok := o.props["toJSON"].(*function); ok {
+		tj, _ := o.own("toJSON")
+		if f, ok := tj.(*function); ok {
 			if value, err = r.call(f, []any{key}); err != nil {
 				return false, err
 			}

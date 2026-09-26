@@ -243,6 +243,11 @@ func (c *compiler) toolCall(path []string, n *ast.CallExpression) (evalFn, error
 // globalCall compiles calls to unshadowed globals: host functions, console,
 // JSON/Object/Array/Math/Number/String helpers, Promise batches and errors.
 func (c *compiler) globalCall(callee ast.Expression, n *ast.CallExpression) (evalFn, bool, error) {
+	if root := rootName(callee); root == "" {
+		return nil, false, nil
+	} else if v, _ := c.lookup(root); v != nil {
+		return nil, false, nil
+	}
 	path, ok := staticPath(callee)
 	if !ok {
 		return nil, false, nil

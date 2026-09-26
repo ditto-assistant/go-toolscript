@@ -1504,8 +1504,10 @@ func decEqualDisplay(a, b *decQuantity) bool {
 
 func init() {
 	registerIntlKind(&intlKind{
-		name:        "NumberFormat",
-		construct:   func(r *rt, locales, options any) (any, error) { return r.newNumberFormat(locales, options, "Intl.NumberFormat") },
+		name: "NumberFormat",
+		construct: func(r *rt, locales, options any) (any, error) {
+			return r.newNumberFormat(locales, options, "Intl.NumberFormat")
+		},
 		boundGetter: "format",
 		methods: map[string]intlMethod{
 			"format": {1, func(r *rt, o *intlObject, args []any) (any, error) {

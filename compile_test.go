@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -319,10 +320,7 @@ func TestParallelBatchesUnderRace(t *testing.T) {
 		{`const re = /x/g; const ids = ["a","b","c","d","e","f"]; return await Promise.all(ids.map(async id => { const r = await mcp.get({id}); return {id, n: r.id.length, m: "xx".match(re), t: [1,2,3].map(x => x * 2).join("-"), d: new Date(0).toISOString()}; }));`, true},
 		{`return await Promise.all([mcp.get({id:"a"}), mcp.get({id:"b"}), mcp.get({id:"c"}), mcp.get({id:"d"})]);`, true},
 		{`const out = []; await Promise.all(["a","b","c"].map(async id => { out.push(await mcp.get({id})); })); return out;`, false},
-		{`return await Promise.all(["a","b","c"].map(async id => bash("echo " + id)));`, false},
 		{`let n = 0; return await Promise.all(["a","b"].map(async id => { n++; return mcp.get({id}); }));`, false},
-		{`return await Promise.all([mcp.get({id:"a"}), mcp.artifacts({op:"append"}), mcp.get({id:"b"})]);`, false},
-		{`return await Promise.all(["x","y"].map(async id => mcp.call("artifacts", {id})));`, false},
 	} {
 		p, err := Compile(tc.code, opts)
 		if err != nil {
@@ -358,5 +356,126 @@ func TestParallelBatchesUnderRace(t *testing.T) {
 		if got := peak.Load() > 1; got != tc.parallel {
 			t.Fatalf("%s: parallel=%v (peak %d) want %v; value %s", tc.code, got, peak.Load(), tc.parallel, encoded(t, r.Value))
 		}
+	}
+}
+
+// Mixed batches: ordinary calls overlap, while host functions, SequentialTools
+// and console output happen in item order without overlapping each other.
+func TestBatchSequencer(t *testing.T) {
+	opts := options()
+	opts.HostFunctions = map[string]HostFunction{"bash": {MinArgs: 1, MaxArgs: 1}}
+	opts.SequentialTools = func(name string) bool { return name == "artifacts" }
+	src := `const ids = ["a","b","c","d","e","f","g","h"];
+return await Promise.all(ids.map(async (id, i) => {
+  const r = await mcp.slow({id});
+  console.log("item", i);
+  if (i % 2 === 0) await mcp.artifacts({append: id});
+  if (i % 3 === 0) bash("echo " + id);
+  return r.id;
+}));`
+	p, err := Compile(src, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for round := 0; round < 20; round++ {
+		var mu sync.Mutex
+		var ordered, console []string
+		var slowActive, slowPeak, orderedActive atomic.Int64
+		enterOrdered := func(entry string) {
+			if orderedActive.Add(1) > 1 {
+				t.Error("ordered effects overlapped")
+			}
+			mu.Lock()
+			ordered = append(ordered, entry)
+			mu.Unlock()
+			time.Sleep(time.Millisecond)
+			orderedActive.Add(-1)
+		}
+		r, err := p.Execute(context.Background(), ExecuteOptions{Parallelism: 8,
+			Console: func(_, line string) { console = append(console, line) },
+			Dispatch: func(_ context.Context, name string, a any) (any, error) {
+				if name == "artifacts" {
+					enterOrdered("artifacts " + a.(map[string]any)["append"].(string))
+					return a, nil
+				}
+				v := slowActive.Add(1)
+				for {
+					p := slowPeak.Load()
+					if v <= p || slowPeak.CompareAndSwap(p, v) {
+						break
+					}
+				}
+				// Later items finish first, to stress ordering.
+				id := a.(map[string]any)["id"].(string)
+				time.Sleep(time.Duration('i'-id[0]) * time.Millisecond)
+				slowActive.Add(-1)
+				return a, nil
+			},
+			HostDispatch: func(_ context.Context, _ string, args []any) (any, error) {
+				enterOrdered(args[0].(string))
+				return map[string]any{}, nil
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := encoded(t, r.Value); got != `["a","b","c","d","e","f","g","h"]` {
+			t.Fatalf("value %s", got)
+		}
+		if slowPeak.Load() < 2 {
+			t.Fatalf("ordinary calls did not overlap (peak %d)", slowPeak.Load())
+		}
+		want := []string{"artifacts a", "echo a", "artifacts c", "echo d", "artifacts e", "artifacts g", "echo g"}
+		if !reflect.DeepEqual(ordered, want) {
+			t.Fatalf("ordered effects %v want %v", ordered, want)
+		}
+		if strings.Join(console, ",") != "item 0,item 1,item 2,item 3,item 4,item 5,item 6,item 7" {
+			t.Fatalf("console %v", console)
+		}
+	}
+}
+
+// Ordinary tool failures never stop sibling dispatches: Promise.all starts
+// every call (and reports the first failure), allSettled returns every
+// success. Only a fatal host error (a revoked run) stops new dispatches.
+func TestBatchFailureSemantics(t *testing.T) {
+	failing := func(calls *atomic.Int64) Dispatch {
+		return func(_ context.Context, _ string, a any) (any, error) {
+			calls.Add(1)
+			if a.(map[string]any)["id"] == "c" {
+				return nil, errors.New("upstream 500")
+			}
+			time.Sleep(time.Millisecond)
+			return a, nil
+		}
+	}
+	for _, parallelism := range []int{1, 8} {
+		var calls atomic.Int64
+		p := compile(t, `const ids = ["a","b","c","d","e"];
+try { await Promise.all(ids.map(async id => mcp.get({id}))); } catch (e) { var failed = String(e); }
+const settled = await Promise.allSettled(ids.map(async id => mcp.get({id})));
+return {failed, ok: settled.filter(s => s.status === "fulfilled").map(s => s.value.id), errors: settled.filter(s => s.status === "rejected").map(s => s.reason)};`)
+		r, err := p.Execute(context.Background(), ExecuteOptions{Parallelism: parallelism, Dispatch: failing(&calls)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := encoded(t, r.Value); got != `{"errors":["upstream 500"],"failed":"GoError: upstream 500","ok":["a","b","d","e"]}` || calls.Load() != 10 {
+			t.Fatalf("parallelism %d: %s calls=%d", parallelism, got, calls.Load())
+		}
+	}
+	// A fatal error (the run was revoked) stops any further dispatch.
+	var calls atomic.Int64
+	revoked := errors.New("run revoked")
+	p := compile(t, `return await Promise.allSettled(["a","b","c","d","e"].map(async id => mcp.get({id})));`)
+	_, err := p.Execute(context.Background(), ExecuteOptions{Fatal: func(err error) bool { return errors.Is(err, revoked) },
+		Dispatch: func(_ context.Context, _ string, a any) (any, error) {
+			calls.Add(1)
+			if a.(map[string]any)["id"] == "b" {
+				return nil, revoked
+			}
+			return a, nil
+		}})
+	if !errors.Is(err, revoked) || calls.Load() != 2 {
+		t.Fatalf("revoked run: %v calls=%d", err, calls.Load())
 	}
 }

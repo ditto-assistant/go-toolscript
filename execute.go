@@ -53,7 +53,7 @@ type ExecuteOptions struct {
 	MaxCalls     int // default 64
 	MaxSteps     int // default 1,000,000 statements, calls and loop iterations
 	MaxItems     int // default 1024 items per Promise.all/allSettled batch
-	Parallelism  int // default 1; maximum 64
+	Parallelism  int // default 1; concurrent items per Promise batch (host-chosen)
 	// MaxArrayLength and MaxStringBytes bound values built by the script
 	// (defaults 1<<24 elements and 16 MiB). Exceeding them throws RangeError.
 	MaxArrayLength int
@@ -63,6 +63,9 @@ type ExecuteOptions struct {
 	// time zone for Date (default time.Local), both as in Goja.
 	Now      func() time.Time
 	Location *time.Location
+	// Random is the source for Math.random (default math/rand/v2); it must be
+	// safe for concurrent use when Parallelism > 1.
+	Random func() float64
 }
 
 // Result retains the call count and fatal status even after execution fails.
@@ -75,19 +78,20 @@ type Result struct {
 }
 
 type execution struct {
-	namespace any // the mcp/tools object, when the program uses it as a value
-	opts      ExecuteOptions
-	fatal     error
-	panicked  error
-	calls     atomic.Int64
-	hostCalls atomic.Int64
-	steps     atomic.Int64
-	fatalMu   sync.Mutex
-	maxString int
-	maxItems  int
-	maxDepth  int
-	batch     int // steps per publication; 1 for tiny budgets
-	aborted   atomic.Bool
+	sequential func(string) bool // CompileOptions.SequentialTools
+	namespace  any               // the mcp/tools object, when the program uses it as a value
+	opts       ExecuteOptions
+	fatal      error
+	panicked   error
+	calls      atomic.Int64
+	hostCalls  atomic.Int64
+	steps      atomic.Int64
+	fatalMu    sync.Mutex
+	maxString  int
+	maxItems   int
+	maxDepth   int
+	batch      int // steps per publication; 1 for tiny budgets
+	aborted    atomic.Bool
 }
 
 // rt is the per-goroutine interpreter state for one execution.
@@ -99,7 +103,10 @@ type rt struct {
 	pending int // steps not yet published to x.steps
 	frames  []*scope8
 	coll    *collate.Collator
-	label   string // target of a labeled break/continue in flight
+	label   string        // target of a labeled break/continue in flight
+	seq     *sequencer    // set on workers of a parallel batch
+	logs    []consoleLine // this batch item's buffered console output
+	item    int           // this worker's current batch item
 }
 
 // Throw is an uncaught JavaScript exception. Tool and host failures surface
@@ -184,9 +191,6 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (res Result,
 	if opts.Parallelism <= 0 {
 		opts.Parallelism = 1
 	}
-	if opts.Parallelism > 64 {
-		opts.Parallelism = 64
-	}
 	if opts.MaxArrayLength <= 0 {
 		opts.MaxArrayLength = 1 << 24
 	}
@@ -201,6 +205,7 @@ func (p *Program) Execute(ctx context.Context, opts ExecuteOptions) (res Result,
 		x.batch = 1
 	}
 	r := &rt{ctx: ctx, x: x}
+	x.sequential = p.sequential
 	if p.namespace != nil {
 		x.namespace = p.buildNamespace()
 	} else {
@@ -421,6 +426,9 @@ func (r *rt) callTool(name string, arg any) (any, error) {
 	if err != nil {
 		return nil, r.typeError("invalid arguments for " + name + ": " + err.Error())
 	}
+	if r.seq != nil && r.x.sequential != nil && r.x.sequential(name) {
+		r.seq.wait(r.item)
+	}
 	v, err := r.effect(&r.x.calls, r.x.opts.MaxCalls, "tool-call", func() (any, error) {
 		if r.x.opts.Dispatch == nil {
 			return nil, errors.New("no dispatcher configured")
@@ -434,6 +442,11 @@ func (r *rt) callTool(name string, arg any) (any, error) {
 }
 
 func (r *rt) callHost(name string, args []any) (any, error) {
+	if r.seq != nil {
+		// Host functions share host state (a shell, a filesystem): in a
+		// parallel batch they run one at a time in item order.
+		r.seq.wait(r.item)
+	}
 	exported := make([]any, len(args))
 	for i, a := range args {
 		v, err := exportValue(a, r.location())

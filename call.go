@@ -591,9 +591,10 @@ func (r *rt) runBatch(size int, settled, isolated bool, eval func(w *rt, i int) 
 	}
 	var next atomic.Int64
 	var wg sync.WaitGroup
+	seq := newSequencer(size, r)
 	for range workers {
 		wg.Add(1)
-		w := &rt{ctx: r.ctx, x: r.x, depth: r.depth}
+		w := &rt{ctx: r.ctx, x: r.x, depth: r.depth, seq: seq}
 		go func() {
 			defer wg.Done()
 			defer func() {
@@ -607,7 +608,13 @@ func (r *rt) runBatch(size int, settled, isolated bool, eval func(w *rt, i int) 
 					r.x.steps.Add(int64(w.pending))
 					return
 				}
-				runOne(w, i)
+				w.item, w.logs = i, nil
+				func() {
+					// Always release the item, even on panic, so later items
+					// waiting for their turn cannot deadlock.
+					defer func() { seq.finish(i, w.logs) }()
+					runOne(w, i)
+				}()
 			}
 		}()
 	}
@@ -676,29 +683,17 @@ func (c *compiler) isolated(node ast.Node) bool {
 				}
 			}
 		case *ast.CallExpression:
-			if c.opts.SequentialTools != nil {
-				if name, isTool := c.toolName(n); isTool && c.opts.SequentialTools(name) {
-					ok = false
-					return false
-				}
-			}
+			// Host functions, SequentialTools and console output do not
+			// force a batch sequential: the runtime sequencer orders them.
 			switch cal := n.Callee.(type) {
 			case *ast.Identifier:
 				if v, _ := c.lookup(cal.Name.String()); v != nil && !local[cal.Name.String()] {
-					ok = false
-				}
-				// Host functions (a shell, a filesystem) share host state, so
-				// batches that use them stay sequential and ordered.
-				if v, _ := c.lookup(cal.Name.String()); v == nil && hasHost(c.opts.HostFunctions, cal.Name.String()) {
 					ok = false
 				}
 			case *ast.DotExpression:
 				name := cal.Identifier.Name.String()
 				if mutatingMethods[name] || strings.HasPrefix(name, "set") {
 					ok = false // includes Date setters
-				}
-				if p, isPath := staticPath(cal.Left); isPath && len(p) == 1 && p[0] == "console" {
-					ok = false
 				}
 				if p, isPath := staticPath(cal.Left); isPath && len(p) == 1 && p[0] == "Object" && name == "assign" {
 					ok = false
@@ -822,24 +817,47 @@ func classString(v any) string {
 	return "[object Object]"
 }
 
-// toolName resolves the dispatcher name of a static tool call, if any.
-func (c *compiler) toolName(n *ast.CallExpression) (string, bool) {
-	path, ok := c.namespacePath(n.Callee)
-	if !ok {
-		return "", false
+// sequencer orders the effects of a parallel batch that must not overlap or
+// reorder: host functions, tools the host marks sequential, and console
+// output. Item i may perform such an effect only after items 0..i-1 have
+// finished; its console lines are released in item order as items finish.
+// Items are claimed in index order, so every earlier item is already running
+// or done and waiting can never deadlock.
+type sequencer struct {
+	mu   sync.Mutex
+	cond *sync.Cond
+	done []bool
+	logs [][]consoleLine
+	r    *rt
+	turn int
+}
+
+type consoleLine struct{ level, line string }
+
+func newSequencer(n int, r *rt) *sequencer {
+	q := &sequencer{done: make([]bool, n), logs: make([][]consoleLine, n), r: r}
+	q.cond = sync.NewCond(&q.mu)
+	return q
+}
+
+func (q *sequencer) wait(i int) {
+	q.mu.Lock()
+	for q.turn < i {
+		q.cond.Wait()
 	}
-	if len(path) == 2 && (path[0] == "mcp" || path[0] == "tools") && path[1] == "call" {
-		if c.opts.ResolveCall == nil || len(n.ArgumentList) == 0 {
-			return "", false
+	q.mu.Unlock()
+}
+
+func (q *sequencer) finish(i int, logs []consoleLine) {
+	q.mu.Lock()
+	q.done[i], q.logs[i] = true, logs
+	for q.turn < len(q.done) && q.done[q.turn] {
+		for _, l := range q.logs[q.turn] {
+			q.r.emitConsole(l.level, l.line)
 		}
-		lit, isLit := n.ArgumentList[0].(*ast.StringLiteral)
-		if !isLit {
-			return "", false
-		}
-		return c.opts.ResolveCall(lit.Value.String())
+		q.logs[q.turn] = nil
+		q.turn++
 	}
-	if c.opts.Resolve == nil {
-		return "", false
-	}
-	return c.opts.Resolve(path)
+	q.cond.Broadcast()
+	q.mu.Unlock()
 }

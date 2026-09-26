@@ -1134,7 +1134,12 @@ func init() {
 			}
 			return t
 		}),
-		"Math.random": func(r *rt, args []any) (any, error) { return rand.Float64(), nil },
+		"Math.random": func(r *rt, args []any) (any, error) {
+			if r.x.opts.Random != nil {
+				return r.x.opts.Random(), nil
+			}
+			return rand.Float64(), nil
+		},
 		"Math.pow": func(r *rt, args []any) (any, error) {
 			a, err := r.toNumber(arg(args, 0))
 			if err != nil {
@@ -1734,10 +1739,20 @@ func (r *rt) console(level string, args []any) error {
 		}
 		parts[i] = s
 	}
-	if r.x.opts.Console != nil {
-		r.x.opts.Console(level, strings.Join(parts, " "))
+	line := strings.Join(parts, " ")
+	if r.seq != nil {
+		// Parallel batch item: released in item order by the sequencer.
+		r.logs = append(r.logs, consoleLine{level, line})
+		return nil
 	}
+	r.emitConsole(level, line)
 	return nil
+}
+
+func (r *rt) emitConsole(level, line string) {
+	if r.x.opts.Console != nil {
+		r.x.opts.Console(level, line)
+	}
 }
 
 func (r *rt) consoleArg(v any) (string, error) {

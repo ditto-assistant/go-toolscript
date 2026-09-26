@@ -66,8 +66,9 @@ type CompileOptions struct {
 	// instead of declining. The list must be complete.
 	Bindings [][]string
 	// SequentialTools marks tools whose calls must never overlap or reorder
-	// (stateful documents, a live browser session). A batch that calls one
-	// runs its items one at a time in source order.
+	// (stateful documents, a live browser session). In a parallel batch, a
+	// call to one waits until every earlier item has finished; the rest of
+	// the batch stays parallel. Host functions are always treated this way.
 	SequentialTools func(tool string) bool
 	// Batches admits await, async functions and Promise.all/allSettled.
 	// This is an explicit asynchronous-tool dialect, not arbitrary JS promises.
@@ -76,6 +77,7 @@ type CompileOptions struct {
 
 // Program is immutable and safe to execute concurrently with separate hosts.
 type Program struct {
+	sequential  func(string) bool
 	main        *funcCode
 	namespace   []nsBinding // non-nil when the namespace is used as a value
 	resolveCall func(string) (string, bool)
@@ -216,7 +218,7 @@ func Compile(source string, opts CompileOptions) (prog *Program, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
 	}
-	prog = &Program{main: main}
+	prog = &Program{main: main, sequential: opts.SequentialTools}
 	if c.namespaceUsed {
 		prog.resolveCall = opts.ResolveCall
 		prog.namespace = []nsBinding{}

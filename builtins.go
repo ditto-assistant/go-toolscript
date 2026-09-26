@@ -78,6 +78,8 @@ func (r *rt) callMethod(recv any, key string, args []any) (any, error) {
 		return r.objectMethod(t, key, args)
 	case *iterator:
 		return r.iteratorMethod(t, key)
+	case *intlObject:
+		return r.intlMethodCall(t, key, args)
 	case *function:
 		if t.props != nil {
 			if f, ok := t.props.get(key); ok {
@@ -1761,7 +1763,7 @@ func (r *rt) consoleArg(v any) (string, error) {
 		return "[object Map]", nil
 	}
 	switch v.(type) {
-	case *object, *array, *regexpValue, *collection, *iterator:
+	case *object, *array, *regexpValue, *collection, *iterator, *intlObject:
 		exported, err := exportConsole(v, r.location())
 		if err == nil {
 			if clean, err := MarshalExport(exported); err == nil {

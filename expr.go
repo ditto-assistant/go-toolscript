@@ -286,7 +286,7 @@ func isGlobalNamespace(name string) bool {
 		return false
 	}
 	switch name {
-	case "JSON", "Math", "Object", "Array", "Number", "String", "console", "Promise", "Date":
+	case "JSON", "Math", "Object", "Array", "Number", "String", "console", "Promise", "Date", "Intl":
 		return true
 	}
 	return false
@@ -647,6 +647,23 @@ func (c *compiler) member(node ast.Expression) (evalFn, error) {
 }
 
 func (c *compiler) newExpression(n *ast.NewExpression) (evalFn, error) {
+	if path, ok := staticPath(n.Callee); ok && len(path) == 2 && path[0] == "Intl" {
+		if v, _ := c.lookup("Intl"); v != nil || intlKinds[path[1]] == nil {
+			return nil, unsupported(n)
+		}
+		args, err := c.arguments(n.ArgumentList)
+		if err != nil {
+			return nil, err
+		}
+		name := path[1]
+		return func(r *rt, s *scope) (any, error) {
+			a, err := args(r, s)
+			if err != nil {
+				return nil, err
+			}
+			return r.newIntl(name, a)
+		}, nil
+	}
 	id, ok := n.Callee.(*ast.Identifier)
 	if !ok {
 		return nil, unsupported(n)

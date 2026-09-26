@@ -259,6 +259,26 @@ func (c *compiler) globalCall(callee ast.Expression, n *ast.CallExpression) (eva
 		f, err := c.prototypeCall(path[0], path[2], n)
 		return f, true, err
 	}
+	if path[0] == "Intl" && (len(path) == 2 || len(path) == 3) {
+		full := strings.Join(path, ".")
+		impl, ok := staticFunctions[full]
+		if !ok {
+			if impl, ok = intlStatic(full); !ok {
+				return nil, true, fmt.Errorf("unsupported %s", full)
+			}
+		}
+		args, err := c.arguments(n.ArgumentList)
+		if err != nil {
+			return nil, true, err
+		}
+		return func(r *rt, s *scope) (any, error) {
+			a, err := args(r, s)
+			if err != nil {
+				return nil, err
+			}
+			return impl(r, a)
+		}, true, nil
+	}
 	if len(path) > 2 {
 		return nil, false, nil
 	}
